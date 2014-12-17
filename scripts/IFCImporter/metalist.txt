@@ -1,0 +1,13 @@
+# ============================================================================== 
+# List of IFC structures for special Metadata nodes
+# ============================================================================== 
+
+IfcPerson
+IfcApplication
+IfcActorRole
+IfcOrganization
+IfcPersonAndOrganization
+IfcZone
+IfcOwnerHistory
+IfcGroup
+

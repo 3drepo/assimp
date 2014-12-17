@@ -1,0 +1,474 @@
+diff --git a/code/CMakeLists.txt b/code/CMakeLists.txt
+index 4f651c7..b7017c9 100644
+--- a/code/CMakeLists.txt
++++ b/code/CMakeLists.txt
+@@ -395,6 +395,8 @@ SET(BLENDER_SRCS
+ SOURCE_GROUP( BLENDER FILES ${BLENDER_SRCS})
+ 
+ SET(IFC_SRCS
++	IFCMetaData.cpp
++	IFCMetaData.h
+ 	IFCLoader.cpp
+ 	IFCLoader.h
+ 	IFCReaderGen.cpp
+diff --git a/code/IFCLoader.cpp b/code/IFCLoader.cpp
+index f6eedc6..058d0ab 100644
+--- a/code/IFCLoader.cpp
++++ b/code/IFCLoader.cpp
+@@ -55,11 +55,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "IFCLoader.h"
+ #include "STEPFileReader.h"
+ 
++#include "IFCMetaData.h"
++
+ #include "IFCUtil.h"
+ 
+ #include "StreamReader.h"
+ #include "MemoryIOWrapper.h"
+ 
++#include <ctime>
++
+ namespace Assimp {
+ 	template<> const std::string LogFunctions<IFCImporter>::log_prefix = "IFC: ";
+ }
+@@ -79,6 +83,18 @@ using namespace Assimp::IFC;
+   IfcUnitAssignment
+   IfcClosedShell
+   IfcDoor
++  IfcMeasureWithUnit
++  IfcNormalisedRatioMeasure
++  IfcColourRgb
++  IfcMonetaryUnit
++  IfcElementQuantity
++  IfcChangeActionEnum
++  IfcAddress
++  IfcActorRole
++  IfcOrganization
++  IfcApplication
++  IfcPersonAndOrganization
++  IfcPerson
+ 
+  */
+ 
+@@ -93,7 +109,8 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el ,Conversion
+ void ProcessProductRepresentation(const IfcProduct& el, aiNode* nd, ConversionData& conv);
+ void MakeTreeRelative(ConversionData& conv);
+ void ConvertUnit(const EXPRESS::DataType& dt,ConversionData& conv);
+-
++void ProcessGroups(aiNode* parent, ConversionData& conv);
++void ProcessOwnerHistories(aiNode* parent, ConversionData& conv);
+ } // anon
+ 
+ static const aiImporterDesc desc = {
+@@ -254,12 +271,12 @@ void IFCImporter::InternReadFile( const std::string& pFile,
+ 
+ 	// tell the reader which entity types to track with special care
+ 	static const char* const types_to_track[] = {
+-		"ifcsite", "ifcbuilding", "ifcproject"
++		"ifcsite", "ifcbuilding", "ifcproject", "ifczone", "ifcownerhistory"
+ 	};
+ 
+ 	// tell the reader for which types we need to simulate STEPs reverse indices
+ 	static const char* const inverse_indices_to_track[] = {
+-		"ifcrelcontainedinspatialstructure", "ifcrelaggregates", "ifcrelvoidselement", "ifcreldefinesbyproperties", "ifcpropertyset", "ifcstyleditem"
++		"ifcrelassignstogroup", "ifcrelcontainedinspatialstructure", "ifcrelaggregates", "ifcrelvoidselement", "ifcreldefinesbyproperties", "ifcpropertyset", "ifcstyleditem"
+ 	};
+ 
+ 	// feed the IFC schema into the reader and pre-parse all lines
+@@ -274,6 +291,8 @@ void IFCImporter::InternReadFile( const std::string& pFile,
+ 	SetCoordinateSpace(conv);
+ 	ProcessSpatialStructures(conv);
+ 	MakeTreeRelative(conv);
++	ProcessGroups(conv.out->mRootNode, conv);
++	ProcessOwnerHistories(conv.out->mRootNode, conv);
+ 
+ 	// NOTE - this is a stress test for the importer, but it works only
+ 	// in a build with no entities disabled. See 
+@@ -370,7 +389,7 @@ void ConvertUnit(const EXPRESS::DataType& dt,ConversionData& conv)
+ // ------------------------------------------------------------------------------------------------
+ void SetUnits(ConversionData& conv)
+ {
+-	// see if we can determine the coordinate space used to express. 
++	// see if we can determine the coordinate space used to express.
+ 	for(size_t i = 0; i <  conv.proj.UnitsInContext->Units.size(); ++i ) {
+ 		ConvertUnit(*conv.proj.UnitsInContext->Units[i],conv);
+ 	}
+@@ -383,8 +402,8 @@ void SetCoordinateSpace(ConversionData& conv)
+ 	const IfcRepresentationContext* fav = NULL;
+ 	BOOST_FOREACH(const IfcRepresentationContext& v, conv.proj.RepresentationContexts) {
+ 		fav = &v;
+-		// Model should be the most suitable type of context, hence ignore the others 
+-		if (v.ContextType && v.ContextType.Get() == "Model") { 
++		// Model should be the most suitable type of context, hence ignore the others
++		if (v.ContextType && v.ContextType.Get() == "Model") {
+ 			break;
+ 		}
+ 	}
+@@ -666,6 +685,66 @@ void ProcessMetadata(uint64_t relDefinesByPropertiesID, ConversionData& conv, Me
+ }
+ 
+ // ------------------------------------------------------------------------------------------------
++void ProcessGroups(aiNode* parent, ConversionData& conv)
++{
++	const STEP::DB::RefMap& refs = conv.db.GetRefs();
++	const STEP::DB::ObjectMapByType& objs = conv.db.GetObjectsByType();
++
++	std::map<std::string, STEP::DB::ObjectSet>::const_iterator zones = objs.find("ifczone");
++	std::vector<aiNode *> subnodes;
++
++	if(zones != objs.end()) {
++		for(STEP::DB::ObjectSet::const_iterator zone = zones->second.begin(); zone != zones->second.end(); zone++)
++		{
++			const IfcGroup *group = (*zone)->ToPtr<IfcGroup>();
++
++			STEP::DB::RefMapRange range = refs.equal_range(group->GetID());
++
++			for(;range.first != range.second; ++range.first)
++			{
++				if(const IfcRelAssignsToGroup* const group_rel = conv.db.GetObject((*range.first).second)->ToPtr<IfcRelAssignsToGroup>())
++				{
++					if (group_rel->RelatingGroup->GetID() != group->GetID())
++					{
++						continue;
++					}
++
++					aiNode *nd_group = ExtractMetaData(parent, *group, conv);
++					subnodes.push_back(nd_group);
++				}
++			}
++		}
++	}
++
++	AppendSubnodes(parent, subnodes);
++}
++
++// ------------------------------------------------------------------------------------------------
++void ProcessOwnerHistories(aiNode* parent, ConversionData& conv)
++{
++	const STEP::DB::RefMap& refs = conv.db.GetRefs();
++	const STEP::DB::ObjectMapByType& objs = conv.db.GetObjectsByType();
++
++	std::map<std::string, STEP::DB::ObjectSet>::const_iterator owners = objs.find("ifcownerhistory");
++	std::vector<aiNode *> subnodes;
++
++	if (owners != objs.end())
++	{
++		const STEP::DB::ObjectSet &owner_list = owners->second;
++
++		for(STEP::DB::ObjectSet::const_iterator owner = owner_list.begin(); owner != owner_list.end(); owner++)
++		{
++			const IfcOwnerHistory* const ifcOwner = (*owner)->ToPtr<IfcOwnerHistory>();
++
++			aiNode *nd_owner = ExtractMetaData(parent, *ifcOwner, conv);
++			subnodes.push_back(nd_owner);
++		}
++	}
++
++	AppendSubnodes(parent, subnodes);
++}
++
++// ------------------------------------------------------------------------------------------------
+ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, ConversionData& conv, std::vector<TempOpening>* collect_openings = NULL)
+ {
+ 	const STEP::DB::RefMap& refs = conv.db.GetRefs();
+@@ -708,13 +787,19 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, Conversion
+ 			}
+ 		}
+ 
+-		if (!properties.empty()) {
+-			aiMetadata* data = new aiMetadata();
+-			data->mNumProperties = properties.size();
+-			data->mKeys = new aiString[data->mNumProperties]();
+-			data->mValues = new aiMetadataEntry[data->mNumProperties]();
++		int numProperties = 1 + properties.size(); // Store at least the IFC ID
++
++		aiMetadata* data = new aiMetadata();
++
++		data->mNumProperties = numProperties;
++		data->mKeys = new aiString[numProperties];
++		data->mValues = new aiMetadataEntry[numProperties];
++
++		data->Set(0, "IFC_id", el.GetID());
++
++		if (numProperties > 1) {
++			unsigned int index = 1;
+ 
+-			unsigned int index = 0;
+ 			BOOST_FOREACH(const Metadata::value_type& kv, properties)
+ 				data->Set(index++, kv.first, aiString(kv.second));
+ 
+@@ -825,6 +910,8 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, Conversion
+ 				nd_aggr->mTransformation = nd->mTransformation;
+ 
+ 				nd_aggr->mChildren = new aiNode*[aggr->RelatedObjects.size()]();
++				nd_aggr->mNumChildren = aggr->RelatedObjects.size();
++				int index = 0;
+ 				BOOST_FOREACH(const IfcObjectDefinition& def, aggr->RelatedObjects) {
+ 					if(const IfcProduct* const prod = def.ToPtr<IfcProduct>()) {
+ 
+@@ -847,13 +934,7 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, Conversion
+ 		ProcessProductRepresentation(el,nd.get(),subnodes,conv);
+ 		conv.apply_openings = conv.collect_openings = NULL;
+ 
+-		if (subnodes.size()) {
+-			nd->mChildren = new aiNode*[subnodes.size()]();
+-			BOOST_FOREACH(aiNode* nd2, subnodes) {
+-				nd->mChildren[nd->mNumChildren++] = nd2;
+-				nd2->mParent = nd.get();
+-			}
+-		}
++		AppendSubnodes(parent, subnodes);
+ 	}
+ 	catch(...) {
+ 		// it hurts, but I don't want to pull boost::ptr_vector into -noboost only for these few spots here
+diff --git a/scripts/IFCImporter/entitylist.txt b/scripts/IFCImporter/entitylist.txt
+index ef91e2f..8dc1e13 100644
+--- a/scripts/IFCImporter/entitylist.txt
++++ b/scripts/IFCImporter/entitylist.txt
+@@ -1,110 +1,126 @@
+-# ============================================================================== 
+-# List of IFC structures needed by Assimp
+-# ============================================================================== 
+-# use genentitylist.sh to update this list
+-
+-# This machine-generated list is not complete, it lacks many intermediate 
+-# classes in the inheritance hierarchy. Those are magically augmented by the
+-# code generator. Also, the names of all used entities need to be present 
+-# in the source code for this to work.
+-
+-IfcAnnotation
+-IfcArbitraryClosedProfileDef
+-IfcArbitraryOpenProfileDef
+-IfcAxis1Placement
+-IfcAxis2Placement
+-IfcAxis2Placement2D
+-IfcAxis2Placement3D
+-IfcBooleanClippingResult
+-IfcBooleanResult
+-IfcBoundedCurve
+-IfcBoundingBox
+-IfcBSplineCurve
+-IfcBuilding
+-IfcCartesianPoint
+-IfcCartesianTransformationOperator
+-IfcCartesianTransformationOperator3D
+-IfcCartesianTransformationOperator3DnonUniform
+-IfcCircle
+-IfcCircleHollowProfileDef
+-IfcCircleProfileDef
+-IfcClosedShell
+-IfcColourOrFactor
+-IfcColourRgb
+-IfcCompositeCurve
+-IfcCompositeCurveSegment
+-IfcConic
+-IfcConnectedFaceSet
+-IfcConversionBasedUnit
+-IfcCurve
+-IfcDirection
+-IfcDoor
+-IfcEllipse
+-IfcExtrudedAreaSolid
+-IfcFace
+-IfcFaceBasedSurfaceModel
+-IfcFaceBound
+-IfcFaceOuterBound
+-IfcFeatureElementSubtraction
+-IfcGeometricRepresentationContext
+-IfcGeometricRepresentationItem
+-IfcHalfSpaceSolid
+-IfcLine
+-IfcLocalPlacement
+-IfcManifoldSolidBrep
+-IfcMappedItem
+-IfcMeasureWithUnit
+-IfcNamedUnit
+-IfcObjectDefinition
+-IfcObjectPlacement
+-IfcOpeningElement
+-IfcParameterizedProfileDef
+-IfcPlane
+-IfcPolygonalBoundedHalfSpace
+-IfcPolyline
+-IfcPolyLoop
+-IfcPresentationStyleAssignment
+-IfcPresentationStyleSelect
+-IfcProduct
+-IfcProductRepresentation
+-IfcProfileDef
+-IfcProject
+-IfcRectangleProfileDef
+-IfcRelAggregates
+-IfcRelContainedInSpatialStructure
+-IfcRelFillsElement
+-IfcRelVoidsElement
+-IfcRepresentation
+-IfcRepresentationContext
+-IfcRepresentationItem
+-IfcRepresentationMap
+-IfcRevolvedAreaSolid
+-IfcShell
+-IfcShellBasedSurfaceModel
+-IfcSite
+-IfcSIUnit
+-IfcSomething
+-IfcSpace
+-IfcSpatialStructureElement
+-IfcSpatialStructureElements
+-IfcStyledItem
+-IfcSurfaceStyle
+-IfcSurfaceStyleElementSelect
+-IfcSurfaceStyleRendering
+-IfcSurfaceStyleShading
+-IfcSurfaceStyleWithTextures
+-IfcSweptAreaSolid
+-IfcSweptDiskSolid
+-IfcTopologicalRepresentationItem
+-IfcTrimmedCurve
+-IfcUnit
+-IfcUnitAssignment
+-IfcVector
+-IfcIShapeProfileDef
+-IfcPropertyListValue
+-IfcRelDefinesByProperties
+-IfcPropertySet
+-IfcPropertySingleValue
+-IfcProperty
+-IfcComplexProperty
+-IfcElementQuantity
++# ============================================================================== 
++# List of IFC structures needed by Assimp
++# ============================================================================== 
++# use genentitylist.sh to update this list
++
++# This machine-generated list is not complete, it lacks many intermediate 
++# classes in the inheritance hierarchy. Those are magically augmented by the
++# code generator. Also, the names of all used entities need to be present 
++# in the source code for this to work.
++
++
++IfcBoundedCurve
++IfcBSplineCurve
++IfcCartesianPoint
++IfcCircle
++IfcCompositeCurve
++IfcCompositeCurveSegment
++IfcConic
++IfcCurve
++IfcEllipse
++IfcFloat
++IfcLine
++IfcMatrix
++IfcPolyline
++IfcTrimmedCurve
++IfcVector
++IfcBooleanResult
++IfcBoundingBox
++IfcCartesianPoint
++IfcConnectedFaceSet
++IfcExtrudedAreaSolid
++IfcFace
++IfcFaceBasedSurfaceModel
++IfcFaceBound
++IfcFaceOuterBound
++IfcFloat
++IfcGeometricRepresentationItem
++IfcManifoldSolidBrep
++IfcMatrix
++IfcPolyLoop
++IfcRepresentationItem
++IfcRevolvedAreaSolid
++IfcShell
++IfcShellBasedSurfaceModel
++IfcSolidModel
++IfcSweptAreaSolid
++IfcSweptDiskSolid
++IfcVector
++IfcActorRole
++IfcAddress
++IfcAnnotation
++IfcApplication
++IfcBuilding
++IfcChangeActionEnum
++IfcClosedShell
++IfcColourRgb
++IfcComplexProperty
++IfcConversionBasedUnit
++IfcDoor
++IfcElementQuantity
++IfcFeatureElementSubtraction
++IfcGeometricRepresentationContext
++IfcGroup
++IfcLocalPlacement
++IfcMappedItem
++IfcMatrix
++IfcMeasureWithUnit
++IfcMonetaryUnit
++IfcNamedUnit
++IfcNormalisedRatioMeasure
++IfcObjectDefinition
++IfcObjectPlacement
++IfcOpeningElement
++IfcOrganization
++IfcOwnerHistory
++IfcPerson
++IfcPersonAndOrganization
++IfcProduct
++IfcProductRepresentation
++IfcProject
++IfcProperty
++IfcPropertyListValue
++IfcPropertySet
++IfcPropertySingleValue
++IfcRelAggregates
++IfcRelAssignsToGroup
++IfcRelContainedInSpatialStructure
++IfcRelDefinesByProperties
++IfcRelVoidsElement
++IfcRepresentation
++IfcRepresentationContext
++IfcRepresentationItem
++IfcRepresentationMap
++IfcSite
++IfcSIUnit
++IfcSomething
++IfcSpace
++IfcSpatialStructureElement
++IfcSpatialStructureElements
++IfcUnit
++IfcUnitAssignment
++IfcValue
++IfcVector
++IfcPresentationStyleAssignment
++IfcPresentationStyleSelect
++IfcRepresentationItem
++IfcStyledItem
++IfcSurfaceStyle
++IfcSurfaceStyleElementSelect
++IfcSurfaceStyleRendering
++IfcSurfaceStyleShading
++IfcSurfaceStyleWithTextures
++IfcArbitraryClosedProfileDef
++IfcArbitraryOpenProfileDef
++IfcCartesianPoint
++IfcCircleHollowProfileDef
++IfcCircleProfileDef
++IfcCurve
++IfcFloat
++IfcIShapeProfileDef
++IfcMatrix
++IfcParameterizedProfileDef
++IfcPolyline
++IfcProfileDef
++IfcRectangleProfileDef
++IfcVector
+diff --git a/scripts/IFCImporter/genentitylist.sh b/scripts/IFCImporter/genentitylist.sh
+index e51959d..d5015ce 100644
+--- a/scripts/IFCImporter/genentitylist.sh
++++ b/scripts/IFCImporter/genentitylist.sh
+@@ -1,3 +1,4 @@
+ #!/bin/sh
++cat entitylistheader.txt > entitylist.txt
+ cd ../../code
+-grep -E 'Ifc([A-Z][a-z]*)+' -o IFCLoader.cpp IFCGeometry.cpp IFCCurve.cpp IFCProfile.cpp IFCMaterial.cpp | uniq | sed s/.*:// > ../scripts/IFCImporter/output.txt
++grep -E 'Ifc([A-Z][a-z]*)+' -o IFCLoader.cpp IFCGeometry.cpp IFCCurve.cpp IFCProfile.cpp IFCMaterial.cpp | sort | uniq | sed s/.*:// >> ../scripts/IFCImporter/entitylist.txt

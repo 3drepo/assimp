@@ -395,6 +395,8 @@ SET(BLENDER_SRCS
 SOURCE_GROUP( BLENDER FILES ${BLENDER_SRCS})
 
 SET(IFC_SRCS
+	IFCMetaData.cpp
+	IFCMetaData.h
 	IFCLoader.cpp
 	IFCLoader.h
 	IFCReaderGen.cpp
