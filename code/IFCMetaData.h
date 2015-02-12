@@ -5,8 +5,8 @@ Open Asset Import Library (ASSIMP)
 Copyright (c) 2006-2010, ASSIMP Development Team
 All rights reserved.
 
-Redistribution and use of this software in source and binary forms, 
-with or without modification, are permitted provided that the 
+Redistribution and use of this software in source and binary forms,
+with or without modification, are permitted provided that the
 following conditions are met:
 
 * Redistributions of source code must retain the above
@@ -23,16 +23,16 @@ following conditions are met:
   derived from this software without specific prior
   written permission of the ASSIMP Development Team.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
 OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ----------------------------------------------------------------------
@@ -57,7 +57,15 @@ namespace IFC {
 
 	template <typename T> aiNode *ExtractMetaData(const aiNode *parent, const T& in, ConversionData& conv);
 
-{converter-decl}
+	template <> aiNode *ExtractMetaData<IfcPersonAndOrganization>(const aiNode *parent, const IfcPersonAndOrganization& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcGroup>(const aiNode *parent, const IfcGroup& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcActorRole>(const aiNode *parent, const IfcActorRole& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcZone>(const aiNode *parent, const IfcZone& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcApplication>(const aiNode *parent, const IfcApplication& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcOwnerHistory>(const aiNode *parent, const IfcOwnerHistory& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcPerson>(const aiNode *parent, const IfcPerson& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcOrganization>(const aiNode *parent, const IfcOrganization& in, ConversionData& conv);
+
 }
 }
 

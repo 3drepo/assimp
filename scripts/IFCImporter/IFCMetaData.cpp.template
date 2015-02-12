@@ -85,7 +85,7 @@ namespace IFC {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	inline void AppendSubnodes(aiNode *parent, const std::vector<aiNode *>& subnodes)
+	void AppendSubnodes(aiNode *parent, const std::vector<aiNode *>& subnodes)
 	{
 		if (subnodes.size() && parent)
 		{
