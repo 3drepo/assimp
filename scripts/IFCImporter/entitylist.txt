@@ -71,6 +71,8 @@ IfcOwnerHistory
 IfcParameterizedProfileDef
 IfcPerson
 IfcPersonAndOrganization
+IfcPlane
+IfcPolygonalBoundedHalfSpace
 IfcPolyline
 IfcPolyLoop
 IfcPresentationStyleAssignment
@@ -104,6 +106,7 @@ IfcSpace
 IfcSpatialStructureElement
 IfcSpatialStructureElements
 IfcStyledItem
+IfcSurface
 IfcSurfaceStyle
 IfcSurfaceStyleElementSelect
 IfcSurfaceStyleRendering
