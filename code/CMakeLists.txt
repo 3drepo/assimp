@@ -55,10 +55,12 @@ SET( PUBLIC_HEADERS
 	${HEADER_PATH}/NullLogger.hpp
 	${HEADER_PATH}/cexport.h
 	${HEADER_PATH}/Exporter.hpp
+	${HEADER_PATH}/optimmap.h
 )
 
 SET( Core_SRCS
 	Assimp.cpp
+	optimmap.cpp
 )
 
 SET( Boost_SRCS

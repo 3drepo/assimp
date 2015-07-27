@@ -117,8 +117,9 @@ private:
 	// Collect vertex/face data
 	void CollectData( aiScene* pcScene, aiNode* pcNode,
 		unsigned int iMat,
-		unsigned int iVFormat, 
-		aiMesh* pcMeshOut, 
+		unsigned int iVFormat,
+		aiMesh* pcMeshOut,
+		aiOptimMap *mapOut,
 		unsigned int aiCurrent[2],
 		unsigned int* num_refs);
 
