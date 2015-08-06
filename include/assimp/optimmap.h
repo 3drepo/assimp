@@ -61,6 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 struct aiNode;
+struct aiMesh;
 
 // ---------------------------------------------------------------------------
 /** @brief Data structure for an Optimization Map
@@ -72,13 +73,13 @@ struct aiNode;
 #ifdef __cplusplus
 
 typedef struct {
-	uintptr_t childPointer;
+	uintptr_t childMesh;
 	int startVertexIDX;
 	int endVertexIDX;
 } aiVMap;
 
 typedef struct {
-	uintptr_t childPointer;
+	uintptr_t childMesh;
 	int startTriangleIDX;
 	int endTriangleIDX;
 	int offset;
@@ -86,10 +87,10 @@ typedef struct {
 
 template <class T>
 struct mapPtrCompare {
-    uintptr_t pointerValue;
-    mapPtrCompare(uintptr_t pointerValue) : pointerValue(pointerValue) { }
+    uintptr_t meshPointer;
+    mapPtrCompare(uintptr_t meshPointer) : meshPointer(meshPointer) { }
 
-    bool operator ()(T const& obj) const { return obj.childPointer == pointerValue; }
+    bool operator ()(T const& obj) const { return obj.childMesh == meshPointer; }
 };	
 
 struct ASSIMP_API aiOptimMap
@@ -102,14 +103,21 @@ struct aiOptimMap
 
 public:
 
-	std::set<uintptr_t> mergeMap;
+	std::set<uintptr_t > mergeMap;
 
-	std::vector<aiVMap> vertexMaps; // Vertex Maps
-	std::vector<aiTMap> triangleMaps; // Triangle Maps
+	std::map<uintptr_t, std::vector<aiVMap> > vertexMaps; // Map between mesh id and a set of vertices
+	std::map<uintptr_t, std::vector<aiTMap> > triangleMaps; // Map between mesh id and a set of triangles
 
+	std::map<uintptr_t, int> triangleOffset; // Offsets for each of the triangle maps
+
+	void addMergedVertexMap(aiMesh *mergedMesh, aiMesh *mergingMesh, int from, int num);
+	void addMergedTriangleMap(aiMesh *mergedMesh, aiMesh *mergingMesh, int from, int num, int offset);
 	void mergeInto(aiNode *mergingNode);
-	void addMergedVertexMap(aiNode *mergingNode, int from, int num);
-	void addMergedTriangleMap(aiNode *mergingNode, int from, int num, int offset);
+
+private:
+	
+	void pushTriangleMap(uintptr_t meshPointer, const aiTMap& tMap);
+	void pushVertexMap(uintptr_t meshPointer, const aiVMap& vMap);
 
 #endif
 

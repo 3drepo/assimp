@@ -165,7 +165,7 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
 					pcMesh->mVertices,
 					pcMesh->mNumVertices * sizeof(aiVector3D));
 
-				mapOut->addMergedVertexMap(pcNode, aiCurrent[AI_PTVS_VERTEX], pcMesh->mNumVertices);
+				mapOut->addMergedVertexMap(pcMeshOut, pcMesh, aiCurrent[AI_PTVS_VERTEX], pcMesh->mNumVertices);
 
 				if (iVFormat & 0x2) {
 					// copy normals without modifying them
@@ -192,7 +192,7 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
 					pcMeshOut->mVertices[aiCurrent[AI_PTVS_VERTEX]+n] = pcNode->mTransformation * pcMesh->mVertices[n];
 				}
 
-				mapOut->addMergedVertexMap(pcNode, aiCurrent[AI_PTVS_VERTEX], pcMesh->mNumVertices);
+				mapOut->addMergedVertexMap(pcMeshOut, pcMesh, aiCurrent[AI_PTVS_VERTEX], pcMesh->mNumVertices);
 
 				aiMatrix4x4 mWorldIT = pcNode->mTransformation;
 				mWorldIT.Inverse().Transpose();
@@ -283,7 +283,7 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
 				};
 			}
 
-			mapOut->addMergedTriangleMap(pcNode, aiCurrent[AI_PTVS_FACE], pcMesh->mNumFaces, aiCurrent[AI_PTVS_VERTEX]);
+			mapOut->addMergedTriangleMap(pcMeshOut, pcMesh, aiCurrent[AI_PTVS_FACE], pcMesh->mNumFaces, aiCurrent[AI_PTVS_VERTEX]);
 				
 			aiCurrent[AI_PTVS_VERTEX] += pcMesh->mNumVertices;
 			aiCurrent[AI_PTVS_FACE]   += pcMesh->mNumFaces;

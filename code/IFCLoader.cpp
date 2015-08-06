@@ -805,7 +805,6 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, Conversion
 		data->mValues = new aiMetadataEntry[numProperties];
 
 		data->Set(0, "IFC_id", el.GetID());
-		std::cout << "Setting IFC_id " << el.GetID() << std::endl;
 
 		if (numProperties > 1) {
 			unsigned int index = 1;
