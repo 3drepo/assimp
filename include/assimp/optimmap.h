@@ -47,12 +47,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_OPTIMMAP_H_INC
 
 #include "types.h"
- 
+
 #ifdef __cplusplus
 
 #include <vector>
-#include <set>
-#include <map>
+#include <unordered_set>
+#include <unordered_map>
 #include <boost/uuid/uuid.hpp>
 #include <functional>
 #include <iostream>
@@ -62,6 +62,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct aiNode;
 struct aiMesh;
+struct aiMaterial;
 
 // ---------------------------------------------------------------------------
 /** @brief Data structure for an Optimization Map
@@ -74,16 +75,12 @@ struct aiMesh;
 
 typedef struct {
 	uintptr_t childMesh;
+	uintptr_t material;
 	int startVertexIDX;
 	int endVertexIDX;
-} aiVMap;
-
-typedef struct {
-	uintptr_t childMesh;
 	int startTriangleIDX;
 	int endTriangleIDX;
-	int offset;
-} aiTMap;
+} aiMap;
 
 template <class T>
 struct mapPtrCompare {
@@ -91,7 +88,7 @@ struct mapPtrCompare {
     mapPtrCompare(uintptr_t meshPointer) : meshPointer(meshPointer) { }
 
     bool operator ()(T const& obj) const { return obj.childMesh == meshPointer; }
-};	
+};
 
 struct ASSIMP_API aiOptimMap
 #else
@@ -102,22 +99,16 @@ struct aiOptimMap
 #ifdef __cplusplus
 
 public:
-
-	std::set<uintptr_t > mergeMap;
-
-	std::map<uintptr_t, std::vector<aiVMap> > vertexMaps; // Map between mesh id and a set of vertices
-	std::map<uintptr_t, std::vector<aiTMap> > triangleMaps; // Map between mesh id and a set of triangles
-
-	std::map<uintptr_t, int> triangleOffset; // Offsets for each of the triangle maps
-
-	void addMergedVertexMap(aiMesh *mergedMesh, aiMesh *mergingMesh, int from, int num);
-	void addMergedTriangleMap(aiMesh *mergedMesh, aiMesh *mergingMesh, int from, int num, int offset);
 	void mergeInto(aiNode *mergingNode);
+	void addMeshMap(aiMesh *mergedMesh, aiMesh *mergingMesh, aiMaterial *material, int vertexFrom, int vertexTo, int triFrom, int triTo);
 
+	const std::unordered_set<uintptr_t> &getMergeMap() const { return mergeMap; }
+	const std::unordered_map<uintptr_t, std::vector<aiMap> > &getMeshMaps() const { return meshMaps; }
 private:
-	
-	void pushTriangleMap(uintptr_t meshPointer, const aiTMap& tMap);
-	void pushVertexMap(uintptr_t meshPointer, const aiVMap& vMap);
+	std::unordered_set<uintptr_t > mergeMap;
+	std::unordered_map<uintptr_t, std::vector<aiMap> > meshMaps; // Descriptions of the merges
+
+	void pushMeshMap(uintptr_t meshPointer, const aiMap& map);
 
 #endif
 
