@@ -153,6 +153,8 @@ void FBXImporter::InternReadFile( const std::string& pFile,
 	std::vector<char> contents;
 	contents.resize(stream->FileSize());
 
+	std::cout << "Reading file ... " << std::endl;
+
 	stream->Read(&*contents.begin(),contents.size(),1);
 	const char* const begin = &*contents.begin();
 
@@ -162,6 +164,9 @@ void FBXImporter::InternReadFile( const std::string& pFile,
 	try {
 
 		bool is_binary = false;
+
+		std::cout << "Tokenizing string ... " << std::endl;
+
 		if (!strncmp(begin,"Kaydara FBX Binary",18)) {
 			is_binary = true;
 			TokenizeBinary(tokens,begin,contents.size());
@@ -170,10 +175,12 @@ void FBXImporter::InternReadFile( const std::string& pFile,
 			Tokenize(tokens,begin);
 		}
 
+		std::cout << "Parsing ... " << std::endl;
 		// use this information to construct a very rudimentary 
 		// parse-tree representing the FBX scope structure
 		Parser parser(tokens, is_binary);
 
+		std::cout << "Document ... " << std::endl;
 		// take the raw parse-tree and convert it to a FBX DOM
 		Document doc(parser,settings);
 

@@ -5,8 +5,8 @@ Open Asset Import Library (assimp)
 Copyright (c) 2006-2012, assimp team
 All rights reserved.
 
-Redistribution and use of this software in source and binary forms, 
-with or without modification, are permitted provided that the 
+Redistribution and use of this software in source and binary forms,
+with or without modification, are permitted provided that the
 following conditions are met:
 
 * Redistributions of source code must retain the above
@@ -23,16 +23,16 @@ following conditions are met:
   derived from this software without specific prior
   written permission of the assimp team.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
 OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ----------------------------------------------------------------------
@@ -164,7 +164,7 @@ void SplitLargeMeshesProcess_Triangle::SplitMesh(
 		// now generate all submeshes
 		for (unsigned int i = 0; i < iSubMeshes;++i)
 		{
-			aiMesh* pcMesh			= new aiMesh;			
+			aiMesh* pcMesh			= new aiMesh;
 			pcMesh->mNumFaces		= iOutFaceNum;
 			pcMesh->mMaterialIndex	= pMesh->mMaterialIndex;
 
@@ -329,7 +329,7 @@ void SplitLargeMeshesProcess_Triangle::SplitMesh(
 						if (pMesh->HasTextureCoords( c))
 							pcMesh->mTextureCoords[c][iIndexOut] = pMesh->mTextureCoords[c][iIndex];
 					}
-					// vertex colors 
+					// vertex colors
 					for (unsigned int c = 0;  c < AI_MAX_NUMBER_OF_COLOR_SETS;++c)
 					{
 						if (pMesh->HasVertexColors( c))
@@ -376,9 +376,12 @@ void SplitLargeMeshesProcess_Vertex::Execute( aiScene* pScene)
 
   	if (0xffffffff == this->LIMIT)return;
 
+	std::cout << "N MESHES: " << pScene->mNumMeshes << std::endl;
+
 	DefaultLogger::get()->debug("SplitLargeMeshesProcess_Vertex begin");
 	for( unsigned int a = 0; a < pScene->mNumMeshes; a++)
 		this->SplitMesh(a, pScene->mMeshes[a],avList);
+
 
 	if (avList.size() != pScene->mNumMeshes)
 	{
@@ -414,6 +417,8 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 {
 	if (pMesh->mNumVertices > SplitLargeMeshesProcess_Vertex::LIMIT)
 	{
+		std::cout << "#VERTS: " << pMesh->mNumVertices << std::endl;
+
 		typedef std::vector< std::pair<unsigned int,float> > VertexWeightTable;
 
 		// build a per-vertex weight list if necessary
@@ -424,6 +429,8 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 		// (this could be too large. Max waste is a single digit percentage)
 		const unsigned int iSubMeshes = (pMesh->mNumVertices / SplitLargeMeshesProcess_Vertex::LIMIT) + 1;
 		//const unsigned int iOutVertexNum2 = pMesh->mNumVertices /iSubMeshes;
+
+		std::cout << "ISUBMESHES: " << iSubMeshes << std::endl;
 
 		// create a std::vector<unsigned int> to indicate which vertices
 		// have already been copied
@@ -441,7 +448,7 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 		{
 			const unsigned int iOutVertexNum = SplitLargeMeshesProcess_Vertex::LIMIT;
 
-			aiMesh* pcMesh			= new aiMesh;			
+			aiMesh* pcMesh			= new aiMesh;
 			pcMesh->mNumVertices	= 0;
 			pcMesh->mMaterialIndex	= pMesh->mMaterialIndex;
 
@@ -510,7 +517,7 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 					// check whether we do already have this vertex
 					if (0xFFFFFFFF == avWasCopied[iIndex])
 					{
-						iNeed++; 
+						iNeed++;
 					}
 				}
 				if (pcMesh->mNumVertices + iNeed > iOutVertexNum)
@@ -578,7 +585,7 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 							pcMesh->mTextureCoords[c][pcMesh->mNumVertices] = pMesh->mTextureCoords[c][iIndex];
 						}
 					}
-					// vertex colors 
+					// vertex colors
 					for (unsigned int c = 0;  c < AI_MAX_NUMBER_OF_COLOR_SETS;++c)
 					{
 						if (pMesh->HasVertexColors( c))
@@ -654,6 +661,8 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 
 			for (unsigned int p = 0; p < pcMesh->mNumFaces;++p)
 				pcMesh->mFaces[p] = vFaces[p];
+
+			std::cout << "NM: " << pcMesh->mNumFaces << " NV: " << pcMesh->mNumVertices << std::endl;
 
 			// add the newly created mesh to the list
 			avList.push_back(std::pair<aiMesh*, unsigned int>(pcMesh,a));

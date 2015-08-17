@@ -474,6 +474,8 @@ SET( PostProcessing_SRCS
 	GenFaceNormalsProcess.h
 	GenVertexNormalsProcess.cpp
 	GenVertexNormalsProcess.h
+	MultiPartOptim.cpp
+	MultiPartOptim.h
 	PretransformVertices.cpp
 	PretransformVertices.h
 	ImproveCacheLocality.cpp

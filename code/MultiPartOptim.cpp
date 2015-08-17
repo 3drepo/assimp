@@ -39,12 +39,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------------------------------------------------
 */
 
-/** @file PretransformVertices.cpp
- *  @brief Implementation of the "PretransformVertices" post processing step 
+/** @file MultiPartOptim.cpp
+ *  @brief Implementation of the "MultiPartOptim" post processing step 
 */
 
 #include "AssimpPCH.h"
-#include "PretransformVertices.h"
+#include "MultiPartOptim.h"
 #include "ProcessHelper.h"
 #include "SceneCombiner.h"
 
@@ -56,32 +56,31 @@ using namespace Assimp;
 
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
-PretransformVertices::PretransformVertices()
-:	configKeepHierarchy (false), configNormalize(false), configTransform(false), configTransformation()
+MultiPartOptim::MultiPartOptim()
+: configNormalize(false), configTransform(false), configTransformation()
 {
 }
 
 // ------------------------------------------------------------------------------------------------
 // Destructor, private as well
-PretransformVertices::~PretransformVertices()
+MultiPartOptim::~MultiPartOptim()
 {
 	// nothing to do here
 }
 
 // ------------------------------------------------------------------------------------------------
 // Returns whether the processing step is present in the given flag field.
-bool PretransformVertices::IsActive( unsigned int pFlags) const
+bool MultiPartOptim::IsActive( unsigned int pFlags) const
 {
 	return	(pFlags & aiProcess_PreTransformVertices) != 0;
 }
 
 // ------------------------------------------------------------------------------------------------
 // Setup import configuration
-void PretransformVertices::SetupProperties(const Importer* pImp)
+void MultiPartOptim::SetupProperties(const Importer* pImp)
 {
 	// Get the current value of AI_CONFIG_PP_PTV_KEEP_HIERARCHY, AI_CONFIG_PP_PTV_NORMALIZE,
 	// AI_CONFIG_PP_PTV_ADD_ROOT_TRANSFORMATION and AI_CONFIG_PP_PTV_ROOT_TRANSFORMATION
-	configKeepHierarchy = (0 != pImp->GetPropertyInteger(AI_CONFIG_PP_PTV_KEEP_HIERARCHY,0));
 	configNormalize = (0 != pImp->GetPropertyInteger(AI_CONFIG_PP_PTV_NORMALIZE,0));
 	configTransform = (0 != pImp->GetPropertyInteger(AI_CONFIG_PP_PTV_ADD_ROOT_TRANSFORMATION,0));
 
@@ -90,7 +89,7 @@ void PretransformVertices::SetupProperties(const Importer* pImp)
 
 // ------------------------------------------------------------------------------------------------
 // Count the number of nodes
-unsigned int PretransformVertices::CountNodes( aiNode* pcNode )
+unsigned int MultiPartOptim::CountNodes( aiNode* pcNode )
 {
 	unsigned int iRet = 1;
 	for (unsigned int i = 0;i < pcNode->mNumChildren;++i)
@@ -102,12 +101,12 @@ unsigned int PretransformVertices::CountNodes( aiNode* pcNode )
 
 // ------------------------------------------------------------------------------------------------
 // Get a bitwise combination identifying the vertex format of a mesh
-unsigned int PretransformVertices::GetMeshVFormat(aiMesh* pcMesh)
+unsigned int MultiPartOptim::GetMeshVFormat(aiMesh* pcMesh)
 {
 	// the vertex format is stored in aiMesh::mBones for later retrieval.
 	// there isn't a good reason to compute it a few hundred times
 	// from scratch. The pointer is unused as animations are lost
-	// during PretransformVertices.
+	// during MultiPartOptim.
 	if (pcMesh->mBones)
 		return (unsigned int)(uint64_t)pcMesh->mBones;
 
@@ -122,18 +121,22 @@ unsigned int PretransformVertices::GetMeshVFormat(aiMesh* pcMesh)
 // ------------------------------------------------------------------------------------------------
 // Count the number of vertices in the whole scene and a given
 // material index
-void PretransformVertices::CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNode, unsigned int iMat,
+void MultiPartOptim::CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNode, int iMat,
 	unsigned int iVFormat, unsigned int* piFaces, unsigned int* piVertices)
 {
 	for (unsigned int i = 0; i < pcNode->mNumMeshes;++i)
 	{
 		aiMesh* pcMesh = pcScene->mMeshes[ pcNode->mMeshes[i] ]; 
-		if (iMat == pcMesh->mMaterialIndex && iVFormat == GetMeshVFormat(pcMesh))
+
+		int numTextures = pcScene->mMaterials[pcMesh->mMaterialIndex]->GetTextureCount(aiTextureType_DIFFUSE);
+
+		if (((iMat == -1 && !numTextures) || iMat == (int)pcMesh->mMaterialIndex) && iVFormat == GetMeshVFormat(pcMesh))
 		{
 			*piVertices += pcMesh->mNumVertices;
 			*piFaces += pcMesh->mNumFaces;
 		}
 	}
+
 	for (unsigned int i = 0;i < pcNode->mNumChildren;++i)
 	{
 		CountVerticesAndFaces(pcScene,pcNode->mChildren[i],iMat,
@@ -143,7 +146,7 @@ void PretransformVertices::CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNo
 
 // ------------------------------------------------------------------------------------------------
 // Collect vertex/face data
-void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsigned int iMat,
+void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 	unsigned int iVFormat, aiMesh* pcMeshOut, aiOptimMap *mapOut,
 	unsigned int aiCurrent[2], unsigned int* num_refs)
 {
@@ -152,7 +155,10 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
 	for (unsigned int i = 0; i < pcNode->mNumMeshes;++i)
 	{
 		aiMesh* pcMesh = pcScene->mMeshes[ pcNode->mMeshes[i] ]; 
-		if (iMat == pcMesh->mMaterialIndex && iVFormat == GetMeshVFormat(pcMesh))
+
+		int numTextures = pcScene->mMaterials[pcMesh->mMaterialIndex]->GetTextureCount(aiTextureType_DIFFUSE);
+
+		if (((iMat == -1 && !numTextures) || iMat == (int)pcMesh->mMaterialIndex) && iVFormat == GetMeshVFormat(pcMesh))
 		{
 			// Decrement mesh reference counter
 			unsigned int& num_ref = num_refs[pcNode->mMeshes[i]];
@@ -165,13 +171,13 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
 					pcMesh->mVertices,
 					pcMesh->mNumVertices * sizeof(aiVector3D));
 
-
 				if (iVFormat & 0x2) {
 					// copy normals without modifying them
 					::memcpy(pcMeshOut->mNormals + aiCurrent[AI_PTVS_VERTEX],
 						pcMesh->mNormals,
 						pcMesh->mNumVertices * sizeof(aiVector3D));
 				}
+
 				if (iVFormat & 0x4)
 				{
 					// copy tangents without modifying them
@@ -214,6 +220,7 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
 					}
 				}
 			}
+
 			unsigned int p = 0;
 			while (iVFormat & (0x100 << p))
 			{
@@ -280,10 +287,8 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
 				};
 			}
 
-			mapOut->addMeshMap(pcMeshOut, pcMesh,
-				pcScene->mMaterials[pcMesh->mMaterialIndex],
- 				aiCurrent[AI_PTVS_VERTEX], aiCurrent[AI_PTVS_VERTEX] + pcMesh->mNumVertices,
- 				aiCurrent[AI_PTVS_FACE], aiCurrent[AI_PTVS_FACE] + pcMesh->mNumFaces);
+			mapOut->addMeshMap(pcMeshOut, pcMesh, pcScene->mMaterials[pcMesh->mMaterialIndex], aiCurrent[AI_PTVS_VERTEX], 
+				aiCurrent[AI_PTVS_VERTEX] + pcMesh->mNumVertices, aiCurrent[AI_PTVS_FACE], aiCurrent[AI_PTVS_FACE] + pcMesh->mNumFaces);
 
 			aiCurrent[AI_PTVS_VERTEX] += pcMesh->mNumVertices;
 			aiCurrent[AI_PTVS_FACE]   += pcMesh->mNumFaces;
@@ -300,21 +305,29 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
 // ------------------------------------------------------------------------------------------------
 // Get a list of all vertex formats that occur for a given material index
 // The output list contains duplicate elements
-void PretransformVertices::GetVFormatList( aiScene* pcScene, unsigned int iMat,
+void MultiPartOptim::GetVFormatList( aiScene* pcScene, unsigned int iMat,
 	std::list<unsigned int>& aiOut)
 {
 	for (unsigned int i = 0; i < pcScene->mNumMeshes;++i)
 	{
 		aiMesh* pcMesh = pcScene->mMeshes[ i ];
-		if (iMat == pcMesh->mMaterialIndex)	{
-			aiOut.push_back(GetMeshVFormat(pcMesh));
+
+		int numTextures = pcScene->mMaterials[pcMesh->mMaterialIndex]->GetTextureCount(aiTextureType_DIFFUSE);
+
+		if (!numTextures && (iMat == -1))
+		{
+				aiOut.push_back(GetMeshVFormat(pcMesh));
+		} else {
+			if (iMat == pcMesh->mMaterialIndex)	{
+				aiOut.push_back(GetMeshVFormat(pcMesh));
+			}
 		}
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
 // Compute the absolute transformation matrices of each node
-void PretransformVertices::ComputeAbsoluteTransform( aiNode* pcNode )
+void MultiPartOptim::ComputeAbsoluteTransform( aiNode* pcNode )
 {
 	if (pcNode->mParent)	{
 		pcNode->mTransformation = pcNode->mParent->mTransformation*pcNode->mTransformation;
@@ -327,7 +340,7 @@ void PretransformVertices::ComputeAbsoluteTransform( aiNode* pcNode )
 
 // ------------------------------------------------------------------------------------------------
 // Apply the node transformation to a mesh
-void PretransformVertices::ApplyTransform(aiMesh* mesh, const aiMatrix4x4& mat)
+void MultiPartOptim::ApplyTransform(aiMesh* mesh, const aiMatrix4x4& mat)
 {
 	// Check whether we need to transform the coordinates at all
 	if (!mat.IsIdentity()) {
@@ -361,7 +374,7 @@ void PretransformVertices::ApplyTransform(aiMesh* mesh, const aiMatrix4x4& mat)
 
 // ------------------------------------------------------------------------------------------------
 // Simple routine to build meshes in worldspace, no further optimization
-void PretransformVertices::BuildWCSMeshes(std::vector<aiMesh*>& out, aiMesh** in,
+void MultiPartOptim::BuildWCSMeshes(std::vector<aiMesh*>& out, aiMesh** in,
 	unsigned int numIn, aiNode* node)
 {
 	// NOTE:
@@ -391,7 +404,7 @@ void PretransformVertices::BuildWCSMeshes(std::vector<aiMesh*>& out, aiMesh** in
 			}
 			if (node->mMeshes[i] < numIn) {
 				// Worst case. Need to operate on a full copy of the mesh
-				DefaultLogger::get()->info("PretransformVertices: Copying mesh due to mismatching transforms");
+				DefaultLogger::get()->info("MultiPartOptim: Copying mesh due to mismatching transforms");
 				aiMesh* ntz;
 
 				const unsigned int tmp = mesh->mNumBones; //
@@ -416,7 +429,7 @@ void PretransformVertices::BuildWCSMeshes(std::vector<aiMesh*>& out, aiMesh** in
 
 // ------------------------------------------------------------------------------------------------
 // Reset transformation matrices to identity
-void PretransformVertices::MakeIdentityTransform(aiNode* nd)
+void MultiPartOptim::MakeIdentityTransform(aiNode* nd)
 {
 	nd->mTransformation = aiMatrix4x4();
 
@@ -427,7 +440,7 @@ void PretransformVertices::MakeIdentityTransform(aiNode* nd)
 
 // ------------------------------------------------------------------------------------------------
 // Build reference counters for all meshes
-void PretransformVertices::BuildMeshRefCountArray(aiNode* nd, unsigned int * refs)
+void MultiPartOptim::BuildMeshRefCountArray(aiNode* nd, unsigned int * refs)
 {
 	for (unsigned int i = 0; i< nd->mNumMeshes;++i)
 		refs[nd->mMeshes[i]]++;
@@ -439,9 +452,9 @@ void PretransformVertices::BuildMeshRefCountArray(aiNode* nd, unsigned int * ref
 
 // ------------------------------------------------------------------------------------------------
 // Executes the post processing step on the given imported data.
-void PretransformVertices::Execute( aiScene* pScene)
+void MultiPartOptim::Execute( aiScene* pScene)
 {
-	DefaultLogger::get()->debug("PretransformVerticesProcess begin");
+	DefaultLogger::get()->debug("MultiPartOptimProcess begin");
 
 	// Return immediately if we have no meshes
 	if (!pScene->mNumMeshes)
@@ -477,45 +490,82 @@ void PretransformVertices::Execute( aiScene* pScene)
 	// Build a set of meshes and their optimization maps
 	std::map<aiMesh *, aiOptimMap *> mesh_map;
 
-	// Keep scene hierarchy? It's an easy job in this case ...
-	// we go on and transform all meshes, if one is referenced by nodes
-	// with different absolute transformations a depth copy of the mesh
-	// is required.
-	if( configKeepHierarchy ) {
+	std::vector<int> texMaterial;
 
-		// Hack: store the matrix we're transforming a mesh with in aiMesh::mBones
-		BuildWCSMeshes(apcOutMeshes,pScene->mMeshes,pScene->mNumMeshes, pScene->mRootNode);
+	// First count how many meshes we need, those with textures
+	// and one for those without textures
+	int numMeshes = 1;
 
-		// ... if new meshes have been generated, append them to the end of the scene
-		if (apcOutMeshes.size() > 0) {
-			aiMesh** npp = new aiMesh*[pScene->mNumMeshes + apcOutMeshes.size()];
+	for (unsigned int i = 0; i < pScene->mNumMaterials; i++)
+	{
+		int numTextures = pScene->mMaterials[i]->GetTextureCount(aiTextureType_DIFFUSE);
+		texMaterial.push_back(numTextures);
 
-			memcpy(npp,pScene->mMeshes,sizeof(aiMesh*)*pScene->mNumMeshes);
-			memcpy(npp+pScene->mNumMeshes,&apcOutMeshes[0],sizeof(aiMesh*)*apcOutMeshes.size());
+		numMeshes += (numTextures > 0);
+	}
 
-			pScene->mNumMeshes  += apcOutMeshes.size();
-			delete[] pScene->mMeshes; pScene->mMeshes = npp;
-		}
+	apcOutMeshes.reserve(numMeshes);
+	std::list<unsigned int> aiVFormats;
 
-		// now iterate through all meshes and transform them to worldspace
-		for (unsigned int i = 0; i < pScene->mNumMeshes; ++i) {
-			ApplyTransform(pScene->mMeshes[i],*reinterpret_cast<aiMatrix4x4*>( pScene->mMeshes[i]->mBones ));
+	std::vector<unsigned int> s(pScene->mNumMeshes,0);
+	BuildMeshRefCountArray(pScene->mRootNode,&s[0]);
 
-			// prevent improper destruction
-			pScene->mMeshes[i]->mBones    = NULL;
-			pScene->mMeshes[i]->mNumBones = 0;
+	// First build mesh that contains meshes that have no
+	// texture
+	aiVFormats.clear();
+	GetVFormatList(pScene, -1, aiVFormats);
+	aiVFormats.sort();
+	aiVFormats.unique();
+	for (std::list<unsigned int>::const_iterator j =  aiVFormats.begin();j != aiVFormats.end();++j)	{
+		unsigned int iVertices = 0;
+		unsigned int iFaces = 0; 
+
+		CountVerticesAndFaces(pScene,pScene->mRootNode,-1,*j,&iFaces,&iVertices);
+
+		std::cout << "FACES: " << iFaces << " - VERTICES: " << iVertices << std::endl;
+
+		if (0 != iFaces && 0 != iVertices)
+		{
+			apcOutMeshes.push_back(new aiMesh());
+			aiMesh* pcMesh = apcOutMeshes.back();
+			pcMesh->mNumFaces = iFaces;
+			pcMesh->mNumVertices = iVertices;
+			pcMesh->mFaces = new aiFace[iFaces];
+			pcMesh->mVertices = new aiVector3D[iVertices];
+			pcMesh->mMaterialIndex = 1
+			;
+
+			if ((*j) & 0x2)pcMesh->mNormals = new aiVector3D[iVertices];
+			if ((*j) & 0x4)
+			{
+				pcMesh->mTangents    = new aiVector3D[iVertices];
+				pcMesh->mBitangents  = new aiVector3D[iVertices];
+			}
+			iFaces = 0;
+			while ((*j) & (0x100 << iFaces))
+			{
+				pcMesh->mTextureCoords[iFaces] = new aiVector3D[iVertices];
+				if ((*j) & (0x10000 << iFaces))pcMesh->mNumUVComponents[iFaces] = 3;
+				else pcMesh->mNumUVComponents[iFaces] = 2;
+				iFaces++;
+			}
+			iFaces = 0;
+			while ((*j) & (0x1000000 << iFaces))
+				pcMesh->mColors[iFaces++] = new aiColor4D[iVertices];
+
+			// fill the mesh ...
+			unsigned int aiTemp[2] = {0,0};
+			aiOptimMap *mapOut = new aiOptimMap();
+
+			CollectData(pScene,pScene->mRootNode,-1,*j,pcMesh,mapOut, aiTemp,&s[0]);
+
+			mesh_map.insert(std::make_pair(pcMesh, mapOut));
 		}
 	}
-	else {
 
-		apcOutMeshes.reserve(pScene->mNumMaterials<<1u);
-		std::list<unsigned int> aiVFormats;
-
-		std::vector<unsigned int> s(pScene->mNumMeshes,0);
-		BuildMeshRefCountArray(pScene->mRootNode,&s[0]);
-
-
-		for (unsigned int i = 0; i < pScene->mNumMaterials;++i)		{
+	for (unsigned int i = 0; i < pScene->mNumMaterials;++i)		{
+		if (texMaterial[i] > 0)
+		{
 			// get the list of all vertex formats for this material
 			aiVFormats.clear();
 			GetVFormatList(pScene,i,aiVFormats);
@@ -524,7 +574,11 @@ void PretransformVertices::Execute( aiScene* pScene)
 			for (std::list<unsigned int>::const_iterator j =  aiVFormats.begin();j != aiVFormats.end();++j)	{
 				unsigned int iVertices = 0;
 				unsigned int iFaces = 0; 
+
 				CountVerticesAndFaces(pScene,pScene->mRootNode,i,*j,&iFaces,&iVertices);
+
+				std::cout << "FACES: " << iFaces << " - VERTICES: " << iVertices << std::endl;
+
 				if (0 != iFaces && 0 != iVertices)
 				{
 					apcOutMeshes.push_back(new aiMesh());
@@ -555,48 +609,49 @@ void PretransformVertices::Execute( aiScene* pScene)
 					// fill the mesh ...
 					unsigned int aiTemp[2] = {0,0};
 					aiOptimMap *mapOut = new aiOptimMap();
-					CollectData(pScene,pScene->mRootNode,i,*j,pcMesh,mapOut, aiTemp,&s[0]);
+
+					CollectData(pScene,pScene->mRootNode, i, *j,pcMesh,mapOut, aiTemp,&s[0]);
 
 					mesh_map.insert(std::make_pair(pcMesh, mapOut));
 				}
 			}
 		}
+	}
 
-		// If no meshes are referenced in the node graph it is possible that we get no output meshes. 
-		if (apcOutMeshes.empty())	{		
-			throw DeadlyImportError("No output meshes: all meshes are orphaned and are not referenced by any nodes");
-		}
-		else
+	// If no meshes are referenced in the node graph it is possible that we get no output meshes. 
+	if (apcOutMeshes.empty())	{		
+		throw DeadlyImportError("No output meshes: all meshes are orphaned and are not referenced by any nodes");
+	}
+	else
+	{
+		// now delete all meshes in the scene and build a new mesh list
+		for (unsigned int i = 0; i < pScene->mNumMeshes;++i)
 		{
-			// now delete all meshes in the scene and build a new mesh list
-			for (unsigned int i = 0; i < pScene->mNumMeshes;++i)
-			{
-				aiMesh* mesh = pScene->mMeshes[i];
-				mesh->mNumBones = 0;
-				mesh->mBones    = NULL;
+			aiMesh* mesh = pScene->mMeshes[i];
+			mesh->mNumBones = 0;
+			mesh->mBones    = NULL;
 
-				// we're reusing the face index arrays. avoid destruction
-				for (unsigned int a = 0; a < mesh->mNumFaces; ++a) {
-					mesh->mFaces[a].mNumIndices = 0;
-					mesh->mFaces[a].mIndices = NULL;
-				}
-
-				delete mesh;
-
-				// Invalidate the contents of the old mesh array. We will most
-				// likely have less output meshes now, so the last entries of 
-				// the mesh array are not overridden. We set them to NULL to 
-				// make sure the developer gets notified when his application
-				// attempts to access these fields ...
-				mesh = NULL;
+			// we're reusing the face index arrays. avoid destruction
+			for (unsigned int a = 0; a < mesh->mNumFaces; ++a) {
+				mesh->mFaces[a].mNumIndices = 0;
+				mesh->mFaces[a].mIndices = NULL;
 			}
 
-			// It is impossible that we have more output meshes than 
-			// input meshes, so we can easily reuse the old mesh array
-			pScene->mNumMeshes = (unsigned int)apcOutMeshes.size();
-			for (unsigned int i = 0; i < pScene->mNumMeshes;++i) {
-				pScene->mMeshes[i] = apcOutMeshes[i];
-			}
+			delete mesh;
+
+			// Invalidate the contents of the old mesh array. We will most
+			// likely have less output meshes now, so the last entries of 
+			// the mesh array are not overridden. We set them to NULL to 
+			// make sure the developer gets notified when his application
+			// attempts to access these fields ...
+			mesh = NULL;
+		}
+
+		// It is impossible that we have more output meshes than 
+		// input meshes, so we can easily reuse the old mesh array
+		pScene->mNumMeshes = (unsigned int)apcOutMeshes.size();
+		for (unsigned int i = 0; i < pScene->mNumMeshes;++i) {
+			pScene->mMeshes[i] = apcOutMeshes[i];
 		}
 	}
 
@@ -634,69 +689,65 @@ void PretransformVertices::Execute( aiScene* pScene)
 		l->mDirection  = aiMatrix3x3( nd->mTransformation ) * l->mDirection;
 	}
 
-	if( !configKeepHierarchy ) {
+	// now delete all nodes in the scene and build a new
+	// flat node graph with a root node and some level 1 children
+	delete pScene->mRootNode;
+	pScene->mRootNode = new aiNode();
+	pScene->mRootNode->mName.Set("<dummy_root>");
 
-		// now delete all nodes in the scene and build a new
-		// flat node graph with a root node and some level 1 children
-		delete pScene->mRootNode;
-		pScene->mRootNode = new aiNode();
-		pScene->mRootNode->mName.Set("<dummy_root>");
+	if (1 == pScene->mNumMeshes && !pScene->mNumLights && !pScene->mNumCameras)
+	{
+		pScene->mRootNode->mNumMeshes = 1;
+		pScene->mRootNode->mMeshes = new unsigned int[1];
+		pScene->mRootNode->mMeshes[0] = 0;
 
-		if (1 == pScene->mNumMeshes && !pScene->mNumLights && !pScene->mNumCameras)
-		{
-			pScene->mRootNode->mNumMeshes = 1;
-			pScene->mRootNode->mMeshes = new unsigned int[1];
-			pScene->mRootNode->mMeshes[0] = 0;
+		std::map<aiMesh *, aiOptimMap *>::iterator mesh_map_it = mesh_map.find(pScene->mMeshes[0]);
 
-			std::map<aiMesh *, aiOptimMap *>::iterator mesh_map_it = mesh_map.find(pScene->mMeshes[0]);
-
-			if (mesh_map_it != mesh_map.end())
-				pScene->mRootNode->mOptimMap = mesh_map_it->second;
-		}
-		else
-		{
-			pScene->mRootNode->mNumChildren = pScene->mNumMeshes+pScene->mNumLights+pScene->mNumCameras;
-			aiNode** nodes = pScene->mRootNode->mChildren = new aiNode*[pScene->mRootNode->mNumChildren];
-
-			// generate mesh nodes
-			for (unsigned int i = 0; i < pScene->mNumMeshes;++i,++nodes)
-			{
-				aiNode* pcNode = *nodes = new aiNode();
-				pcNode->mParent = pScene->mRootNode;
-				pcNode->mName.length = ::sprintf(pcNode->mName.data,"mesh_%i",i);
-
-				// setup mesh indices
-				pcNode->mNumMeshes = 1;
-				pcNode->mMeshes = new unsigned int[1];
-				pcNode->mMeshes[0] = i;
-
-				std::map<aiMesh *, aiOptimMap *>::iterator mesh_map_it = mesh_map.find(pScene->mMeshes[i]);
-
-				if (mesh_map_it != mesh_map.end())
-					pcNode->mOptimMap = mesh_map_it->second;
-
-			}
-			// generate light nodes
-			for (unsigned int i = 0; i < pScene->mNumLights;++i,++nodes)
-			{
-				aiNode* pcNode = *nodes = new aiNode();
-				pcNode->mParent = pScene->mRootNode;
-				pcNode->mName.length = ::sprintf(pcNode->mName.data,"light_%i",i);
-				pScene->mLights[i]->mName = pcNode->mName;
-			}
-			// generate camera nodes
-			for (unsigned int i = 0; i < pScene->mNumCameras;++i,++nodes)
-			{
-				aiNode* pcNode = *nodes = new aiNode();
-				pcNode->mParent = pScene->mRootNode;
-				pcNode->mName.length = ::sprintf(pcNode->mName.data,"cam_%i",i);
-				pScene->mCameras[i]->mName = pcNode->mName;
-			}
-		}
+		if (mesh_map_it != mesh_map.end())
+			pScene->mRootNode->mOptimMap = mesh_map_it->second;
 	}
-	else {
-		// ... and finally set the transformation matrix of all nodes to identity
-		MakeIdentityTransform(pScene->mRootNode);
+	else
+	{
+		pScene->mRootNode->mNumChildren = pScene->mNumMeshes+pScene->mNumLights+pScene->mNumCameras;
+		aiNode** nodes = pScene->mRootNode->mChildren = new aiNode*[pScene->mRootNode->mNumChildren];
+
+		// generate mesh nodes
+		for (unsigned int i = 0; i < pScene->mNumMeshes;++i,++nodes)
+		{
+			aiNode* pcNode = *nodes = new aiNode();
+			pcNode->mParent = pScene->mRootNode;
+			pcNode->mName.length = ::sprintf(pcNode->mName.data,"mesh_%i",i);
+
+			// setup mesh indices
+			pcNode->mNumMeshes = 1;
+			pcNode->mMeshes = new unsigned int[1];
+			pcNode->mMeshes[0] = i;
+
+			std::map<aiMesh *, aiOptimMap *>::iterator mesh_map_it = mesh_map.find(pScene->mMeshes[i]);
+
+			std::cout << "1: " << (uintptr_t)(pcNode) << " - " ;
+			if (mesh_map_it != mesh_map.end()){
+				std::cout << (uintptr_t)(mesh_map_it->second) << std::endl;
+				pcNode->mOptimMap = mesh_map_it->second;
+			}
+
+		}
+		// generate light nodes
+		for (unsigned int i = 0; i < pScene->mNumLights;++i,++nodes)
+		{
+			aiNode* pcNode = *nodes = new aiNode();
+			pcNode->mParent = pScene->mRootNode;
+			pcNode->mName.length = ::sprintf(pcNode->mName.data,"light_%i",i);
+			pScene->mLights[i]->mName = pcNode->mName;
+		}
+		// generate camera nodes
+		for (unsigned int i = 0; i < pScene->mNumCameras;++i,++nodes)
+		{
+			aiNode* pcNode = *nodes = new aiNode();
+			pcNode->mParent = pScene->mRootNode;
+			pcNode->mName.length = ::sprintf(pcNode->mName.data,"cam_%i",i);
+			pScene->mCameras[i]->mName = pcNode->mName;
+		}
 	}
 
 	if (configNormalize) {
@@ -730,7 +781,7 @@ void PretransformVertices::Execute( aiScene* pScene)
 	{
 		char buffer[4096];
 
-		DefaultLogger::get()->debug("PretransformVerticesProcess finished");
+		DefaultLogger::get()->debug("MultiPartOptimProcess finished");
 
 		sprintf(buffer,"Removed %i nodes and %i animation channels (%i output nodes)",
 			iOldNodes,iOldAnimationChannels,CountNodes(pScene->mRootNode));

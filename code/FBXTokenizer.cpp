@@ -147,6 +147,8 @@ void Tokenize(TokenList& output_tokens, const char* input)
 	for (const char* cur = input;*cur;column += (*cur == '\t' ? ASSIMP_FBX_TAB_WIDTH : 1), ++cur) {
 		const char c = *cur;
 
+		std::cout << "LINE: " << line << std::endl;
+
 		if (IsLineEnd(c)) {
 			comment = false;
 

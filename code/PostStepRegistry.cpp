@@ -74,7 +74,7 @@ corresponding preprocessor flag to selectively disable steps.
 #	include "SplitLargeMeshes.h"
 #endif
 #ifndef ASSIMP_BUILD_NO_PRETRANSFORMVERTICES_PROCESS
-#	include "PretransformVertices.h"
+#	include "MultiPartOptim.h"
 #endif
 #ifndef ASSIMP_BUILD_NO_LIMITBONEWEIGHTS_PROCESS
 #	include "LimitBoneWeightsProcess.h"
@@ -164,7 +164,7 @@ void GetPostProcessingStepInstanceList(std::vector< BaseProcess* >& out)
 	out.push_back( new TextureTransformStep());
 #endif
 #if (!defined ASSIMP_BUILD_NO_PRETRANSFORMVERTICES_PROCESS)
-	out.push_back( new PretransformVertices());
+	out.push_back( new MultiPartOptim());
 #endif
 #if (!defined ASSIMP_BUILD_NO_TRIANGULATE_PROCESS)
 	out.push_back( new TriangulateProcess());
