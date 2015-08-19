@@ -116,14 +116,15 @@ private:
         unsigned int* piFaces,
         unsigned int* piVertices);
 
-    // -------------------------------------------------------------------
-    // Collect vertex/face data
-    void CollectData( aiScene* pcScene, aiNode* pcNode,
-        unsigned int iMat,
-        unsigned int iVFormat,
-        aiMesh* pcMeshOut,
-        unsigned int aiCurrent[2],
-        unsigned int* num_refs);
+	// -------------------------------------------------------------------
+	// Collect vertex/face data
+	void CollectData( aiScene* pcScene, aiNode* pcNode,
+		unsigned int iMat,
+		unsigned int iVFormat, 
+		aiMesh* pcMeshOut, 
+		aiOptimMap *mapOut,
+		unsigned int aiCurrent[2],
+		unsigned int* num_refs);
 
     // -------------------------------------------------------------------
     // Get a list of all vertex formats that occur for a given material

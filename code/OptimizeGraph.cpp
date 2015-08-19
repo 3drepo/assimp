@@ -112,13 +112,17 @@ void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& no
         nd->mChildren[i] = NULL;
     }
 
-    // Check whether we need this node; if not we can replace it by our own children (warn, danger of incest).
+    aiOptimMap *map = new aiOptimMap();
+
+  // Check whether we need this node; if not we can replace it by our own children (warn, danger of incest).
     if (locked.find(AI_OG_GETKEY(nd->mName)) == locked.end() ) {
         for (std::list<aiNode*>::iterator it = child_nodes.begin(); it != child_nodes.end();) {
 
             if (locked.find(AI_OG_GETKEY((*it)->mName)) == locked.end()) {
                 (*it)->mTransformation = nd->mTransformation * (*it)->mTransformation;
                 nodes.push_back(*it);
+
+                map->mergeInto(*it);
 
                 it = child_nodes.erase(it);
                 continue;
@@ -128,6 +132,7 @@ void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& no
 
         if (nd->mNumMeshes || !child_nodes.empty()) {
             nodes.push_back(nd);
+            nd->mOptimMap = map;
         }
         else {
             delete nd; /* bye, node */
@@ -167,6 +172,8 @@ void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& no
                     else {
 
                         child->mTransformation = inv * child->mTransformation ;
+
+			map->mergeInto(child);
 
                         join.push_back(child);
                         it = child_nodes.erase(it);
@@ -217,6 +224,7 @@ void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& no
                 delete[] join_master->mMeshes;
                 join_master->mMeshes = meshes;
                 join_master->mNumMeshes += out_meshes;
+                join_master->mOptimMap = map;
             }
         }
     }

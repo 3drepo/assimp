@@ -53,11 +53,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "material.h"
 #include "anim.h"
 #include "metadata.h"
+#include "optimmap.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct aiOptimMap;
 
 // -------------------------------------------------------------------------------
 /** A node in the imported hierarchy.
@@ -112,12 +114,14 @@ struct aiNode
     /** The meshes of this node. Each entry is an index into the mesh */
     unsigned int* mMeshes;
 
-    /** Metadata associated with this node or NULL if there is no metadata.
-      *  Whether any metadata is generated depends on the source file format. See the
-      * @link importer_notes @endlink page for more information on every source file
-      * format. Importers that don't document any metadata don't write any.
-      */
-    C_STRUCT aiMetadata* mMetaData;
+	/** Metadata associated with this node or NULL if there is no metadata.
+	  *  Whether any metadata is generated depends on the source file format. See the
+	  * @link importer_notes @endlink page for more information on every source file
+	  * format. Importers that don't document any metadata don't write any. 
+	  */
+	C_STRUCT aiMetadata* mMetaData;
+
+	C_STRUCT aiOptimMap* mOptimMap;
 
 #ifdef __cplusplus
     /** Constructor */
@@ -130,6 +134,7 @@ struct aiNode
         , mNumMeshes(0)
         , mMeshes(NULL)
         , mMetaData(NULL)
+        , mOptimMap(NULL)
     {
     }
 
@@ -144,6 +149,7 @@ struct aiNode
         , mNumMeshes(0)
         , mMeshes(NULL)
         , mMetaData(NULL)
+        , mOptimMap(NULL)
     {
     }
 

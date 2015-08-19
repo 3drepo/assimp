@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ==============================================================================
 # List of IFC structures needed by Assimp
 # ==============================================================================
@@ -17,21 +18,53 @@ IfcAxis2Placement
 IfcAxis2Placement2D
 IfcAxis2Placement3D
 IfcBooleanClippingResult
+=======
+# ============================================================================== 
+# List of IFC structures needed by Assimp
+# ============================================================================== 
+# use genentitylist.sh to update this list
+
+# This machine-generated list is not complete, it lacks many intermediate 
+# classes in the inheritance hierarchy. Those are magically augmented by the
+# code generator. Also, the names of all used entities need to be present 
+# in the source code for this to work.
+
+
+IfcActorRole
+IfcAddress
+IfcAnnotation
+IfcApplication
+IfcArbitraryClosedProfileDef
+IfcArbitraryOpenProfileDef
+IfcAxis2Placement3D
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcBooleanResult
 IfcBoundedCurve
 IfcBoundingBox
 IfcBSplineCurve
 IfcBuilding
+<<<<<<< HEAD
 IfcCartesianPoint
 IfcCartesianTransformationOperator
 IfcCartesianTransformationOperator3D
 IfcCartesianTransformationOperator3DnonUniform
+=======
+IfcBuildingStorey
+IfcCartesianPoint
+IfcCartesianTransformationOperator
+IfcChangeActionEnum
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcCircle
 IfcCircleHollowProfileDef
 IfcCircleProfileDef
 IfcClosedShell
+<<<<<<< HEAD
 IfcColourOrFactor
 IfcColourRgb
+=======
+IfcColourRgb
+IfcComplexProperty
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcCompositeCurve
 IfcCompositeCurveSegment
 IfcConic
@@ -40,6 +73,10 @@ IfcConversionBasedUnit
 IfcCurve
 IfcDirection
 IfcDoor
+<<<<<<< HEAD
+=======
+IfcElementQuantity
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcEllipse
 IfcExtrudedAreaSolid
 IfcFace
@@ -47,19 +84,45 @@ IfcFaceBasedSurfaceModel
 IfcFaceBound
 IfcFaceOuterBound
 IfcFeatureElementSubtraction
+<<<<<<< HEAD
 IfcGeometricRepresentationContext
 IfcGeometricRepresentationItem
 IfcHalfSpaceSolid
+=======
+IfcFloat
+IfcFlowSegment
+IfcGeometricRepresentationContext
+IfcGeometricRepresentationItem
+IfcGroup
+IfcIShapeProfileDef
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcLine
 IfcLocalPlacement
 IfcManifoldSolidBrep
 IfcMappedItem
+<<<<<<< HEAD
 IfcMeasureWithUnit
 IfcNamedUnit
 IfcObjectDefinition
 IfcObjectPlacement
 IfcOpeningElement
 IfcParameterizedProfileDef
+=======
+IfcMatrix3
+IfcMatrix4
+IfcMeasureWithUnit
+IfcMonetaryUnit
+IfcNamedUnit
+IfcNormalisedRatioMeasure
+IfcObjectDefinition
+IfcObjectPlacement
+IfcOpeningElement
+IfcOrganization
+IfcOwnerHistory
+IfcParameterizedProfileDef
+IfcPerson
+IfcPersonAndOrganization
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcPlane
 IfcPolygonalBoundedHalfSpace
 IfcPolyline
@@ -70,10 +133,22 @@ IfcProduct
 IfcProductRepresentation
 IfcProfileDef
 IfcProject
+<<<<<<< HEAD
 IfcRectangleProfileDef
 IfcRelAggregates
 IfcRelContainedInSpatialStructure
 IfcRelFillsElement
+=======
+IfcProperty
+IfcPropertyListValue
+IfcPropertySet
+IfcPropertySingleValue
+IfcRectangleProfileDef
+IfcRelAggregates
+IfcRelAssignsToGroup
+IfcRelContainedInSpatialStructure
+IfcRelDefinesByProperties
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcRelVoidsElement
 IfcRepresentation
 IfcRepresentationContext
@@ -84,11 +159,19 @@ IfcShell
 IfcShellBasedSurfaceModel
 IfcSite
 IfcSIUnit
+<<<<<<< HEAD
+=======
+IfcSolidModel
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcSomething
 IfcSpace
 IfcSpatialStructureElement
 IfcSpatialStructureElements
 IfcStyledItem
+<<<<<<< HEAD
+=======
+IfcSurface
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf
 IfcSurfaceStyle
 IfcSurfaceStyleElementSelect
 IfcSurfaceStyleRendering
@@ -96,6 +179,7 @@ IfcSurfaceStyleShading
 IfcSurfaceStyleWithTextures
 IfcSweptAreaSolid
 IfcSweptDiskSolid
+<<<<<<< HEAD
 IfcTopologicalRepresentationItem
 IfcTrimmedCurve
 IfcUnit
@@ -109,3 +193,10 @@ IfcPropertySingleValue
 IfcProperty
 IfcComplexProperty
 IfcElementQuantity
+=======
+IfcTrimmedCurve
+IfcUnit
+IfcUnitAssignment
+IfcValue
+IfcVector3
+>>>>>>> 61154c233840540ae5b22f5a5a0cdc6ad663b3cf

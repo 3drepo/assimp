@@ -55,10 +55,12 @@ SET( PUBLIC_HEADERS
   ${HEADER_PATH}/NullLogger.hpp
   ${HEADER_PATH}/cexport.h
   ${HEADER_PATH}/Exporter.hpp
+  ${HEADER_PATH}/optimmap.h
 )
 
 SET( Core_SRCS
   Assimp.cpp
+  optimmap.cpp
 )
 
 SET( Boost_SRCS
@@ -407,6 +409,8 @@ ADD_ASSIMP_IMPORTER(IFC
   IFCLoader.h
   IFCReaderGen.cpp
   IFCReaderGen.h
+  IFCMetaData.cpp
+  IFCMetaData.h
   IFCUtil.h
   IFCUtil.cpp
   IFCGeometry.cpp
@@ -474,6 +478,8 @@ SET( PostProcessing_SRCS
   GenFaceNormalsProcess.h
   GenVertexNormalsProcess.cpp
   GenVertexNormalsProcess.h
+  MultiPartOptim.cpp
+  MultiPartOptim.h
   PretransformVertices.cpp
   PretransformVertices.h
   ImproveCacheLocality.cpp

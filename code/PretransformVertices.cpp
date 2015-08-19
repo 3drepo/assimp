@@ -145,7 +145,7 @@ void PretransformVertices::CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNo
 // ------------------------------------------------------------------------------------------------
 // Collect vertex/face data
 void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsigned int iMat,
-    unsigned int iVFormat, aiMesh* pcMeshOut,
+    unsigned int iVFormat, aiMesh* pcMeshOut, aiOptimMap *mapOut,
     unsigned int aiCurrent[2], unsigned int* num_refs)
 {
     // No need to multiply if there's no transformation
@@ -278,6 +278,12 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
                     break;
                 };
             }
+
+            mapOut->addMeshMap(pcMeshOut, pcMesh,
+                pcScene->mMaterials[pcMesh->mMaterialIndex],
+                aiCurrent[AI_PTVS_VERTEX], aiCurrent[AI_PTVS_VERTEX] + pcMesh->mNumVertices,
+                aiCurrent[AI_PTVS_FACE], aiCurrent[AI_PTVS_FACE] + pcMesh->mNumFaces);
+
             aiCurrent[AI_PTVS_VERTEX] += pcMesh->mNumVertices;
             aiCurrent[AI_PTVS_FACE]   += pcMesh->mNumFaces;
         }
@@ -467,6 +473,9 @@ void PretransformVertices::Execute( aiScene* pScene)
     // now build a list of output meshes
     std::vector<aiMesh*> apcOutMeshes;
 
+    // Build a set of meshes and their optimization maps
+    std::map<aiMesh *, aiOptimMap *> mesh_map;
+
     // Keep scene hierarchy? It's an easy job in this case ...
     // we go on and transform all meshes, if one is referenced by nodes
     // with different absolute transformations a depth copy of the mesh
@@ -543,7 +552,10 @@ void PretransformVertices::Execute( aiScene* pScene)
 
                     // fill the mesh ...
                     unsigned int aiTemp[2] = {0,0};
-                    CollectData(pScene,pScene->mRootNode,i,*j,pcMesh,aiTemp,&s[0]);
+                    aiOptimMap *mapOut = new aiOptimMap();
+                    CollectData(pScene,pScene->mRootNode,i,*j,pcMesh,mapOut, aiTemp,&s[0]);
+
+                    mesh_map.insert(std::make_pair(pcMesh, mapOut));
                 }
             }
         }
@@ -633,7 +645,12 @@ void PretransformVertices::Execute( aiScene* pScene)
             pScene->mRootNode->mNumMeshes = 1;
             pScene->mRootNode->mMeshes = new unsigned int[1];
             pScene->mRootNode->mMeshes[0] = 0;
-        }
+
+            std::map<aiMesh *, aiOptimMap *>::iterator mesh_map_it = mesh_map.find(pScene->mMeshes[0]);
+
+            if (mesh_map_it != mesh_map.end())
+                pScene->mRootNode->mOptimMap = mesh_map_it->second;
+      }
         else
         {
             pScene->mRootNode->mNumChildren = pScene->mNumMeshes+pScene->mNumLights+pScene->mNumCameras;
@@ -650,6 +667,12 @@ void PretransformVertices::Execute( aiScene* pScene)
                 pcNode->mNumMeshes = 1;
                 pcNode->mMeshes = new unsigned int[1];
                 pcNode->mMeshes[0] = i;
+
+                std::map<aiMesh *, aiOptimMap *>::iterator mesh_map_it = mesh_map.find(pScene->mMeshes[i]);
+
+                if (mesh_map_it != mesh_map.end())
+				pcNode->mOptimMap = mesh_map_it->second;
+
             }
             // generate light nodes
             for (unsigned int i = 0; i < pScene->mNumLights;++i,++nodes)

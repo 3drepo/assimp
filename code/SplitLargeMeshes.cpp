@@ -375,6 +375,7 @@ void SplitLargeMeshesProcess_Vertex::Execute( aiScene* pScene)
     std::vector<std::pair<aiMesh*, unsigned int> > avList;
 
     if (0xffffffff == this->LIMIT)return;
+    std::cout << "N MESHES: " << pScene->mNumMeshes << std::endl;
 
     DefaultLogger::get()->debug("SplitLargeMeshesProcess_Vertex begin");
     for( unsigned int a = 0; a < pScene->mNumMeshes; a++)
@@ -414,7 +415,9 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 {
     if (pMesh->mNumVertices > SplitLargeMeshesProcess_Vertex::LIMIT)
     {
-        typedef std::vector< std::pair<unsigned int,float> > VertexWeightTable;
+        std::cout << "#VERTS: " << pMesh->mNumVertices << std::endl;
+
+		typedef std::vector< std::pair<unsigned int,float> > VertexWeightTable;
 
         // build a per-vertex weight list if necessary
         VertexWeightTable* avPerVertexWeights = ComputeVertexBoneWeightTable(pMesh);
@@ -654,6 +657,8 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 
             for (unsigned int p = 0; p < pcMesh->mNumFaces;++p)
                 pcMesh->mFaces[p] = vFaces[p];
+
+            std::cout << "NM: " << pcMesh->mNumFaces << " NV: " << pcMesh->mNumVertices << std::endl;
 
             // add the newly created mesh to the list
             avList.push_back(std::pair<aiMesh*, unsigned int>(pcMesh,a));
