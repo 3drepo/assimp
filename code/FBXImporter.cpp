@@ -153,8 +153,6 @@ void FBXImporter::InternReadFile( const std::string& pFile,
     std::vector<char> contents;
     contents.resize(stream->FileSize()+1);
 
-    std::cout << "Reading file ... " << std::endl;
-
     stream->Read( &*contents.begin(), 1, contents.size()-1 );
     contents[ contents.size() - 1 ] = 0;
     const char* const begin = &*contents.begin();
@@ -177,7 +175,6 @@ void FBXImporter::InternReadFile( const std::string& pFile,
         // parse-tree representing the FBX scope structure
         Parser parser(tokens, is_binary);
 
-	std::cout << "Document ... " << std::endl;
         // take the raw parse-tree and convert it to a FBX DOM
         Document doc(parser,settings);
 
