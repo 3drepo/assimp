@@ -532,7 +532,7 @@ void MultiPartOptim::Execute( aiScene* pScene)
 			pcMesh->mNumVertices = iVertices;
 			pcMesh->mFaces = new aiFace[iFaces];
 			pcMesh->mVertices = new aiVector3D[iVertices];
-			pcMesh->mMaterialIndex = 1
+			pcMesh->mMaterialIndex = 0;
 			;
 
 			if ((*j) & 0x2)pcMesh->mNormals = new aiVector3D[iVertices];
