@@ -80,6 +80,8 @@ typedef struct {
 	int endVertexIDX;
 	int startTriangleIDX;
 	int endTriangleIDX;
+	aiVector3D min;
+	aiVector3D max;
 } aiMap;
 
 template <class T>
@@ -100,7 +102,7 @@ struct aiOptimMap
 
 public:
 	void mergeInto(aiNode *mergingNode);
-	void addMeshMap(aiMesh *mergedMesh, aiMesh *mergingMesh, aiMaterial *material, int vertexFrom, int vertexTo, int triFrom, int triTo);
+	void addMeshMap(aiMesh *mergedMesh, aiMesh *mergingMesh, aiMaterial *material, int vertexFrom, int vertexTo, int triFrom, int triTo, const aiVector3D &min, const aiVector3D &max);
 
 	const std::unordered_set<uintptr_t> &getMergeMap() const { return mergeMap; }
 	const std::unordered_map<uintptr_t, std::vector<aiMap> > &getMeshMaps() const { return meshMaps; }

@@ -279,11 +279,6 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
                 };
             }
 
-            mapOut->addMeshMap(pcMeshOut, pcMesh,
-                pcScene->mMaterials[pcMesh->mMaterialIndex],
-                aiCurrent[AI_PTVS_VERTEX], aiCurrent[AI_PTVS_VERTEX] + pcMesh->mNumVertices,
-                aiCurrent[AI_PTVS_FACE], aiCurrent[AI_PTVS_FACE] + pcMesh->mNumFaces);
-
             aiCurrent[AI_PTVS_VERTEX] += pcMesh->mNumVertices;
             aiCurrent[AI_PTVS_FACE]   += pcMesh->mNumFaces;
         }
@@ -292,7 +287,7 @@ void PretransformVertices::CollectData( aiScene* pcScene, aiNode* pcNode, unsign
     // append all children of us
     for (unsigned int i = 0;i < pcNode->mNumChildren;++i) {
         CollectData(pcScene,pcNode->mChildren[i],iMat,
-            iVFormat,pcMeshOut,aiCurrent,num_refs);
+            iVFormat,pcMeshOut,mapOut,aiCurrent,num_refs);
     }
 }
 

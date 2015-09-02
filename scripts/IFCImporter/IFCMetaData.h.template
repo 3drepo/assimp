@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "IFCLoader.h"
 #include "IFCReaderGen.h"
 #include "IFCUtil.h"
+#include "../include/assimp/scene.h"
 #include <vector>
 
 namespace Assimp {

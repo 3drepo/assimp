@@ -52,7 +52,9 @@ void aiOptimMap::mergeInto(aiNode *mergingNode)
 }
 
 
-void aiOptimMap::addMeshMap(aiMesh *mergedMesh, aiMesh *mergingMesh, aiMaterial *material, int vertexFrom, int vertexTo, int triFrom, int triTo)
+void aiOptimMap::addMeshMap(aiMesh *mergedMesh, aiMesh *mergingMesh, aiMaterial *material,
+	int vertexFrom, int vertexTo, int triFrom, int triTo,
+	const aiVector3D &min, const aiVector3D &max)
 {
 	uintptr_t meshPointer     = reinterpret_cast<uintptr_t>(mergedMesh);
 	uintptr_t childPointer    = reinterpret_cast<uintptr_t>(mergingMesh);
@@ -66,6 +68,8 @@ void aiOptimMap::addMeshMap(aiMesh *mergedMesh, aiMesh *mergingMesh, aiMaterial 
 	newMap.endVertexIDX     = vertexTo;
 	newMap.startTriangleIDX = triFrom;
 	newMap.endTriangleIDX   = triTo;
+	newMap.min              = min;
+	newMap.max              = max;
 
 	pushMeshMap(meshPointer, newMap);
 }

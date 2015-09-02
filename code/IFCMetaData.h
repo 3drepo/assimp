@@ -5,8 +5,8 @@ Open Asset Import Library (ASSIMP)
 Copyright (c) 2006-2010, ASSIMP Development Team
 All rights reserved.
 
-Redistribution and use of this software in source and binary forms,
-with or without modification, are permitted provided that the
+Redistribution and use of this software in source and binary forms, 
+with or without modification, are permitted provided that the 
 following conditions are met:
 
 * Redistributions of source code must retain the above
@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "IFCLoader.h"
 #include "IFCReaderGen.h"
 #include "IFCUtil.h"
+#include "../include/assimp/scene.h"
 #include <vector>
 
 namespace Assimp {
@@ -57,14 +58,14 @@ namespace IFC {
 
 	template <typename T> aiNode *ExtractMetaData(const aiNode *parent, const T& in, ConversionData& conv);
 
-	template <> aiNode *ExtractMetaData<IfcPersonAndOrganization>(const aiNode *parent, const IfcPersonAndOrganization& in, ConversionData& conv);
-	template <> aiNode *ExtractMetaData<IfcGroup>(const aiNode *parent, const IfcGroup& in, ConversionData& conv);
 	template <> aiNode *ExtractMetaData<IfcActorRole>(const aiNode *parent, const IfcActorRole& in, ConversionData& conv);
-	template <> aiNode *ExtractMetaData<IfcZone>(const aiNode *parent, const IfcZone& in, ConversionData& conv);
 	template <> aiNode *ExtractMetaData<IfcApplication>(const aiNode *parent, const IfcApplication& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcGroup>(const aiNode *parent, const IfcGroup& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcOrganization>(const aiNode *parent, const IfcOrganization& in, ConversionData& conv);
 	template <> aiNode *ExtractMetaData<IfcOwnerHistory>(const aiNode *parent, const IfcOwnerHistory& in, ConversionData& conv);
 	template <> aiNode *ExtractMetaData<IfcPerson>(const aiNode *parent, const IfcPerson& in, ConversionData& conv);
-	template <> aiNode *ExtractMetaData<IfcOrganization>(const aiNode *parent, const IfcOrganization& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcPersonAndOrganization>(const aiNode *parent, const IfcPersonAndOrganization& in, ConversionData& conv);
+	template <> aiNode *ExtractMetaData<IfcZone>(const aiNode *parent, const IfcZone& in, ConversionData& conv);
 
 }
 }

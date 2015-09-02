@@ -43,10 +43,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of the "MultiPartOptim" post processing step 
 */
 
-#include "AssimpPCH.h"
 #include "MultiPartOptim.h"
 #include "ProcessHelper.h"
 #include "SceneCombiner.h"
+#include "Exceptional.h"
 
 using namespace Assimp;
 
@@ -158,6 +158,8 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 
 		int numTextures = pcScene->mMaterials[pcMesh->mMaterialIndex]->GetTextureCount(aiTextureType_DIFFUSE);
 
+		aiVector3D min, max;
+
 		if (((iMat == -1 && !numTextures) || iMat == (int)pcMesh->mMaterialIndex) && iVFormat == GetMeshVFormat(pcMesh))
 		{
 			// Decrement mesh reference counter
@@ -189,12 +191,48 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 						pcMesh->mBitangents,
 						pcMesh->mNumVertices * sizeof(aiVector3D));
 				}
+
+				// Compute sub mesh bounding box
+				if (pcMesh->mNumVertices)
+				{
+					min = pcMesh->mVertices[0];
+					max = pcMesh->mVertices[1];
+				}
+
+				for (unsigned int n = 0; n < pcMesh->mNumVertices;++n)	{
+					const aiVector3D &v = pcMesh->mVertices[n];
+
+					 min.x = std::min(min.x, v.x);
+					 min.y = std::min(min.y, v.y);
+					 min.z = std::min(min.z, v.z);
+
+					 max.x = std::max(max.x, v.x);
+					 max.y = std::max(max.y, v.y);
+					 max.z = std::max(max.z, v.z);
+				}
 			}
 			else
 			{
+				// Compute sub mesh bounding box
+				if (pcMesh->mNumVertices)
+				{
+					min = pcMesh->mVertices[0];
+					max = pcMesh->mVertices[1];
+				}
+
 				// copy positions, transform them to worldspace
 				for (unsigned int n = 0; n < pcMesh->mNumVertices;++n)	{
 					pcMeshOut->mVertices[aiCurrent[AI_PTVS_VERTEX]+n] = pcNode->mTransformation * pcMesh->mVertices[n];
+
+					const aiVector3D &v = pcMeshOut->mVertices[aiCurrent[AI_PTVS_VERTEX] + n];
+
+					min.x = std::min(min.x, v.x);
+					min.y = std::min(min.y, v.y);
+					min.z = std::min(min.z, v.z);
+
+					max.x = std::max(max.x, v.x);
+					max.y = std::max(max.y, v.y);
+					max.z = std::max(max.z, v.z);
 				}
 
 				aiMatrix4x4 mWorldIT = pcNode->mTransformation;
@@ -207,7 +245,7 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 				{
 					// copy normals, transform them to worldspace
 					for (unsigned int n = 0; n < pcMesh->mNumVertices;++n)	{
-						pcMeshOut->mNormals[aiCurrent[AI_PTVS_VERTEX]+n] = 
+						pcMeshOut->mNormals[aiCurrent[AI_PTVS_VERTEX]+n] =
 							(m * pcMesh->mNormals[n]).Normalize();
 					}
 				}
@@ -240,7 +278,7 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 				++p;
 			}
 			// now we need to copy all faces. since we will delete the source mesh afterwards,
-			// we don't need to reallocate the array of indices except if this mesh is 
+			// we don't need to reallocate the array of indices except if this mesh is
 			// referenced multiple times.
 			for (unsigned int planck = 0;planck < pcMesh->mNumFaces;++planck)
 			{
@@ -249,11 +287,11 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 
 				const unsigned int num_idx = f_src.mNumIndices;
 
-				f_dst.mNumIndices = num_idx; 
+				f_dst.mNumIndices = num_idx;
 
 				unsigned int* pi;
 				if (!num_ref) { /* if last time the mesh is referenced -> no reallocation */
-					pi = f_dst.mIndices = f_src.mIndices; 
+					pi = f_dst.mIndices = f_src.mIndices;
 
 					// offset all vertex indices
 					for (unsigned int hahn = 0; hahn < num_idx;++hahn){
@@ -262,7 +300,7 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 				}
 				else {
 					pi = f_dst.mIndices = new unsigned int[num_idx];
-					
+
 					// copy and offset all vertex indices
 					for (unsigned int hahn = 0; hahn < num_idx;++hahn){
 						pi[hahn] = f_src.mIndices[hahn] + aiCurrent[AI_PTVS_VERTEX];
@@ -287,8 +325,9 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 				};
 			}
 
-			mapOut->addMeshMap(pcMeshOut, pcMesh, pcScene->mMaterials[pcMesh->mMaterialIndex], aiCurrent[AI_PTVS_VERTEX], 
-				aiCurrent[AI_PTVS_VERTEX] + pcMesh->mNumVertices, aiCurrent[AI_PTVS_FACE], aiCurrent[AI_PTVS_FACE] + pcMesh->mNumFaces);
+			mapOut->addMeshMap(pcMeshOut, pcMesh, pcScene->mMaterials[pcMesh->mMaterialIndex], aiCurrent[AI_PTVS_VERTEX],
+				aiCurrent[AI_PTVS_VERTEX] + pcMesh->mNumVertices, aiCurrent[AI_PTVS_FACE], aiCurrent[AI_PTVS_FACE] + pcMesh->mNumFaces,
+				min, max);
 
 			aiCurrent[AI_PTVS_VERTEX] += pcMesh->mNumVertices;
 			aiCurrent[AI_PTVS_FACE]   += pcMesh->mNumFaces;
@@ -305,7 +344,7 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 // ------------------------------------------------------------------------------------------------
 // Get a list of all vertex formats that occur for a given material index
 // The output list contains duplicate elements
-void MultiPartOptim::GetVFormatList( aiScene* pcScene, unsigned int iMat,
+void MultiPartOptim::GetVFormatList( aiScene* pcScene, int iMat,
 	std::list<unsigned int>& aiOut)
 {
 	for (unsigned int i = 0; i < pcScene->mNumMeshes;++i)

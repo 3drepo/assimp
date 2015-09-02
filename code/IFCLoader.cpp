@@ -58,6 +58,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "IFCUtil.h"
 
+#include "IFCMetaData.h"
+
 #include "StreamReader.h"
 #include "MemoryIOWrapper.h"
 #include "../include/assimp/scene.h"
@@ -611,9 +613,9 @@ void ProcessProductRepresentation(const IfcProduct& el, aiNode* nd, std::vector<
 typedef std::map<std::string, std::string> Metadata;
 
 // ------------------------------------------------------------------------------------------------
-void ProcessMetadata(const ListOf< Lazy< IfcProperty >, 1, 0 >& set, ConversionData& conv, Metadata& properties, 
-	const std::string& prefix = "", 
-	unsigned int nest = 0) 
+void ProcessMetadata(const ListOf< Lazy< IfcProperty >, 1, 0 >& set, ConversionData& conv, Metadata& properties,
+	const std::string& prefix = "",
+	unsigned int nest = 0)
 {
 	BOOST_FOREACH(const IfcProperty& property, set) {
 		const std::string& key = prefix.length() > 0 ? (prefix + "." + property.Name) : property.Name;
