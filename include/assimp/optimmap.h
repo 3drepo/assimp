@@ -51,13 +51,33 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef __cplusplus
 
 #include <vector>
-#include <unordered_set>
-#include <unordered_map>
+#include <set>
+#include <map>
 #include <boost/uuid/uuid.hpp>
 #include <functional>
 #include <iostream>
 #include <stdint.h>
 
+#endif
+
+//
+#if _MSC_VER > 1500 || (defined __GNUC___)
+#   define ASSIMP_OPTIM_USE_UNORDERED_MAP
+#else
+#   define optim_unordered_map std::map
+#   define optim_unordered_set std::set
+#endif
+
+#ifdef ASSIMP_OPTIM_USE_UNORDERED_MAP
+#   include <unordered_map>
+#   include <unordered_set>
+#   if _MSC_VER > 1600
+#       define optim_unordered_set unordered_set
+#       define optim_unordered_map unordered_map
+#   else
+#       define optim_unordered_set tr1::unordered_set
+#       define optim_unordered_map tr1::unordered_map
+#   endif
 #endif
 
 struct aiNode;
@@ -104,11 +124,11 @@ public:
 	void mergeInto(aiNode *mergingNode);
 	void addMeshMap(aiMesh *mergedMesh, aiMesh *mergingMesh, aiMaterial *material, int vertexFrom, int vertexTo, int triFrom, int triTo, const aiVector3D &min, const aiVector3D &max);
 
-	const std::unordered_set<uintptr_t> &getMergeMap() const { return mergeMap; }
-	const std::unordered_map<uintptr_t, std::vector<aiMap> > &getMeshMaps() const { return meshMaps; }
+	const optim_unordered_set<uintptr_t> &getMergeMap() const { return mergeMap; }
+	const optim_unordered_map<uintptr_t, std::vector<aiMap> > &getMeshMaps() const { return meshMaps; }
 private:
-	std::unordered_set<uintptr_t > mergeMap;
-	std::unordered_map<uintptr_t, std::vector<aiMap> > meshMaps; // Descriptions of the merges
+	optim_unordered_set<uintptr_t > mergeMap;
+	optim_unordered_map<uintptr_t, std::vector<aiMap> > meshMaps; // Descriptions of the merges
 
 	void pushMeshMap(uintptr_t meshPointer, const aiMap& map);
 

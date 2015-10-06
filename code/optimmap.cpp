@@ -6,7 +6,7 @@ void aiOptimMap::pushMeshMap(uintptr_t meshPointer, const aiMap& map)
 	//std::cout << "MP: " << meshPointer << " " << meshMaps.size() << std::endl;
 	//std::cout << "&" << &meshMaps << std::endl;
 
-	std::unordered_map<uintptr_t, std::vector<aiMap> >::iterator meshMap = meshMaps.find(meshPointer);
+	optim_unordered_map<uintptr_t, std::vector<aiMap> >::iterator meshMap = meshMaps.find(meshPointer);
 	std::vector<aiMap> *meshMapPtr = NULL;
 
 	if (meshMap == meshMaps.end())
@@ -29,7 +29,7 @@ void aiOptimMap::mergeInto(aiNode *mergingNode)
 		mergeMap.insert(mergingNode->mOptimMap->mergeMap.begin(), mergingNode->mOptimMap->mergeMap.end());
 		mergingNode->mOptimMap->mergeMap.clear();
 
-		std::unordered_map<uintptr_t, std::vector<aiMap> >::iterator meshMapIT;
+		optim_unordered_map<uintptr_t, std::vector<aiMap> >::iterator meshMapIT;
 
 		for(meshMapIT = mergingNode->mOptimMap->meshMaps.begin(); meshMapIT != mergingNode->mOptimMap->meshMaps.end(); ++meshMapIT)
 		{
