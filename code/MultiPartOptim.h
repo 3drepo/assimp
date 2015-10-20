@@ -54,11 +54,12 @@ struct aiNode;
 class MultiPartOptimTest;
 namespace Assimp	{
 
-typedef struct {
-	unsigned int numVertices = 0;
-	unsigned int numFaces = 0;
+struct splitMeshCount {
+	splitMeshCount() : numVertices(0), numFaces(0) {}
+	unsigned int numVertices;
+	unsigned int numFaces;
 	aiNode *pNode;
-} splitMeshCount;
+};
 
 // ---------------------------------------------------------------------------
 /** The MultiPartOptim pre-transforms all vertices in the node tree
