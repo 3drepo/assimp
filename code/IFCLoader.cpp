@@ -58,8 +58,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "IFCUtil.h"
 
-#include "IFCMetaData.h"
-
 #include "StreamReader.h"
 #include "MemoryIOWrapper.h"
 #include "../include/assimp/scene.h"
@@ -80,34 +78,11 @@ using namespace Assimp::IFC;
  * all entity classes that are only indirectly referenced need to be
  * mentioned explicitly.
 
-IfcRepresentationMap
-IfcProductRepresentation
-IfcUnitAssignment
-IfcClosedShell
-IfcDoor
-IfcMeasureWithUnit
-IfcNormalisedRatioMeasure
-IfcColourRgb
-IfcMonetaryUnit
-IfcElementQuantity
-IfcChangeActionEnum
-IfcAddress
-IfcActorRole
-IfcOrganization
-IfcApplication
-IfcPersonAndOrganization
-IfcPerson
-IfcAxis2Placement3D
-IfcBuildingStorey
-IfcRelContainedInSpatialStructure
-IfcRelDefinesByProperties
-IfcProperty
-IfcCartesianTransformationOperator
-IfcDirection
-IfcFlowSegment
-IfcPlane
-IfcSurface
-IfcPolygonalBoundedHalfSpace
+  IfcRepresentationMap
+  IfcProductRepresentation
+  IfcUnitAssignment
+  IfcClosedShell
+  IfcDoor
 
  */
 
@@ -118,12 +93,9 @@ namespace {
 void SetUnits(ConversionData& conv);
 void SetCoordinateSpace(ConversionData& conv);
 void ProcessSpatialStructures(ConversionData& conv);
-aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el ,ConversionData& conv);
-void ProcessProductRepresentation(const IfcProduct& el, aiNode* nd, ConversionData& conv);
 void MakeTreeRelative(ConversionData& conv);
 void ConvertUnit(const EXPRESS::DataType& dt,ConversionData& conv);
-void ProcessGroups(aiNode* parent, ConversionData& conv);
-void ProcessOwnerHistories(aiNode* parent, ConversionData& conv);
+
 } // anon
 
 static const aiImporterDesc desc = {
@@ -284,12 +256,12 @@ void IFCImporter::InternReadFile( const std::string& pFile,
 
     // tell the reader which entity types to track with special care
     static const char* const types_to_track[] = {
-        "ifcsite", "ifcbuilding", "ifcproject", "ifczone", "ifcownerhistory"
+        "ifcsite", "ifcbuilding", "ifcproject"
     };
 
     // tell the reader for which types we need to simulate STEPs reverse indices
     static const char* const inverse_indices_to_track[] = {
-        "ifcrelassignstogroup", "ifcrelcontainedinspatialstructure", "ifcrelaggregates", "ifcrelvoidselement", "ifcreldefinesbyproperties", "ifcpropertyset", "ifcstyleditem"
+        "ifcrelcontainedinspatialstructure", "ifcrelaggregates", "ifcrelvoidselement", "ifcreldefinesbyproperties", "ifcpropertyset", "ifcstyleditem"
     };
 
     // feed the IFC schema into the reader and pre-parse all lines
@@ -614,69 +586,69 @@ typedef std::map<std::string, std::string> Metadata;
 
 // ------------------------------------------------------------------------------------------------
 void ProcessMetadata(const ListOf< Lazy< IfcProperty >, 1, 0 >& set, ConversionData& conv, Metadata& properties,
-	const std::string& prefix = "",
-	unsigned int nest = 0)
+    const std::string& prefix = "",
+    unsigned int nest = 0)
 {
-	BOOST_FOREACH(const IfcProperty& property, set) {
-		const std::string& key = prefix.length() > 0 ? (prefix + "." + property.Name) : property.Name;
-		if (const IfcPropertySingleValue* const singleValue = property.ToPtr<IfcPropertySingleValue>()) {
-			if (singleValue->NominalValue) {
-				if (const EXPRESS::STRING* str = singleValue->NominalValue.Get()->ToPtr<EXPRESS::STRING>()) {
-					std::string value = static_cast<std::string>(*str);
-					properties[key]=value;
-				}
-				else if (const EXPRESS::REAL* val = singleValue->NominalValue.Get()->ToPtr<EXPRESS::REAL>()) {
-					float value = static_cast<float>(*val);
-					std::stringstream s;
-					s << value;
-					properties[key]=s.str();
-				}
-				else if (const EXPRESS::INTEGER* val = singleValue->NominalValue.Get()->ToPtr<EXPRESS::INTEGER>()) {
-					int64_t value = static_cast<int64_t>(*val);
-					std::stringstream s;
-					s << value;
-					properties[key]=s.str();
-				}
-			}
-		}
-		else if (const IfcPropertyListValue* const listValue = property.ToPtr<IfcPropertyListValue>()) {
-			std::stringstream ss;
-			ss << "[";
-			unsigned index=0;
-			BOOST_FOREACH(const IfcValue::Out& v, listValue->ListValues) {
-				if (!v) continue;
-				if (const EXPRESS::STRING* str = v->ToPtr<EXPRESS::STRING>()) {
-					std::string value = static_cast<std::string>(*str);
-					ss << "'" << value << "'";
-				}
-				else if (const EXPRESS::REAL* val = v->ToPtr<EXPRESS::REAL>()) {
-					float value = static_cast<float>(*val);
-					ss << value;
-				}
-				else if (const EXPRESS::INTEGER* val = v->ToPtr<EXPRESS::INTEGER>()) {
-					int64_t value = static_cast<int64_t>(*val);
-					ss << value;
-				}
-				if (index+1<listValue->ListValues.size()) {
-					ss << ",";
-				}
-				index++;
-			}
-			ss << "]";
-			properties[key]=ss.str();
-		}
-		else if (const IfcComplexProperty* const complexProp = property.ToPtr<IfcComplexProperty>()) {
-			if(nest > 2) { // mostly arbitrary limit to prevent stack overflow vulnerabilities
-				IFCImporter::LogError("maximum nesting level for IfcComplexProperty reached, skipping this property.");
-			}
-			else {
-				ProcessMetadata(complexProp->HasProperties, conv, properties, key, nest + 1);
-			}
-		}
-		else {
-			properties[key]="";
-		}
-	}
+    BOOST_FOREACH(const IfcProperty& property, set) {
+        const std::string& key = prefix.length() > 0 ? (prefix + "." + property.Name) : property.Name;
+        if (const IfcPropertySingleValue* const singleValue = property.ToPtr<IfcPropertySingleValue>()) {
+            if (singleValue->NominalValue) {
+                if (const EXPRESS::STRING* str = singleValue->NominalValue.Get()->ToPtr<EXPRESS::STRING>()) {
+                    std::string value = static_cast<std::string>(*str);
+                    properties[key]=value;
+                }
+                else if (const EXPRESS::REAL* val = singleValue->NominalValue.Get()->ToPtr<EXPRESS::REAL>()) {
+                    float value = static_cast<float>(*val);
+                    std::stringstream s;
+                    s << value;
+                    properties[key]=s.str();
+                }
+                else if (const EXPRESS::INTEGER* val = singleValue->NominalValue.Get()->ToPtr<EXPRESS::INTEGER>()) {
+                    int64_t value = static_cast<int64_t>(*val);
+                    std::stringstream s;
+                    s << value;
+                    properties[key]=s.str();
+                }
+            }
+        }
+        else if (const IfcPropertyListValue* const listValue = property.ToPtr<IfcPropertyListValue>()) {
+            std::stringstream ss;
+            ss << "[";
+            unsigned index=0;
+            BOOST_FOREACH(const IfcValue::Out& v, listValue->ListValues) {
+                if (!v) continue;
+                if (const EXPRESS::STRING* str = v->ToPtr<EXPRESS::STRING>()) {
+                    std::string value = static_cast<std::string>(*str);
+                    ss << "'" << value << "'";
+                }
+                else if (const EXPRESS::REAL* val = v->ToPtr<EXPRESS::REAL>()) {
+                    float value = static_cast<float>(*val);
+                    ss << value;
+                }
+                else if (const EXPRESS::INTEGER* val = v->ToPtr<EXPRESS::INTEGER>()) {
+                    int64_t value = static_cast<int64_t>(*val);
+                    ss << value;
+                }
+                if (index+1<listValue->ListValues.size()) {
+                    ss << ",";
+                }
+                index++;
+            }
+            ss << "]";
+            properties[key]=ss.str();
+        }
+        else if (const IfcComplexProperty* const complexProp = property.ToPtr<IfcComplexProperty>()) {
+            if(nest > 2) { // mostly arbitrary limit to prevent stack overflow vulnerabilities
+                IFCImporter::LogError("maximum nesting level for IfcComplexProperty reached, skipping this property.");
+            }
+            else {
+                ProcessMetadata(complexProp->HasProperties, conv, properties, key, nest + 1);
+            }
+        }
+        else {
+            properties[key]="";
+        }
+    }
 }
 
 
@@ -688,66 +660,6 @@ void ProcessMetadata(uint64_t relDefinesByPropertiesID, ConversionData& conv, Me
             ProcessMetadata(set->HasProperties, conv, properties);
         }
     }
-}
-
-// ------------------------------------------------------------------------------------------------
-void ProcessGroups(aiNode* parent, ConversionData& conv)
-{
-	const STEP::DB::RefMap& refs = conv.db.GetRefs();
-	const STEP::DB::ObjectMapByType& objs = conv.db.GetObjectsByType();
-
-	std::map<std::string, STEP::DB::ObjectSet>::const_iterator zones = objs.find("ifczone");
-	std::vector<aiNode *> subnodes;
-
-	if(zones != objs.end()) {
-		for(STEP::DB::ObjectSet::const_iterator zone = zones->second.begin(); zone != zones->second.end(); zone++)
-		{
-			const IfcGroup *group = (*zone)->ToPtr<IfcGroup>();
-
-			STEP::DB::RefMapRange range = refs.equal_range(group->GetID());
-
-			for(;range.first != range.second; ++range.first)
-			{
-				if(const IfcRelAssignsToGroup* const group_rel = conv.db.GetObject((*range.first).second)->ToPtr<IfcRelAssignsToGroup>())
-				{
-					if (group_rel->RelatingGroup->GetID() != group->GetID())
-					{
-						continue;
-					}
-
-					aiNode *nd_group = ExtractMetaData(parent, *group, conv);
-					subnodes.push_back(nd_group);
-				}
-			}
-		}
-	}
-
-	AppendSubnodes(parent, subnodes);
-}
-
-// ------------------------------------------------------------------------------------------------
-void ProcessOwnerHistories(aiNode* parent, ConversionData& conv)
-{
-	const STEP::DB::RefMap& refs = conv.db.GetRefs();
-	const STEP::DB::ObjectMapByType& objs = conv.db.GetObjectsByType();
-
-	std::map<std::string, STEP::DB::ObjectSet>::const_iterator owners = objs.find("ifcownerhistory");
-	std::vector<aiNode *> subnodes;
-
-	if (owners != objs.end())
-	{
-		const STEP::DB::ObjectSet &owner_list = owners->second;
-
-		for(STEP::DB::ObjectSet::const_iterator owner = owner_list.begin(); owner != owner_list.end(); owner++)
-		{
-			const IfcOwnerHistory* const ifcOwner = (*owner)->ToPtr<IfcOwnerHistory>();
-
-			aiNode *nd_owner = ExtractMetaData(parent, *ifcOwner, conv);
-			subnodes.push_back(nd_owner);
-		}
-	}
-
-	AppendSubnodes(parent, subnodes);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -794,19 +706,13 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, Conversion
             }
         }
 
-        int numProperties = 1 + properties.size(); // Store at least the IFC ID
+        if (!properties.empty()) {
+            aiMetadata* data = new aiMetadata();
+            data->mNumProperties = properties.size();
+            data->mKeys = new aiString[data->mNumProperties]();
+            data->mValues = new aiMetadataEntry[data->mNumProperties]();
 
-        aiMetadata* data = new aiMetadata();
-
-        data->mNumProperties = numProperties;
-        data->mKeys = new aiString[numProperties];
-        data->mValues = new aiMetadataEntry[numProperties];
-
-        data->Set(0, "IFC_id", el.GetID());
-
-        if (numProperties > 1) {
-            unsigned int index = 1;
-
+            unsigned int index = 0;
             BOOST_FOREACH(const Metadata::value_type& kv, properties)
                 data->Set(index++, kv.first, aiString(kv.second));
 
@@ -899,7 +805,6 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, Conversion
             }
         }
 
-
         for(;range.first != range.second; ++range.first) {
             // see note in loop above
             if (conv.already_processed.find((*range.first).second) != conv.already_processed.end()) {
@@ -914,29 +819,8 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, Conversion
                 std::auto_ptr<aiNode> nd_aggr(new aiNode());
                 nd_aggr->mName.Set("$RelAggregates");
                 nd_aggr->mParent = nd.get();
-		nd_aggr->mTransformation = nd->mTransformation;
 
-		aiMetadata* data = new aiMetadata();
-
-		data->mNumProperties = 1;
-		data->mKeys = new aiString[1];
-		data->mValues = new aiMetadataEntry[1];
-
-		data->Set(0, "IFC_id", aggr->GetID());
-
-		nd_aggr->mMetaData = data;
-
-		// Count valid related objects
-		int valid_objects = 0;
-		BOOST_FOREACH(const IfcObjectDefinition& def, aggr->RelatedObjects) {
-			if(def.ToPtr<IfcProduct>())
-				valid_objects++;
-		}
-
-		nd_aggr->mChildren	  = NULL;
-		nd_aggr->mNumChildren = 0;
-
-		std::vector<aiNode *> child_subnodes;
+                nd_aggr->mTransformation = nd->mTransformation;
 
                 nd_aggr->mChildren = new aiNode*[aggr->RelatedObjects.size()]();
                 BOOST_FOREACH(const IfcObjectDefinition& def, aggr->RelatedObjects) {
@@ -948,7 +832,6 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const IfcProduct& el, Conversion
                         }
                     }
                 }
-		AppendSubnodes(nd_aggr.get(), child_subnodes);
 
                 subnodes.push_back( nd_aggr.release() );
             }
