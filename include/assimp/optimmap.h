@@ -72,8 +72,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #   include <unordered_map>
 #   include <unordered_set>
 #   if _MSC_VER > 1600
-#       define optim_unordered_set unordered_set
-#       define optim_unordered_map unordered_map
+#       define optim_unordered_set std::unordered_set
+#       define optim_unordered_map std::unordered_map
 #   else
 #       define optim_unordered_set tr1::unordered_set
 #       define optim_unordered_map tr1::unordered_map
