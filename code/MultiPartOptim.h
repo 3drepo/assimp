@@ -54,6 +54,12 @@ struct aiNode;
 class MultiPartOptimTest;
 namespace Assimp	{
 
+typedef struct {
+	unsigned int numVertices = 0;
+	unsigned int numFaces = 0;
+	aiNode *pNode;
+} splitMeshCount;
+
 // ---------------------------------------------------------------------------
 /** The MultiPartOptim pre-transforms all vertices in the node tree
  *  and removes the whole graph. The output is a list of meshes, one for
@@ -97,7 +103,9 @@ private:
 		int iMat,
 		unsigned int iVFormat,
 		unsigned int* piFaces,
-		unsigned int* piVertices);
+		unsigned int* piVertices,
+		std::vector<std::vector<int> > &meshSplit,
+		std::vector<splitMeshCount> &meshCounts);
 
 	// -------------------------------------------------------------------
 	// Collect vertex/face data
@@ -107,7 +115,11 @@ private:
 		aiMesh* pcMeshOut,
 		aiOptimMap *mapOut,
 		unsigned int aiCurrent[2],
-		unsigned int* num_refs);
+		unsigned int* num_refs,
+		const std::vector<int> &splitList,
+		int &splitListIDX,
+		aiNode* startNode,
+		bool &foundStart);
 
 	// -------------------------------------------------------------------
 	// Get a list of all vertex formats that occur for a given material
