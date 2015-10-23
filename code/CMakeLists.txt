@@ -409,8 +409,6 @@ ADD_ASSIMP_IMPORTER(IFC
   IFCLoader.h
   IFCReaderGen.cpp
   IFCReaderGen.h
-  IFCMetaData.cpp
-  IFCMetaData.h
   IFCUtil.h
   IFCUtil.cpp
   IFCGeometry.cpp
