@@ -187,12 +187,9 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 {
 	// No need to multiply if there's no transformation
 	const bool identity = pcNode->mTransformation.IsIdentity();
-	std::cout << "(CollectData)#foundStart ||pcNode == startNode: " << (foundStart || pcNode == startNode) << std::endl;
 	if (foundStart || pcNode == startNode)
 	{
 		foundStart = true;
-		std::cout << "(CollectData)#Meshes: " << pcNode->mNumMeshes << std::endl;
-		std::cout << "(CollectData)SplitList.size: " << splitList.size() << std::endl;
 		for (unsigned int i = 0; i < pcNode->mNumMeshes; ++i)
 		{
 			if (splitListIDX == (splitList.size()))
@@ -389,10 +386,6 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 		}
 	}
 
-	//std::cout << "AV: " << aiCurrent[AI_PTVS_VERTEX] << " PF: " << aiCurrent[AI_PTVS_FACE] << std::endl;
-	std::cout << "SS: " << splitList.size() << " SLI: " << splitListIDX << std::endl;
-
-	std::cout << "NC: " << pcNode->mNumChildren << std::endl;
 
 	// append all children of us
 	for (unsigned int i = 0;i < pcNode->mNumChildren;++i) {
@@ -630,24 +623,13 @@ void MultiPartOptim::Execute( aiScene* pScene)
 
 		unsigned int processedFaces    = 0;
 
-		std::cout << "COUNTING ..." << std::endl;
-
 		CountVerticesAndFaces(pScene,pScene->mRootNode,-1,*j,&iFaces,&iVertices, meshSplit, meshCounts);
-
-		std::cout << "DONE." << std::endl;
-
 		if (0 != iFaces && 0 != iVertices)
 		{
 			for(unsigned int i = 0; i < meshSplit.size(); i++)
 			{
-				std::cout << "SPLIT: " << i << std::endl;
-				std::cout << "ROOT: " << (uintptr_t)(pScene->mRootNode) << std::endl;
-				std::cout << "NODE: " << (uintptr_t)(meshCounts[i].pNode) << std::endl;
-
 				iFaces    = meshCounts[i].numFaces;
 				iVertices = meshCounts[i].numVertices;
-
-				std::cout << "FC: " << iFaces << " VT: " << iVertices << std::endl;
 
 				apcOutMeshes.push_back(new aiMesh());
 				aiMesh* pcMesh = apcOutMeshes.back();
