@@ -187,14 +187,15 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 {
 	// No need to multiply if there's no transformation
 	const bool identity = pcNode->mTransformation.IsIdentity();
-
+	std::cout << "(CollectData)#foundStart ||pcNode == startNode: " << (foundStart || pcNode == startNode) << std::endl;
 	if (foundStart || pcNode == startNode)
 	{
 		foundStart = true;
-
+		std::cout << "(CollectData)#Meshes: " << pcNode->mNumMeshes << std::endl;
+		std::cout << "(CollectData)SplitList.size: " << splitList.size() << std::endl;
 		for (unsigned int i = 0; i < pcNode->mNumMeshes; ++i)
 		{
-			if (splitListIDX == (splitList.size() - 1))
+			if (splitListIDX == (splitList.size()))
 			{
 				break;
 			}
@@ -335,7 +336,10 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 						aiFace& f_dst = pcMeshOut->mFaces[aiCurrent[AI_PTVS_FACE]+planck];
 
 						const unsigned int num_idx = f_src.mNumIndices;
-
+						if (f_dst.mNumIndices != 0)
+						{
+							std::cout << "Possible overlap of indices!" << std::endl;
+						}
 						f_dst.mNumIndices = num_idx;
 
 						unsigned int* pi;
@@ -386,13 +390,13 @@ void MultiPartOptim::CollectData( aiScene* pcScene, aiNode* pcNode, int iMat,
 	}
 
 	//std::cout << "AV: " << aiCurrent[AI_PTVS_VERTEX] << " PF: " << aiCurrent[AI_PTVS_FACE] << std::endl;
-	//std::cout << "SS: " << splitList.size() << " SLI: " << splitListIDX << std::endl;
+	std::cout << "SS: " << splitList.size() << " SLI: " << splitListIDX << std::endl;
 
-	//std::cout << "NC: " << pcNode->mNumChildren << std::endl;
+	std::cout << "NC: " << pcNode->mNumChildren << std::endl;
 
 	// append all children of us
 	for (unsigned int i = 0;i < pcNode->mNumChildren;++i) {
-		if (splitListIDX == (splitList.size() - 1))
+		if (splitListIDX == splitList.size())
 			break;
 
 		CollectData(pcScene,pcNode->mChildren[i],iMat,
