@@ -671,10 +671,11 @@ void MultiPartOptim::Execute( aiScene* pScene)
 				mesh_map.insert(std::make_pair(pcMesh, mapOut));
 			}
 		}
+
+		meshSplit.clear();
+		meshCounts.clear();
 	}
 
-	meshSplit.clear();
-	meshCounts.clear();
 
 	for (unsigned int i = 0; i < pScene->mNumMaterials;++i)		{
 		if (texMaterial[i] > 0)
@@ -736,6 +737,9 @@ void MultiPartOptim::Execute( aiScene* pScene)
 						mesh_map.insert(std::make_pair(pcMesh, mapOut));
 					}
 				}
+
+				meshSplit.clear();
+				meshCounts.clear();
 			}
 		}
 	}
