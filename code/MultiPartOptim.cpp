@@ -861,16 +861,15 @@ void MultiPartOptim::Execute( aiScene* pScene)
 		{
 			aiNode* pcNode = *nodes = new aiNode();
 			pcNode->mParent = pScene->mRootNode;
-			pcNode->mName.length = ::sprintf(pcNode->mName.data,"light_%i",i);
-			pScene->mLights[i]->mName = pcNode->mName;
+			pcNode->mName.length = ::sprintf(pcNode->mName.data, pScene->mLights[i]->mName.C_Str());
 		}
 		// generate camera nodes
 		for (unsigned int i = 0; i < pScene->mNumCameras;++i,++nodes)
 		{
 			aiNode* pcNode = *nodes = new aiNode();
 			pcNode->mParent = pScene->mRootNode;
-			pcNode->mName.length = ::sprintf(pcNode->mName.data,"cam_%i",i);
-			pScene->mCameras[i]->mName = pcNode->mName;
+			pcNode->mName.length = ::sprintf(pcNode->mName.data, pScene->mCameras[i]->mName.C_Str());
+
 		}
 	}
 
