@@ -677,19 +677,19 @@ void MultiPartOptim::Execute( aiScene* pScene)
 	}
 
 
-	for (unsigned int i = 0; i < pScene->mNumMaterials;++i)		{
-		if (texMaterial[i] > 0)
+	for (unsigned int iMat = 0; iMat < pScene->mNumMaterials;++iMat)		{
+		if (texMaterial[iMat] > 0)
 		{
 			// get the list of all vertex formats for this material
 			aiVFormats.clear();
-			GetVFormatList(pScene,i,aiVFormats);
+			GetVFormatList(pScene,iMat,aiVFormats);
 			aiVFormats.sort();
 			aiVFormats.unique();
 			for (std::list<unsigned int>::const_iterator j =  aiVFormats.begin();j != aiVFormats.end();++j)	{
 				unsigned int iVertices = 0;
 				unsigned int iFaces = 0;
 
-				CountVerticesAndFaces(pScene,pScene->mRootNode,i,*j,&iFaces,&iVertices, meshSplit, meshCounts);
+				CountVerticesAndFaces(pScene,pScene->mRootNode,iMat,*j,&iFaces,&iVertices, meshSplit, meshCounts);
 
 				if (0 != iFaces && 0 != iVertices)
 				{
@@ -704,7 +704,7 @@ void MultiPartOptim::Execute( aiScene* pScene)
 						pcMesh->mNumVertices = iVertices;
 						pcMesh->mFaces = new aiFace[iFaces];
 						pcMesh->mVertices = new aiVector3D[iVertices];
-						pcMesh->mMaterialIndex = i;
+						pcMesh->mMaterialIndex = iMat;
 						if ((*j) & 0x2)pcMesh->mNormals = new aiVector3D[iVertices];
 						if ((*j) & 0x4)
 						{
@@ -730,7 +730,7 @@ void MultiPartOptim::Execute( aiScene* pScene)
 						int splitListIDX = 0;
 						bool foundStart = false;
 
-						CollectData(pScene, pScene->mRootNode, i, *j,pcMesh,mapOut,
+						CollectData(pScene, pScene->mRootNode, iMat, *j,pcMesh,mapOut,
 								aiTemp,&s[0], meshSplit[i], splitListIDX, meshCounts[i].pNode,
 								foundStart);
 
