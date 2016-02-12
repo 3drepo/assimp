@@ -124,48 +124,58 @@ unsigned int MultiPartOptim::GetMeshVFormat(aiMesh* pcMesh)
 // Count the number of vertices in the whole scene and a given
 // material index
 void MultiPartOptim::CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNode, int iMat,
-	unsigned int iVFormat, unsigned int* piFaces, unsigned int* piVertices,
-	std::vector<std::vector<int> > &meshSplit,
-	std::vector<splitMeshCount> &meshCounts)
+	unsigned int iVFormat, std::vector<unsigned int> &piFaces, std::vector<unsigned int> &piVertices,
+	std::vector<std::vector<std::vector<int>>> &meshSplit,
+	std::vector<std::vector<splitMeshCount>> &meshCounts)
 {
-	if (!meshCounts.size())
-	{
-		meshSplit.resize(1);
-		meshCounts.resize(1);
 
-		meshCounts.back().pNode = pcNode;
+	std::vector<std::vector<int>*> splitList;
+	std::vector<splitMeshCount*>   meshCount;
+
+	for (uint32_t i = 0; i < meshCounts.size(); ++i)
+	{
+		if (!meshCounts[i].size())
+		{
+			meshSplit[i].resize(1);
+			meshCounts[i].resize(1);
+
+			meshCounts[i].back().pNode = pcNode;
+		}
+
+		splitList.push_back(&meshSplit[i].back());
+		meshCount.push_back(&meshCounts[i].back());
 	}
+	
 
 	if (pcNode->mNumMeshes > 0)
 	{
-		std::vector<int> *splitList = &meshSplit.back();
-		splitMeshCount   *meshCount = &meshCounts.back();
-
 		for (unsigned int i = 0; i < pcNode->mNumMeshes; ++i)
 		{
 			aiMesh* pcMesh = pcScene->mMeshes[ pcNode->mMeshes[i] ];
 
 			int numTextures = pcScene->mMaterials[pcMesh->mMaterialIndex]->GetTextureCount(aiTextureType_DIFFUSE);
-
+			float opacity;
+			AI_SUCCESS == pcScene->mMaterials[pcMesh->mMaterialIndex]->Get(AI_MATKEY_OPACITY, opacity);
+			size_t msIndex = opacity != 1 && iMat == -1; //0 = opaque, 1 = transparency, 0 if textured
 			if (((iMat == -1 && !numTextures) || iMat == (int)pcMesh->mMaterialIndex) && iVFormat == GetMeshVFormat(pcMesh))
 			{
-				*piVertices += pcMesh->mNumVertices;
-				*piFaces    += pcMesh->mNumFaces;
+				piVertices[msIndex] += pcMesh->mNumVertices;
+				piFaces[msIndex] += pcMesh->mNumFaces;
 
-				if (*piFaces > (MAX_FACE_COUNT * meshSplit.size()))
+				if (piFaces[msIndex] > (MAX_FACE_COUNT * meshSplit[msIndex].size()))
 				{
-					meshSplit.resize(meshSplit.size() + 1);
-					meshCounts.resize(meshCounts.size() + 1);
+					meshSplit[msIndex].resize(meshSplit[msIndex].size() + 1);
+					meshCounts[msIndex].resize(meshCounts[msIndex].size() + 1);
 
-					splitList = &meshSplit.back();
-					meshCount = &meshCounts.back();
+					splitList[msIndex] = &meshSplit[msIndex].back();
+					meshCount[msIndex] = &meshCounts[msIndex].back();
 
-					meshCount->pNode = pcNode;
+					meshCount[msIndex]->pNode = pcNode;
 				}
 
-				splitList->push_back(pcNode->mMeshes[i]);
-				meshCount->numVertices += pcMesh->mNumVertices;
-				meshCount->numFaces    += pcMesh->mNumFaces;
+				splitList[msIndex]->push_back(pcNode->mMeshes[i]);
+				meshCount[msIndex]->numVertices += pcMesh->mNumVertices;
+				meshCount[msIndex]->numFaces += pcMesh->mNumFaces;
 			}
 		}
 
@@ -174,7 +184,7 @@ void MultiPartOptim::CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNode, in
 	for (unsigned int i = 0;i < pcNode->mNumChildren;++i)
 	{
 		CountVerticesAndFaces(pcScene,pcNode->mChildren[i],iMat,
-			iVFormat,piFaces,piVertices, meshSplit, meshCounts);
+			iVFormat, piFaces,piVertices, meshSplit, meshCounts);
 	}
 }
 
@@ -587,7 +597,8 @@ void MultiPartOptim::Execute( aiScene* pScene)
 	std::map<aiMesh *, aiOptimMap *> mesh_map;
 
 	std::vector<int> texMaterial;
-
+	std::vector<bool> transparentMaterial;
+	bool hasTransparentMaterial = false;
 	// First count how many meshes we need, those with textures
 	// and one for those without textures
 	int numMeshes = 1;
@@ -597,8 +608,17 @@ void MultiPartOptim::Execute( aiScene* pScene)
 		int numTextures = pScene->mMaterials[i]->GetTextureCount(aiTextureType_DIFFUSE);
 		texMaterial.push_back(numTextures);
 
+		float opacity;
+		AI_SUCCESS == pScene->mMaterials[i]->Get(AI_MATKEY_OPACITY, opacity);
+		bool isTransparent = opacity < 1;
+		hasTransparentMaterial |= isTransparent;		
+		transparentMaterial.push_back(isTransparent);
+		
 		numMeshes += (numTextures > 0);
 	}
+
+	if (hasTransparentMaterial)	numMeshes++;
+
 
 	apcOutMeshes.reserve(numMeshes);
 	std::list<unsigned int> aiVFormats;
@@ -613,67 +633,72 @@ void MultiPartOptim::Execute( aiScene* pScene)
 	aiVFormats.sort();
 	aiVFormats.unique();
 
-	std::vector<std::vector<int> > meshSplit;
-	std::vector<splitMeshCount> meshCounts;
-
 
 	for (std::list<unsigned int>::const_iterator j =  aiVFormats.begin();j != aiVFormats.end();++j)	{
-		unsigned int iVertices = 0;
-		unsigned int iFaces = 0;
+		std::vector<unsigned int>  iVertices = { 0, 0 };
+		std::vector<unsigned int>  iFaces = { 0, 0 };
+
+		std::vector<std::vector<std::vector<int> >> meshSplit;
+		std::vector<std::vector<splitMeshCount>> meshCounts;
+
+		meshSplit.resize(2);
+		meshCounts.resize(2);
 
 		unsigned int processedFaces    = 0;
-
-		CountVerticesAndFaces(pScene,pScene->mRootNode,-1,*j,&iFaces,&iVertices, meshSplit, meshCounts);
-		if (0 != iFaces && 0 != iVertices)
+		CountVerticesAndFaces(pScene, pScene->mRootNode, -1, *j, iFaces, iVertices, meshSplit, meshCounts);
+		for (uint32_t meshIdx = 0; meshIdx < meshSplit.size(); ++meshIdx)
 		{
-			for(unsigned int i = 0; i < meshSplit.size(); i++)
+			if (0 != iFaces[meshIdx] && 0 != iVertices[meshIdx])
 			{
-				iFaces    = meshCounts[i].numFaces;
-				iVertices = meshCounts[i].numVertices;
-
-				apcOutMeshes.push_back(new aiMesh());
-				aiMesh* pcMesh = apcOutMeshes.back();
-				pcMesh->mNumFaces = iFaces;
-				pcMesh->mNumVertices = iVertices;
-				pcMesh->mFaces = new aiFace[iFaces];
-				pcMesh->mVertices = new aiVector3D[iVertices];
-				pcMesh->mMaterialIndex = 0;
-				;
-
-				if ((*j) & 0x2)pcMesh->mNormals = new aiVector3D[iVertices];
-				if ((*j) & 0x4)
+				for (unsigned int i = 0; i < meshSplit[meshIdx].size(); i++)
 				{
-					pcMesh->mTangents    = new aiVector3D[iVertices];
-					pcMesh->mBitangents  = new aiVector3D[iVertices];
+					iFaces[meshIdx] = meshCounts[meshIdx][i].numFaces;
+					iVertices[meshIdx] = meshCounts[meshIdx][i].numVertices;
+
+					apcOutMeshes.push_back(new aiMesh());
+					aiMesh* pcMesh = apcOutMeshes.back();
+					pcMesh->mNumFaces = iFaces[meshIdx];
+					pcMesh->mNumVertices = iVertices[meshIdx];
+					pcMesh->mFaces = new aiFace[iFaces[meshIdx]];
+					pcMesh->mVertices = new aiVector3D[iVertices[meshIdx]];
+					pcMesh->mMaterialIndex = 0;
+					;
+
+					if ((*j) & 0x2)pcMesh->mNormals = new aiVector3D[iVertices[meshIdx]];
+					if ((*j) & 0x4)
+					{
+						pcMesh->mTangents = new aiVector3D[iVertices[meshIdx]];
+						pcMesh->mBitangents = new aiVector3D[iVertices[meshIdx]];
+					}
+					iFaces[meshIdx] = 0;
+					while ((*j) & (0x100 << iFaces[meshIdx]))
+					{
+						pcMesh->mTextureCoords[iFaces[meshIdx]] = new aiVector3D[iVertices[meshIdx]];
+						if ((*j) & (0x10000 << iFaces[meshIdx]))pcMesh->mNumUVComponents[iFaces[meshIdx]] = 3;
+						else pcMesh->mNumUVComponents[iFaces[meshIdx]] = 2;
+						iFaces[meshIdx]++;
+					}
+					iFaces[meshIdx] = 0;
+					while ((*j) & (0x1000000 << iFaces[meshIdx]))
+						pcMesh->mColors[iFaces[meshIdx]++] = new aiColor4D[iVertices[meshIdx]];
+
+					// fill the mesh ...
+					unsigned int aiTemp[2] = { 0, 0 };
+					aiOptimMap *mapOut = new aiOptimMap();
+
+					int splitListIDX = 0;
+					bool foundStart = false;
+
+					CollectData(pScene, pScene->mRootNode, -1, *j, pcMesh, mapOut, aiTemp, &s[0],
+						meshSplit[meshIdx][i], splitListIDX, meshCounts[meshIdx][i].pNode, foundStart);
+
+					mesh_map.insert(std::make_pair(pcMesh, mapOut));
 				}
-				iFaces = 0;
-				while ((*j) & (0x100 << iFaces))
-				{
-					pcMesh->mTextureCoords[iFaces] = new aiVector3D[iVertices];
-					if ((*j) & (0x10000 << iFaces))pcMesh->mNumUVComponents[iFaces] = 3;
-					else pcMesh->mNumUVComponents[iFaces] = 2;
-					iFaces++;
-				}
-				iFaces = 0;
-				while ((*j) & (0x1000000 << iFaces))
-					pcMesh->mColors[iFaces++] = new aiColor4D[iVertices];
-
-				// fill the mesh ...
-				unsigned int aiTemp[2] = {0,0};
-				aiOptimMap *mapOut = new aiOptimMap();
-
-				int splitListIDX = 0;
-				bool foundStart = false;
-
-				CollectData(pScene,pScene->mRootNode,-1,*j,pcMesh,mapOut, aiTemp,&s[0],
-						meshSplit[i], splitListIDX, meshCounts[i].pNode, foundStart);
-
-				mesh_map.insert(std::make_pair(pcMesh, mapOut));
 			}
-		}
 
-		meshSplit.clear();
-		meshCounts.clear();
+		}
+		
+
 	}
 
 
@@ -686,42 +711,49 @@ void MultiPartOptim::Execute( aiScene* pScene)
 			aiVFormats.sort();
 			aiVFormats.unique();
 			for (std::list<unsigned int>::const_iterator j =  aiVFormats.begin();j != aiVFormats.end();++j)	{
-				unsigned int iVertices = 0;
-				unsigned int iFaces = 0;
+				//Textured meshes should be separate meshes anyway
+				std::vector<unsigned int>  iVertices = { 0};
+				std::vector<unsigned int>  iFaces = { 0 };
 
-				CountVerticesAndFaces(pScene,pScene->mRootNode,iMat,*j,&iFaces,&iVertices, meshSplit, meshCounts);
+				std::vector<std::vector<std::vector<int> >> meshSplit;
+				std::vector<std::vector<splitMeshCount>> meshCounts;
 
-				if (0 != iFaces && 0 != iVertices)
+				meshSplit.resize(1);
+				meshCounts.resize(1);
+
+				CountVerticesAndFaces(pScene,pScene->mRootNode,iMat,*j, iFaces, iVertices, meshSplit, meshCounts);
+
+				if (0 != iFaces[0] && 0 != iVertices[0])
 				{
-					for(unsigned int i = 0; i < meshSplit.size(); i++)
+					for(unsigned int i = 0; i < meshSplit[0].size(); i++)
 					{
-						iFaces    = meshCounts[i].numFaces;
-						iVertices = meshCounts[i].numVertices;
+						iFaces[0] = meshCounts[0][i].numFaces;
+						iVertices[0] = meshCounts[0][i].numVertices;
 
 						apcOutMeshes.push_back(new aiMesh());
 						aiMesh* pcMesh = apcOutMeshes.back();
-						pcMesh->mNumFaces = iFaces;
-						pcMesh->mNumVertices = iVertices;
-						pcMesh->mFaces = new aiFace[iFaces];
-						pcMesh->mVertices = new aiVector3D[iVertices];
+						pcMesh->mNumFaces = iFaces[0];
+						pcMesh->mNumVertices = iVertices[0];
+						pcMesh->mFaces = new aiFace[iFaces[0]];
+						pcMesh->mVertices = new aiVector3D[iVertices[0]];
 						pcMesh->mMaterialIndex = iMat;
-						if ((*j) & 0x2)pcMesh->mNormals = new aiVector3D[iVertices];
+						if ((*j) & 0x2)pcMesh->mNormals = new aiVector3D[iVertices[0]];
 						if ((*j) & 0x4)
 						{
-							pcMesh->mTangents    = new aiVector3D[iVertices];
-							pcMesh->mBitangents  = new aiVector3D[iVertices];
+							pcMesh->mTangents = new aiVector3D[iVertices[0]];
+							pcMesh->mBitangents = new aiVector3D[iVertices[0]];
 						}
-						iFaces = 0;
-						while ((*j) & (0x100 << iFaces))
+						iFaces[0] = 0;
+						while ((*j) & (0x100 << iFaces[0]))
 						{
-							pcMesh->mTextureCoords[iFaces] = new aiVector3D[iVertices];
-							if ((*j) & (0x10000 << iFaces))pcMesh->mNumUVComponents[iFaces] = 3;
-							else pcMesh->mNumUVComponents[iFaces] = 2;
-							iFaces++;
+							pcMesh->mTextureCoords[iFaces[0]] = new aiVector3D[iVertices[0]];
+							if ((*j) & (0x10000 << iFaces[0]))pcMesh->mNumUVComponents[iFaces[0]] = 3;
+							else pcMesh->mNumUVComponents[iFaces[0]] = 2;
+							iFaces[0]++;
 						}
-						iFaces = 0;
-						while ((*j) & (0x1000000 << iFaces))
-							pcMesh->mColors[iFaces++] = new aiColor4D[iVertices];
+						iFaces[0] = 0;
+						while ((*j) & (0x1000000 << iFaces[0]))
+							pcMesh->mColors[iFaces[0]++] = new aiColor4D[iVertices[0]];
 
 						// fill the mesh ...
 						unsigned int aiTemp[2] = {0,0};
@@ -731,15 +763,13 @@ void MultiPartOptim::Execute( aiScene* pScene)
 						bool foundStart = false;
 
 						CollectData(pScene, pScene->mRootNode, iMat, *j,pcMesh,mapOut,
-								aiTemp,&s[0], meshSplit[i], splitListIDX, meshCounts[i].pNode,
+							aiTemp, &s[0], meshSplit[0][i], splitListIDX, meshCounts[0][i].pNode,
 								foundStart);
 
 						mesh_map.insert(std::make_pair(pcMesh, mapOut));
 					}
 				}
 
-				meshSplit.clear();
-				meshCounts.clear();
 			}
 		}
 	}
