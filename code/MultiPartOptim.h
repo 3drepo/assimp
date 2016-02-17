@@ -103,8 +103,8 @@ private:
 	void CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNode,
 		int iMat,
 		unsigned int iVFormat, std::vector<unsigned int> &piFaces, std::vector<unsigned int> &piVertices,
-		std::vector<std::vector<std::vector<int>>> &meshSplit,
-		std::vector<std::vector<splitMeshCount>> &meshCounts);
+		std::vector< std::vector< std::vector<int> > > &meshSplit,
+		std::vector< std::vector<splitMeshCount> > &meshCounts);
 
 	// -------------------------------------------------------------------
 	// Collect vertex/face data

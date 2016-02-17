@@ -125,8 +125,8 @@ unsigned int MultiPartOptim::GetMeshVFormat(aiMesh* pcMesh)
 // material index
 void MultiPartOptim::CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNode, int iMat,
 	unsigned int iVFormat, std::vector<unsigned int> &piFaces, std::vector<unsigned int> &piVertices,
-	std::vector<std::vector<std::vector<int>>> &meshSplit,
-	std::vector<std::vector<splitMeshCount>> &meshCounts)
+	std::vector< std::vector<std::vector<int> > > &meshSplit,
+	std::vector< std::vector<splitMeshCount> > &meshCounts)
 {
 
 	std::vector<std::vector<int>*> splitList;
@@ -638,8 +638,8 @@ void MultiPartOptim::Execute( aiScene* pScene)
 		std::vector<unsigned int>  iVertices = { 0, 0 };
 		std::vector<unsigned int>  iFaces = { 0, 0 };
 
-		std::vector<std::vector<std::vector<int> >> meshSplit;
-		std::vector<std::vector<splitMeshCount>> meshCounts;
+		std::vector< std::vector<std::vector<int> > > meshSplit;
+		std::vector< std::vector<splitMeshCount> > meshCounts;
 
 		meshSplit.resize(2);
 		meshCounts.resize(2);
@@ -715,8 +715,8 @@ void MultiPartOptim::Execute( aiScene* pScene)
 				std::vector<unsigned int>  iVertices = { 0};
 				std::vector<unsigned int>  iFaces = { 0 };
 
-				std::vector<std::vector<std::vector<int> >> meshSplit;
-				std::vector<std::vector<splitMeshCount>> meshCounts;
+				std::vector< std::vector<std::vector<int> > > meshSplit;
+				std::vector< std::vector<splitMeshCount> > meshCounts;
 
 				meshSplit.resize(1);
 				meshCounts.resize(1);
