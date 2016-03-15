@@ -102,11 +102,9 @@ private:
 	// material index
 	void CountVerticesAndFaces( aiScene* pcScene, aiNode* pcNode,
 		int iMat,
-		unsigned int iVFormat,
-		unsigned int* piFaces,
-		unsigned int* piVertices,
-		std::vector<std::vector<int> > &meshSplit,
-		std::vector<splitMeshCount> &meshCounts);
+		unsigned int iVFormat, std::vector<unsigned int> &piFaces, std::vector<unsigned int> &piVertices,
+		std::vector< std::vector< std::vector<int> > > &meshSplit,
+		std::vector< std::vector<splitMeshCount> > &meshCounts);
 
 	// -------------------------------------------------------------------
 	// Collect vertex/face data
