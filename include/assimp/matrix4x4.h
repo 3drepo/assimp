@@ -230,15 +230,15 @@ public:
 
 } PACK_STRUCT;
 
-typedef aiMatrix4x4t<float> aiMatrix4x4;
+typedef aiMatrix4x4t<double> aiMatrix4x4;
 
 #else
 
 struct aiMatrix4x4 {
-    float a1, a2, a3, a4;
-    float b1, b2, b3, b4;
-    float c1, c2, c3, c4;
-    float d1, d2, d3, d4;
+    double a1, a2, a3, a4;
+    double b1, b2, b3, b4;
+    double c1, c2, c3, c4;
+    double d1, d2, d3, d4;
 };
 
 

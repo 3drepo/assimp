@@ -152,7 +152,7 @@ struct BoneVertex
 {
     //! Bone and corresponding vertex weight.
     //! -1 for unrequired bones ....
-    std::vector<std::pair<int,float> > mBoneWeights;
+    std::vector<std::pair<int,double> > mBoneWeights;
 
     //! Position of the bone vertex.
     //! MUST be identical to the vertex position
@@ -227,7 +227,7 @@ struct BaseNode
         mName = szTemp;
 
         // Set mTargetPosition to qnan
-        const float qnan = get_qnan();
+        const double qnan = get_qnan();
         mTargetPosition.x = qnan;
     }
 
@@ -322,9 +322,9 @@ struct Light : public BaseNode
 
     LightType mLightType;
     aiColor3D mColor;
-    float mIntensity;
-    float mAngle; // in degrees
-    float mFalloff;
+    double mIntensity;
+    double mAngle; // in degrees
+    double mFalloff;
 };
 
 // ---------------------------------------------------------------------------
@@ -347,7 +347,7 @@ struct Camera : public BaseNode
     {
     }
 
-    float mFOV, mNear, mFar;
+    double mFOV, mNear, mFar;
     CameraType mCameraType;
 };
 
@@ -549,13 +549,13 @@ private:
     //! (also works for MESH_TVERT, MESH_CFACE, MESH_VERTCOL  ...)
     //! \param apOut Output buffer (3 floats)
     //! \param rIndexOut Output index
-    void ParseLV4MeshFloatTriple(float* apOut, unsigned int& rIndexOut);
+    void ParseLV4MeshFloatTriple(double* apOut, unsigned int& rIndexOut);
 
     // -------------------------------------------------------------------
     //! Parse a *MESH_VERT block in a file
     //! (also works for MESH_TVERT, MESH_CFACE, MESH_VERTCOL  ...)
     //! \param apOut Output buffer (3 floats)
-    void ParseLV4MeshFloatTriple(float* apOut);
+    void ParseLV4MeshFloatTriple(double* apOut);
 
     // -------------------------------------------------------------------
     //! Parse a *MESH_TFACE block in a file
@@ -571,9 +571,9 @@ private:
     void ParseLV4MeshLongTriple(unsigned int* apOut);
 
     // -------------------------------------------------------------------
-    //! Parse a single float element
-    //! \param fOut Output float
-    void ParseLV4MeshFloat(float& fOut);
+    //! Parse a single double element
+    //! \param fOut Output double
+    void ParseLV4MeshFloat(double& fOut);
 
     // -------------------------------------------------------------------
     //! Parse a single int element

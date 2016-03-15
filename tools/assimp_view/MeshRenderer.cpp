@@ -100,19 +100,19 @@ int CMeshRenderer::DrawSorted(unsigned int iIndex,const aiMatrix4x4& mWorld)
     // well ... this is really funny now. We must compute their distance
     // from the camera. We take the average distance of a face and add it
     // to a map which sorts it
-    std::map<float,unsigned int, std::greater<float> > smap;
+    std::map<double,unsigned int, std::greater<double> > smap;
 
     for (unsigned int iFace = 0; iFace < pcMesh->mNumFaces;++iFace)
     {
         const aiFace* pcFace = &pcMesh->mFaces[iFace];
-        float fDist = 0.0f;
+        double fDist = 0.0f;
         for (unsigned int c = 0; c < 3;++c)
         {
             aiVector3D vPos = pcMesh->mVertices[pcFace->mIndices[c]];
             vPos -= vLocalCamera;
             fDist += vPos.SquareLength();
         }
-        smap.insert(std::pair<float, unsigned int>(fDist,iFace));
+        smap.insert(std::pair<double, unsigned int>(fDist,iFace));
     }
 
     // now we can lock the index buffer and rebuild it
@@ -124,7 +124,7 @@ int CMeshRenderer::DrawSorted(unsigned int iIndex,const aiMatrix4x4& mWorld)
         uint16_t* aiIndices;
         pcHelper->piIB->Lock(0,0,(void**)&aiIndices,D3DLOCK_DISCARD);
 
-        for (std::map<float,unsigned int, std::greater<float> >::const_iterator
+        for (std::map<double,unsigned int, std::greater<double> >::const_iterator
             i =  smap.begin();
             i != smap.end();++i)
         {
@@ -139,7 +139,7 @@ int CMeshRenderer::DrawSorted(unsigned int iIndex,const aiMatrix4x4& mWorld)
         uint32_t* aiIndices;
         pcHelper->piIB->Lock(0,0,(void**)&aiIndices,D3DLOCK_DISCARD);
 
-        for (std::map<float,unsigned int, std::greater<float> >::const_iterator
+        for (std::map<double,unsigned int, std::greater<double> >::const_iterator
             i =  smap.begin();
             i != smap.end();++i)
         {

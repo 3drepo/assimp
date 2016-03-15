@@ -207,7 +207,7 @@ void IRRImporter::BuildSkybox(std::vector<aiMesh*>& meshes, std::vector<aiMateri
     // by six single planes with different textures, so we'll
     // need to build six meshes.
 
-    const float l = 10.f; // the size used by Irrlicht
+    const double l = 10.f; // the size used by Irrlicht
 
     // FRONT SIDE
     meshes.push_back( BuildSingleQuadMesh(
@@ -415,21 +415,21 @@ void IRRImporter::ComputeAnimations(Node* root, aiNode* real, std::vector<aiNode
 
 #if 0
                 // This can be a division through zero, but we don't care
-                float f1 = (float)lcm / angles[0];
-                float f2 = (float)lcm / angles[1];
-                float f3 = (float)lcm / angles[2];
+                double f1 = (double)lcm / angles[0];
+                double f2 = (double)lcm / angles[1];
+                double f3 = (double)lcm / angles[2];
 #endif
 
                 // find out how many time units we'll need for the finest
                 // track (in seconds) - this defines the number of output
                 // keys (fps * seconds)
-                float max  = 0.f;
+                double max  = 0.f;
                 if (angles[0])
-                    max = (float)lcm / angles[0];
+                    max = (double)lcm / angles[0];
                 if (angles[1])
-                    max = std::max(max, (float)lcm / angles[1]);
+                    max = std::max(max, (double)lcm / angles[1]);
                 if (angles[2])
-                    max = std::max(max, (float)lcm / angles[2]);
+                    max = std::max(max, (double)lcm / angles[2]);
 
                 anim->mNumRotationKeys = (unsigned int)(max*fps);
                 anim->mRotationKeys = new aiQuatKey[anim->mNumRotationKeys];
@@ -479,7 +479,7 @@ void IRRImporter::ComputeAnimations(Node* root, aiNode* real, std::vector<aiNode
                     aiVectorKey& key = anim->mPositionKeys[i];
                     key.mTime = i * tdelta;
 
-                    const float t = (float) ( in.speed * key.mTime );
+                    const double t = (double) ( in.speed * key.mTime );
                     key.mValue = in.circleCenter  + in.circleRadius * ((vecU * std::cos(t)) + (vecV * std::sin(t)));
                 }
 
@@ -498,7 +498,7 @@ void IRRImporter::ComputeAnimations(Node* root, aiNode* real, std::vector<aiNode
                 anim->mPositionKeys = new aiVectorKey[anim->mNumPositionKeys];
 
                 aiVector3D diff = in.direction - in.circleCenter;
-                const float lengthOfWay = diff.Length();
+                const double lengthOfWay = diff.Length();
                 diff.Normalize();
 
                 const double timeFactor = lengthOfWay / in.timeForWay;
@@ -507,7 +507,7 @@ void IRRImporter::ComputeAnimations(Node* root, aiNode* real, std::vector<aiNode
                 for (unsigned int i = 0; i < anim->mNumPositionKeys;++i)    {
                     aiVectorKey& key = anim->mPositionKeys[i];
                     key.mTime = i * tdelta;
-                    key.mValue = in.circleCenter + diff * float(timeFactor * key.mTime);
+                    key.mValue = in.circleCenter + diff * double(timeFactor * key.mTime);
                 }
             }
             break;
@@ -542,8 +542,8 @@ void IRRImporter::ComputeAnimations(Node* root, aiNode* real, std::vector<aiNode
                 {
                     aiVectorKey& key = anim->mPositionKeys[i];
 
-                    const float dt = (i * in.speed * 0.001f );
-                    const float u = dt - std::floor(dt);
+                    const double dt = (i * in.speed * 0.001f );
+                    const double u = dt - std::floor(dt);
                     const int idx = (int)std::floor(dt) % size;
 
                     // get the 4 current points to evaluate the spline
@@ -553,13 +553,13 @@ void IRRImporter::ComputeAnimations(Node* root, aiNode* real, std::vector<aiNode
                     const aiVector3D& p3 = in.splineKeys[ ClampSpline( idx + 2, size ) ].mValue;
 
                     // compute polynomials
-                    const float u2 = u*u;
-                    const float u3 = u2*2;
+                    const double u2 = u*u;
+                    const double u3 = u2*2;
 
-                    const float h1 = 2.0f * u3 - 3.0f * u2 + 1.0f;
-                    const float h2 = -2.0f * u3 + 3.0f * u3;
-                    const float h3 = u3 - 2.0f * u3;
-                    const float h4 = u3 - u2;
+                    const double h1 = 2.0f * u3 - 3.0f * u2 + 1.0f;
+                    const double h2 = -2.0f * u3 + 3.0f * u3;
+                    const double h3 = u3 - 2.0f * u3;
+                    const double h4 = u3 - u2;
 
                     // compute the spline tangents
                     const aiVector3D t1 = ( p2 - p0 ) * in.tightness;
@@ -858,7 +858,7 @@ void IRRImporter::GenerateGraph(Node* root,aiNode* rootOut ,aiScene* scene,
     // Now compute the final local transformation matrix of the
     // node from the given translation, rotation and scaling values.
     // (the rotation is given in Euler angles, XYZ order)
-    //std::swap((float&)root->rotation.z,(float&)root->rotation.y);
+    //std::swap((double&)root->rotation.z,(double&)root->rotation.y);
     rootOut->mTransformation.FromEulerAnglesXYZ(AI_DEG_TO_RAD(root->rotation) );
 
     // apply scaling
@@ -1154,7 +1154,7 @@ void IRRImporter::InternReadFile( const std::string& pFile,
                                 curAnim->loop = prop.value;
                             }
                         }
-                        else if (!ASSIMP_stricmp(reader->getNodeName(),"float"))    {
+                        else if (!ASSIMP_stricmp(reader->getNodeName(),"double"))    {
                             FloatProperty prop;
                             ReadFloatProperty(prop);
 

@@ -64,7 +64,7 @@ namespace Assimp    {
 // * C++ style comments only
 //
 // * Structures may include the primitive types char, int, short,
-//   float, double. Signedness specifiers are not allowed on
+//   double, double. Signedness specifiers are not allowed on
 //   integers. Enum types are allowed, but they must have been
 //   defined in this header.
 //
@@ -145,8 +145,8 @@ struct World : ElemBase {
 
 // -------------------------------------------------------------------------------
 struct MVert : ElemBase {
-    float co[3] FAIL;
-    float no[3] FAIL;
+    double co[3] FAIL;
+    double no[3] FAIL;
     char flag;
     int mat_nr WARN;
     int bweight;
@@ -166,7 +166,7 @@ struct MLoop : ElemBase {
 
 // -------------------------------------------------------------------------------
 struct MLoopUV : ElemBase {
-    float uv[2];
+    double uv[2];
     int flag;
 };
 
@@ -205,7 +205,7 @@ struct MFace : ElemBase {
 
 // -------------------------------------------------------------------------------
 struct TFace : ElemBase {
-    float uv[4][2] FAIL;
+    double uv[4][2] FAIL;
     int col[4] FAIL;
     char flag;
     short mode;
@@ -216,7 +216,7 @@ struct TFace : ElemBase {
 // -------------------------------------------------------------------------------
 struct MTFace : ElemBase {
 
-    float uv[4][2] FAIL;
+    double uv[4][2] FAIL;
     char flag;
     short mode;
     short tile;
@@ -228,7 +228,7 @@ struct MTFace : ElemBase {
 // -------------------------------------------------------------------------------
 struct MDeformWeight : ElemBase  {
       int    def_nr FAIL;
-      float  weight FAIL;
+      double  weight FAIL;
 };
 
 // -------------------------------------------------------------------------------
@@ -242,18 +242,18 @@ struct MDeformVert : ElemBase  {
 struct Material : ElemBase {
     ID id FAIL;
 
-    float r,g,b WARN;
-    float specr,specg,specb WARN;
+    double r,g,b WARN;
+    double specr,specg,specb WARN;
     short har;
-    float ambr,ambg,ambb WARN;
-    float mirr,mirg,mirb;
-    float emit WARN;
-    float alpha WARN;
-    float ref;
-    float translucency;
-    float roughness;
-    float darkness;
-    float refrac;
+    double ambr,ambg,ambb WARN;
+    double mirr,mirg,mirb;
+    double emit WARN;
+    double alpha WARN;
+    double ref;
+    double translucency;
+    double roughness;
+    double darkness;
+    double refrac;
 
     boost::shared_ptr<Group> group;
 
@@ -315,15 +315,15 @@ struct Camera : ElemBase {
     // struct AnimData *adt;
 
     Type type,flag WARN;
-    float angle WARN;
-    //float passepartalpha, angle;
-    //float clipsta, clipend;
-    //float lens, ortho_scale, drawsize;
-    //float shiftx, shifty;
+    double angle WARN;
+    //double passepartalpha, angle;
+    //double clipsta, clipend;
+    //double lens, ortho_scale, drawsize;
+    //double shiftx, shifty;
 
-    //float YF_dofdist, YF_aperture;
+    //double YF_dofdist, YF_aperture;
     //short YF_bkhtype, YF_bkhbias;
-    //float YF_bkhrot;
+    //double YF_bkhrot;
 };
 
 
@@ -356,51 +356,51 @@ struct Lamp : ElemBase {
       //int mode;
 
       short colormodel, totex;
-      float r,g,b,k WARN;
-      //float shdwr, shdwg, shdwb;
+      double r,g,b,k WARN;
+      //double shdwr, shdwg, shdwb;
 
-      float energy, dist, spotsize, spotblend;
-      //float haint;
+      double energy, dist, spotsize, spotblend;
+      //double haint;
 
-      float att1, att2;
+      double att1, att2;
       //struct CurveMapping *curfalloff;
       FalloffType falloff_type;
 
-      //float clipsta, clipend, shadspotsize;
-      //float bias, soft, compressthresh;
+      //double clipsta, clipend, shadspotsize;
+      //double bias, soft, compressthresh;
       //short bufsize, samp, buffers, filtertype;
       //char bufflag, buftype;
 
       //short ray_samp, ray_sampy, ray_sampz;
       //short ray_samp_type;
       //short area_shape;
-      //float area_size, area_sizey, area_sizez;
-      //float adapt_thresh;
+      //double area_size, area_sizey, area_sizez;
+      //double adapt_thresh;
       //short ray_samp_method;
 
       //short texact, shadhalostep;
 
       //short sun_effect_type;
       //short skyblendtype;
-      //float horizon_brightness;
-      //float spread;
-      float sun_brightness;
-      //float sun_size;
-      //float backscattered_light;
-      //float sun_intensity;
-      //float atm_turbidity;
-      //float atm_inscattering_factor;
-      //float atm_extinction_factor;
-      //float atm_distance_factor;
-      //float skyblendfac;
-      //float sky_exposure;
+      //double horizon_brightness;
+      //double spread;
+      double sun_brightness;
+      //double sun_size;
+      //double backscattered_light;
+      //double sun_intensity;
+      //double atm_turbidity;
+      //double atm_inscattering_factor;
+      //double atm_extinction_factor;
+      //double atm_distance_factor;
+      //double skyblendfac;
+      //double sky_exposure;
       //short sky_colorspace;
 
       // int YF_numphotons, YF_numsearch;
       // short YF_phdepth, YF_useqmc, YF_bufsize, YF_pad;
-      // float YF_causticblur, YF_ltradius;
+      // double YF_causticblur, YF_ltradius;
 
-      // float YF_glowint, YF_glowofs;
+      // double YF_glowint, YF_glowofs;
       // short YF_glowtype, YF_pad2;
 
       //struct Ipo *ipo;
@@ -492,7 +492,7 @@ struct MirrorModifierData : ElemBase {
     ModifierData modifier FAIL;
 
     short axis, flag;
-    float tolerance;
+    double tolerance;
     boost::shared_ptr<Object> mirror_ob;
 };
 
@@ -516,8 +516,8 @@ struct Object : ElemBase  {
     };
 
     Type type FAIL;
-    float obmat[4][4] WARN;
-    float parentinv[4][4] WARN;
+    double obmat[4][4] WARN;
+    double parentinv[4][4] WARN;
     char parsubstr[32] WARN;
 
     Object* parent WARN;
@@ -571,7 +571,7 @@ struct Image : ElemBase {
     boost::shared_ptr<PackedFile> packedfile;
     //struct PreviewImage * preview;
 
-    float lastupdate;
+    double lastupdate;
     int lastused;
     short animspeed;
 
@@ -615,18 +615,18 @@ struct Tex : ElemBase {
     ID id FAIL;
     // AnimData *adt;
 
-    //float noisesize, turbul;
-    //float bright, contrast, rfac, gfac, bfac;
-    //float filtersize;
+    //double noisesize, turbul;
+    //double bright, contrast, rfac, gfac, bfac;
+    //double filtersize;
 
-    //float mg_H, mg_lacunarity, mg_octaves, mg_offset, mg_gain;
-    //float dist_amount, ns_outscale;
+    //double mg_H, mg_lacunarity, mg_octaves, mg_offset, mg_gain;
+    //double dist_amount, ns_outscale;
 
-    //float vn_w1;
-    //float vn_w2;
-    //float vn_w3;
-    //float vn_w4;
-    //float vn_mexp;
+    //double vn_w1;
+    //double vn_w2;
+    //double vn_w3;
+    //double vn_w4;
+    //double vn_mexp;
     //short vn_distm, vn_coltype;
 
     //short noisedepth, noisetype;
@@ -637,7 +637,7 @@ struct Tex : ElemBase {
     Type type FAIL;
     //short stype;
 
-    //float cropxmin, cropymin, cropxmax, cropymax;
+    //double cropxmin, cropymin, cropxmax, cropymax;
     //int texfilter;
     //int afmax;
     //short xrepeat, yrepeat;
@@ -647,8 +647,8 @@ struct Tex : ElemBase {
     //int len;
     //int frames, offset, sfra;
 
-    //float checkerdist, nabla;
-    //float norfac;
+    //double checkerdist, nabla;
+    //double norfac;
 
     //ImageUser iuser;
 
@@ -727,30 +727,30 @@ struct MTex : ElemBase {
 
     Projection projx,projy,projz;
     char mapping;
-    float ofs[3], size[3], rot;
+    double ofs[3], size[3], rot;
 
     int texflag;
     short colormodel, pmapto, pmaptoneg;
     //short normapspace, which_output;
     //char brush_map_mode;
-    float r,g,b,k WARN;
-    //float def_var, rt;
+    double r,g,b,k WARN;
+    //double def_var, rt;
 
-    //float colfac, varfac;
+    //double colfac, varfac;
 
-    float norfac;
-    //float dispfac, warpfac;
-    float colspecfac, mirrfac, alphafac;
-    float difffac, specfac, emitfac, hardfac;
-    //float raymirrfac, translfac, ambfac;
-    //float colemitfac, colreflfac, coltransfac;
-    //float densfac, scatterfac, reflfac;
+    double norfac;
+    //double dispfac, warpfac;
+    double colspecfac, mirrfac, alphafac;
+    double difffac, specfac, emitfac, hardfac;
+    //double raymirrfac, translfac, ambfac;
+    //double colemitfac, colreflfac, coltransfac;
+    //double densfac, scatterfac, reflfac;
 
-    //float timefac, lengthfac, clumpfac;
-    //float kinkfac, roughfac, padensfac;
-    //float lifefac, sizefac, ivelfac, pvelfac;
-    //float shadowfac;
-    //float zenupfac, zendownfac, blendfac;
+    //double timefac, lengthfac, clumpfac;
+    //double kinkfac, roughfac, padensfac;
+    //double lifefac, sizefac, ivelfac, pvelfac;
+    //double shadowfac;
+    //double zenupfac, zendownfac, blendfac;
 };
 
 

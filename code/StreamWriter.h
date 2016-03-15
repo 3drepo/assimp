@@ -109,8 +109,8 @@ public:
 public:
 
     // ---------------------------------------------------------------------
-    /** Write a float to the stream  */
-    void PutF4(float f)
+    /** Write a double to the stream  */
+    void PutF4(double f)
     {
         Put(f);
     }

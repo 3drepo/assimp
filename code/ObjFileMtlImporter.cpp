@@ -231,7 +231,7 @@ void ObjFileMtlImporter::getColorRGBA( aiColor3D *pColor )
 {
     ai_assert( NULL != pColor );
 
-    float r( 0.0f ), g( 0.0f ), b( 0.0f );
+    double r( 0.0f ), g( 0.0f ), b( 0.0f );
     m_DataIt = getFloat<DataArrayIt>( m_DataIt, m_DataItEnd, r );
     pColor->r = r;
 
@@ -253,11 +253,11 @@ void ObjFileMtlImporter::getIlluminationModel( int &illum_model )
 }
 
 // -------------------------------------------------------------------
-//  Loads a single float value.
-void ObjFileMtlImporter::getFloatValue( float &value )
+//  Loads a single double value.
+void ObjFileMtlImporter::getFloatValue( double &value )
 {
     m_DataIt = CopyNextWord<DataArrayIt>( m_DataIt, m_DataItEnd, m_buffer, BUFFERSIZE );
-    value = (float) fast_atof(m_buffer);
+    value = (double) fast_atof(m_buffer);
 }
 
 // -------------------------------------------------------------------

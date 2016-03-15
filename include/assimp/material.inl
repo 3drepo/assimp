@@ -54,7 +54,7 @@ inline aiReturn aiMaterial::GetTexture( aiTextureType type,
    C_STRUCT aiString* path,
    aiTextureMapping* mapping    /*= NULL*/,
    unsigned int* uvindex        /*= NULL*/,
-   float* blend                /*= NULL*/,
+   double* blend                /*= NULL*/,
    aiTextureOp* op              /*= NULL*/,
    aiTextureMapMode* mapmode    /*= NULL*/) const
 {
@@ -122,7 +122,7 @@ inline aiReturn aiMaterial::Get(const char* pKey,unsigned int type,
 
 // ---------------------------------------------------------------------------
 inline aiReturn aiMaterial::Get(const char* pKey,unsigned int type,
-    unsigned int idx,float* pOut,
+    unsigned int idx,double* pOut,
     unsigned int* pMax) const
 {
     return ::aiGetMaterialFloatArray(this,pKey,type,idx,pOut,pMax);
@@ -136,7 +136,7 @@ inline aiReturn aiMaterial::Get(const char* pKey,unsigned int type,
 }
 // ---------------------------------------------------------------------------
 inline aiReturn aiMaterial::Get(const char* pKey,unsigned int type,
-    unsigned int idx,float& pOut) const
+    unsigned int idx,double& pOut) const
 {
     return aiGetMaterialFloat(this,pKey,type,idx,&pOut);
 }
@@ -189,14 +189,14 @@ aiReturn aiMaterial::AddProperty (const TYPE* pInput,
 }
 
 // ---------------------------------------------------------------------------
-inline aiReturn aiMaterial::AddProperty(const float* pInput,
+inline aiReturn aiMaterial::AddProperty(const double* pInput,
     const unsigned int pNumValues,
     const char* pKey,
     unsigned int type,
     unsigned int index)
 {
     return AddBinaryProperty((const void*)pInput,
-        pNumValues * sizeof(float),
+        pNumValues * sizeof(double),
         pKey,type,index,aiPTI_Float);
 }
 
@@ -269,14 +269,14 @@ inline aiReturn aiMaterial::AddProperty(const int* pInput,
 
 // ---------------------------------------------------------------------------
 template<>
-inline aiReturn aiMaterial::AddProperty<float>(const float* pInput,
+inline aiReturn aiMaterial::AddProperty<double>(const double* pInput,
     const unsigned int pNumValues,
     const char* pKey,
     unsigned int type,
     unsigned int index)
 {
     return AddBinaryProperty((const void*)pInput,
-        pNumValues * sizeof(float),
+        pNumValues * sizeof(double),
         pKey,type,index,aiPTI_Float);
 }
 

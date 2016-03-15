@@ -98,10 +98,10 @@ void ImproveCacheLocalityProcess::Execute( aiScene* pScene)
 
     DefaultLogger::get()->debug("ImproveCacheLocalityProcess begin");
 
-    float out = 0.f;
+    double out = 0.f;
     unsigned int numf = 0, numm = 0;
     for( unsigned int a = 0; a < pScene->mNumMeshes; a++){
-        const float res = ProcessMesh( pScene->mMeshes[a],a);
+        const double res = ProcessMesh( pScene->mMeshes[a],a);
         if (res) {
             numf += pScene->mMeshes[a]->mNumFaces;
             out  += res;
@@ -120,7 +120,7 @@ void ImproveCacheLocalityProcess::Execute( aiScene* pScene)
 
 // ------------------------------------------------------------------------------------------------
 // Improves the cache coherency of a specific mesh
-float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshNum)
+double ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshNum)
 {
     // TODO: rewrite this to use std::vector or boost::shared_array
     ai_assert(NULL != pMesh);
@@ -140,7 +140,7 @@ float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int mesh
         return 0.f;
     }
 
-    float fACMR = 3.f;
+    double fACMR = 3.f;
     const aiFace* const pcEnd = pMesh->mFaces+pMesh->mNumFaces;
 
     // Input ACMR is for logging purposes only
@@ -175,7 +175,7 @@ float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int mesh
             }
         }
         delete[] piFIFOStack;
-        fACMR = (float)iCacheMisses / pMesh->mNumFaces;
+        fACMR = (double)iCacheMisses / pMesh->mNumFaces;
         if (3.0 == fACMR)   {
             char szBuff[128]; // should be sufficiently large in every case
 
@@ -353,9 +353,9 @@ float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int mesh
             }
         }
     }
-    float fACMR2 = 0.0f;
+    double fACMR2 = 0.0f;
     if (!DefaultLogger::isNullLogger()) {
-        fACMR2 = (float)iCacheMisses / pMesh->mNumFaces;
+        fACMR2 = (double)iCacheMisses / pMesh->mNumFaces;
 
         // very intense verbose logging ... prepare for much text if there are many meshes
         if ( DefaultLogger::get()->getLogSeverity() == Logger::VERBOSE) {

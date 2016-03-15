@@ -203,7 +203,7 @@ bool TriangulateProcess::TriangulateMesh( aiMesh* pMesh)
 #ifdef AI_BUILD_TRIANGULATE_COLOR_FACE_WINDING
         for (unsigned int i = 0; i < face.mNumIndices; ++i) {
             aiColor4D& c = clr[idx[i]];
-            c.r = (i+1) / (float)max;
+            c.r = (i+1) / (double)max;
             c.b = 1.f - c.r;
         }
 #endif
@@ -242,7 +242,7 @@ bool TriangulateProcess::TriangulateMesh( aiMesh* pMesh)
                 diag.Normalize();
                 right.Normalize();
 
-                const float angle = std::acos(left*diag) + std::acos(right*diag);
+                const double angle = std::acos(left*diag) + std::acos(right*diag);
                 if (angle > AI_MATH_PI_F) {
                     // this is the concave point
                     start_vertex = i;
@@ -297,12 +297,12 @@ bool TriangulateProcess::TriangulateMesh( aiMesh* pMesh)
             }
 
             // Select largest normal coordinate to ignore for projection
-            const float ax = (n.x>0 ? n.x : -n.x);
-            const float ay = (n.y>0 ? n.y : -n.y);
-            const float az = (n.z>0 ? n.z : -n.z);
+            const double ax = (n.x>0 ? n.x : -n.x);
+            const double ay = (n.y>0 ? n.y : -n.y);
+            const double az = (n.z>0 ? n.z : -n.z);
 
             unsigned int ac = 0, bc = 1; /* no z coord. projection to xy */
-            float inv = n.z;
+            double inv = n.z;
             if (ax > ay) {
                 if (ax > az) { /* no x coord. projection to yz */
                     ac = 1; bc = 2;

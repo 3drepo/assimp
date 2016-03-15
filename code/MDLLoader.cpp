@@ -375,11 +375,11 @@ void MDLImporter::InternReadFile_Quake1( )
             {
                 if (!i) {
                     // however, create only one output image (the first)
-                    this->CreateTextureARGB8_3DGS_MDL3(szCurrent + iNumImages * sizeof(float));
+                    this->CreateTextureARGB8_3DGS_MDL3(szCurrent + iNumImages * sizeof(double));
                 }
                 // go to the end of the skin section / the beginning of the next skin
                 szCurrent += pcHeader->skinheight * pcHeader->skinwidth +
-                    sizeof(float) * iNumImages;
+                    sizeof(double) * iNumImages;
             }
         }
         // 3DGS has a few files that are using other 3DGS like texture formats here
@@ -480,14 +480,14 @@ void MDLImporter::InternReadFile_Quake1( )
             }
 
             aiVector3D& vec = pcMesh->mVertices[iCurrent];
-            vec.x = (float)pcVertices[iIndex].v[0] * pcHeader->scale[0];
+            vec.x = (double)pcVertices[iIndex].v[0] * pcHeader->scale[0];
             vec.x += pcHeader->translate[0];
 
-            vec.y = (float)pcVertices[iIndex].v[1] * pcHeader->scale[1];
+            vec.y = (double)pcVertices[iIndex].v[1] * pcHeader->scale[1];
             vec.y += pcHeader->translate[1];
             //vec.y *= -1.0f;
 
-            vec.z = (float)pcVertices[iIndex].v[2] * pcHeader->scale[2];
+            vec.z = (double)pcVertices[iIndex].v[2] * pcHeader->scale[2];
             vec.z += pcHeader->translate[2];
 
             // read the normal vector from the precalculated normal table
@@ -495,8 +495,8 @@ void MDLImporter::InternReadFile_Quake1( )
             //pcMesh->mNormals[iCurrent].y *= -1.0f;
 
             // read texture coordinates
-            float s = (float)pcTexCoords[iIndex].s;
-            float t = (float)pcTexCoords[iIndex].t;
+            double s = (double)pcTexCoords[iIndex].s;
+            double t = (double)pcTexCoords[iIndex].t;
 
             // translate texture coordinates
             if (0 == pcTriangles->facesfront && 0 != pcTexCoords[iIndex].onseam)    {
@@ -687,14 +687,14 @@ void MDLImporter::InternReadFile_3DGS_MDL345( )
                 }
 
                 aiVector3D& vec = pcMesh->mVertices[iCurrent];
-                vec.x = (float)pcVertices[iIndex].v[0] * pcHeader->scale[0];
+                vec.x = (double)pcVertices[iIndex].v[0] * pcHeader->scale[0];
                 vec.x += pcHeader->translate[0];
 
-                vec.y = (float)pcVertices[iIndex].v[1] * pcHeader->scale[1];
+                vec.y = (double)pcVertices[iIndex].v[1] * pcHeader->scale[1];
                 vec.y += pcHeader->translate[1];
                 // vec.y *= -1.0f;
 
-                vec.z = (float)pcVertices[iIndex].v[2] * pcHeader->scale[2];
+                vec.z = (double)pcVertices[iIndex].v[2] * pcHeader->scale[2];
                 vec.z += pcHeader->translate[2];
 
                 // read the normal vector from the precalculated normal table
@@ -742,14 +742,14 @@ void MDLImporter::InternReadFile_3DGS_MDL345( )
                 }
 
                 aiVector3D& vec = pcMesh->mVertices[iCurrent];
-                vec.x = (float)pcVertices[iIndex].v[0] * pcHeader->scale[0];
+                vec.x = (double)pcVertices[iIndex].v[0] * pcHeader->scale[0];
                 vec.x += pcHeader->translate[0];
 
-                vec.y = (float)pcVertices[iIndex].v[1] * pcHeader->scale[1];
+                vec.y = (double)pcVertices[iIndex].v[1] * pcHeader->scale[1];
                 vec.y += pcHeader->translate[1];
                 // vec.y *= -1.0f;
 
-                vec.z = (float)pcVertices[iIndex].v[2] * pcHeader->scale[2];
+                vec.z = (double)pcVertices[iIndex].v[2] * pcHeader->scale[2];
                 vec.z += pcHeader->translate[2];
 
                 // read the normal vector from the precalculated normal table
@@ -792,8 +792,8 @@ void MDLImporter::ImportUVCoordinate_3DGS_MDL345(
         DefaultLogger::get()->warn("Index overflow in MDLn UV coord list");
     }
 
-    float s = (float)pcSrc[iIndex].u;
-    float t = (float)pcSrc[iIndex].v;
+    double s = (double)pcSrc[iIndex].u;
+    double t = (double)pcSrc[iIndex].v;
 
     // Scale s and t to range from 0.0 to 1.0
     if (0x5 != iGSFileVersion)  {
@@ -840,8 +840,8 @@ void MDLImporter::CalculateUVCoordinates_MDL5()
         }
 
         if (1 != iWidth || 1 != iHeight)    {
-            const float fWidth = (float)iWidth;
-            const float fHeight = (float)iHeight;
+            const double fWidth = (double)iWidth;
+            const double fHeight = (double)iHeight;
             aiMesh* pcMesh = this->pScene->mMeshes[0];
             for (unsigned int i = 0; i < pcMesh->mNumVertices;++i)
             {
@@ -1065,8 +1065,8 @@ void MDLImporter::ReadFaces_3DGS_MDL7(const MDL::IntGroupInfo_MDL7& groupInfo,
                         DefaultLogger::get()->warn("Index overflow in MDL7 UV coordinate list (#1)");
                     }
 
-                    float u = groupInfo.pcGroupUVs[iIndex].u;
-                    float v = 1.0f-groupInfo.pcGroupUVs[iIndex].v; // DX to OGL
+                    double u = groupInfo.pcGroupUVs[iIndex].u;
+                    double v = 1.0f-groupInfo.pcGroupUVs[iIndex].v; // DX to OGL
 
                     groupData.vTextureCoords1[iOutIndex].x = u;
                     groupData.vTextureCoords1[iOutIndex].y = v;
@@ -1092,8 +1092,8 @@ void MDLImporter::ReadFaces_3DGS_MDL7(const MDL::IntGroupInfo_MDL7& groupInfo,
                         DefaultLogger::get()->warn("Index overflow in MDL7 UV coordinate list (#2)");
                     }
 
-                    float u = groupInfo.pcGroupUVs[ iIndex ].u;
-                    float v = 1.0f-groupInfo.pcGroupUVs[ iIndex ].v;
+                    double u = groupInfo.pcGroupUVs[ iIndex ].u;
+                    double v = 1.0f-groupInfo.pcGroupUVs[ iIndex ].v;
 
                     groupData.vTextureCoords2[ iOutIndex ].x = u;
                     groupData.vTextureCoords2[ iOutIndex ].y = v; // DX to OGL

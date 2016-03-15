@@ -516,22 +516,22 @@ IfcFloat ConvertSIPrefix(const std::string& prefix)
 // ------------------------------------------------------------------------------------------------
 void ConvertColor(aiColor4D& out, const IfcColourRgb& in)
 {
-    out.r = static_cast<float>( in.Red );
-    out.g = static_cast<float>( in.Green );
-    out.b = static_cast<float>( in.Blue );
-    out.a = static_cast<float>( 1.f );
+    out.r = static_cast<double>( in.Red );
+    out.g = static_cast<double>( in.Green );
+    out.b = static_cast<double>( in.Blue );
+    out.a = static_cast<double>( 1.f );
 }
 
 // ------------------------------------------------------------------------------------------------
 void ConvertColor(aiColor4D& out, const IfcColourOrFactor& in,ConversionData& conv,const aiColor4D* base)
 {
     if (const EXPRESS::REAL* const r = in.ToPtr<EXPRESS::REAL>()) {
-        out.r = out.g = out.b = static_cast<float>(*r);
+        out.r = out.g = out.b = static_cast<double>(*r);
         if(base) {
-            out.r *= static_cast<float>( base->r );
-            out.g *= static_cast<float>( base->g );
-            out.b *= static_cast<float>( base->b );
-            out.a = static_cast<float>( base->a );
+            out.r *= static_cast<double>( base->r );
+            out.g *= static_cast<double>( base->g );
+            out.b *= static_cast<double>( base->b );
+            out.a = static_cast<double>( base->a );
         }
         else out.a = 1.0;
     }

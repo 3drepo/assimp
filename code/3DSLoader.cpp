@@ -459,7 +459,7 @@ void Discreet3DSImporter::ParseChunk(const char* name, unsigned int num)
         camera->mLookAt.x = stream->GetF4() - camera->mPosition.x;
         camera->mLookAt.y = stream->GetF4() - camera->mPosition.y;
         camera->mLookAt.z = stream->GetF4() - camera->mPosition.z;
-        float len = camera->mLookAt.Length();
+        double len = camera->mLookAt.Length();
         if (len < 1e-5f) {
 
             // There are some files with lookat == position. Don't know why or whether it's ok or not.
@@ -470,7 +470,7 @@ void Discreet3DSImporter::ParseChunk(const char* name, unsigned int num)
         else camera->mLookAt /= len;
 
         // And finally - the camera rotation angle, in counter clockwise direction
-        const float angle =  AI_DEG_TO_RAD( stream->GetF4() );
+        const double angle =  AI_DEG_TO_RAD( stream->GetF4() );
         aiQuaternion quat(camera->mLookAt,angle);
         camera->mUp = quat.GetMatrix() * aiVector3D(0.f,1.f,0.f);
 
@@ -822,7 +822,7 @@ void Discreet3DSImporter::ParseHierarchyChunk(uint16_t parent)
             aiFloatKey v;
             v.mTime = (double)fidx;
 
-            // This is just a single float
+            // This is just a single double
             SkipTCBInfo();
             v.mValue = stream->GetF4();
 
@@ -871,7 +871,7 @@ void Discreet3DSImporter::ParseHierarchyChunk(uint16_t parent)
             v.mTime = (double)fidx;
 
             // The rotation keyframe is given as an axis-angle pair
-            const float rad = stream->GetF4();
+            const double rad = stream->GetF4();
             aiVector3D axis;
             axis.x = stream->GetF4();
             axis.y = stream->GetF4();
@@ -1168,13 +1168,13 @@ void Discreet3DSImporter::ParseMaterialChunk()
     case Discreet3DS::CHUNK_MAT_TRANSPARENCY:
         {
         // This is the material's transparency
-        float* pcf = &mScene->mMaterials.back().mTransparency;
+        double* pcf = &mScene->mMaterials.back().mTransparency;
         *pcf = ParsePercentageChunk();
 
         // NOTE: transparency, not opacity
         if (is_qnan(*pcf))
             *pcf = 1.0f;
-        else *pcf = 1.0f - *pcf * (float)0xFFFF / 100.0f;
+        else *pcf = 1.0f - *pcf * (double)0xFFFF / 100.0f;
         }
         break;
 
@@ -1190,30 +1190,30 @@ void Discreet3DSImporter::ParseMaterialChunk()
 
     case Discreet3DS::CHUNK_MAT_SHININESS:
         { // This is the shininess of the material
-        float* pcf = &mScene->mMaterials.back().mSpecularExponent;
+        double* pcf = &mScene->mMaterials.back().mSpecularExponent;
         *pcf = ParsePercentageChunk();
         if (is_qnan(*pcf))
             *pcf = 0.0f;
-        else *pcf *= (float)0xFFFF;
+        else *pcf *= (double)0xFFFF;
         }
         break;
 
     case Discreet3DS::CHUNK_MAT_SHININESS_PERCENT:
         { // This is the shininess strength of the material
-        float* pcf = &mScene->mMaterials.back().mShininessStrength;
+        double* pcf = &mScene->mMaterials.back().mShininessStrength;
         *pcf = ParsePercentageChunk();
         if (is_qnan(*pcf))
             *pcf = 0.0f;
-        else *pcf *= (float)0xffff / 100.0f;
+        else *pcf *= (double)0xffff / 100.0f;
         }
         break;
 
     case Discreet3DS::CHUNK_MAT_SELF_ILPCT:
         { // This is the self illumination strength of the material
-        float f = ParsePercentageChunk();
+        double f = ParsePercentageChunk();
         if (is_qnan(f))
             f = 0.0f;
-        else f *= (float)0xFFFF / 100.0f;
+        else f *= (double)0xFFFF / 100.0f;
         mScene->mMaterials.back().mEmissive = aiColor3D(f,f,f);
         }
         break;
@@ -1278,7 +1278,7 @@ void Discreet3DSImporter::ParseTextureChunk(D3DS::Texture* pcOut)
 
     case Discreet3DS::CHUNK_PERCENTW:
         // Manually parse the blend factor
-        pcOut->mTextureBlend = (float)((uint16_t)stream->GetI2()) / 100.0f;
+        pcOut->mTextureBlend = (double)((uint16_t)stream->GetI2()) / 100.0f;
         break;
 
     case Discreet3DS::CHUNK_MAT_MAP_USCALE:
@@ -1337,7 +1337,7 @@ void Discreet3DSImporter::ParseTextureChunk(D3DS::Texture* pcOut)
 
 // ------------------------------------------------------------------------------------------------
 // Read a percentage chunk
-float Discreet3DSImporter::ParsePercentageChunk()
+double Discreet3DSImporter::ParsePercentageChunk()
 {
     Discreet3DS::Chunk chunk;
     ReadChunk(&chunk);
@@ -1345,7 +1345,7 @@ float Discreet3DSImporter::ParsePercentageChunk()
     if (Discreet3DS::CHUNK_PERCENTF == chunk.Flag)
         return stream->GetF4();
     else if (Discreet3DS::CHUNK_PERCENTW == chunk.Flag)
-        return (float)((uint16_t)stream->GetI2()) / (float)0xFFFF;
+        return (double)((uint16_t)stream->GetI2()) / (double)0xFFFF;
     return get_qnan();
 }
 
@@ -1357,7 +1357,7 @@ void Discreet3DSImporter::ParseColorChunk(aiColor3D* out,
     ai_assert(out != NULL);
 
     // error return value
-    const float qnan = get_qnan();
+    const double qnan = get_qnan();
     static const aiColor3D clrError = aiColor3D(qnan,qnan,qnan);
 
     Discreet3DS::Chunk chunk;
@@ -1373,7 +1373,7 @@ void Discreet3DSImporter::ParseColorChunk(aiColor3D* out,
         bGamma = true;
 
     case Discreet3DS::CHUNK_RGBF:
-        if (sizeof(float) * 3 > diff)   {
+        if (sizeof(double) * 3 > diff)   {
             *out = clrError;
             return;
         }
@@ -1389,9 +1389,9 @@ void Discreet3DSImporter::ParseColorChunk(aiColor3D* out,
             *out = clrError;
             return;
         }
-        out->r = (float)(uint8_t)stream->GetI1() / 255.0f;
-        out->g = (float)(uint8_t)stream->GetI1() / 255.0f;
-        out->b = (float)(uint8_t)stream->GetI1() / 255.0f;
+        out->r = (double)(uint8_t)stream->GetI1() / 255.0f;
+        out->g = (double)(uint8_t)stream->GetI1() / 255.0f;
+        out->b = (double)(uint8_t)stream->GetI1() / 255.0f;
         break;
 
     // Percentage chunks are accepted, too.
@@ -1405,7 +1405,7 @@ void Discreet3DSImporter::ParseColorChunk(aiColor3D* out,
 
     case Discreet3DS::CHUNK_PERCENTW:
         if (acceptPercent && 1 <= diff) {
-            out->g = out->b = out->r = (float)(uint8_t)stream->GetI1() / 255.0f;
+            out->g = out->b = out->r = (double)(uint8_t)stream->GetI1() / 255.0f;
             break;
         }
         *out = clrError;

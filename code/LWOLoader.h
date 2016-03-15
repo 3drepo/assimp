@@ -120,7 +120,7 @@ private:
     /** Parsing functions used for all file format versions
     */
     inline void GetS0(std::string& out,unsigned int max);
-    inline float GetF4();
+    inline double GetF4();
     inline uint32_t GetU4();
     inline uint16_t GetU2();
     inline uint8_t  GetU1();
@@ -320,13 +320,13 @@ private:
     /** Assign a value from a VMAP to a vertex and all vertices
      *  attached to it.
      *  @param base VMAP destination data
-     *  @param numRead Number of float's to be read
+     *  @param numRead Number of double's to be read
      *  @param idx Absolute index of the first vertex
      *  @param data Value of the VMAP to be assigned - read numRead
      *    floats from this array.
     */
     void DoRecursiveVMAPAssignment(VMapEntry* base, unsigned int numRead,
-        unsigned int idx, float* data);
+        unsigned int idx, double* data);
 
     // -------------------------------------------------------------------
     /** Compute normal vectors for a mesh
@@ -402,9 +402,9 @@ protected:
 
 
 // ------------------------------------------------------------------------------------------------
-inline float LWOImporter::GetF4()
+inline double LWOImporter::GetF4()
 {
-    float f;
+    double f;
     ::memcpy(&f, mFileBuffer, 4);
     mFileBuffer += 4;
     AI_LSWAP4(f);

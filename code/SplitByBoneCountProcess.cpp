@@ -156,7 +156,7 @@ void SplitByBoneCountProcess::SplitMesh( const aiMesh* pMesh, std::vector<aiMesh
 
     // necessary optimisation: build a list of all affecting bones for each vertex
     // TODO: (thom) maybe add a custom allocator here to avoid allocating tens of thousands of small arrays
-    typedef std::pair<size_t, float> BoneWeight;
+    typedef std::pair<size_t, double> BoneWeight;
     std::vector< std::vector<BoneWeight> > vertexBones( pMesh->mNumVertices);
     for( size_t a = 0; a < pMesh->mNumBones; ++a)
     {

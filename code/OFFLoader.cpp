@@ -155,9 +155,9 @@ void OFFImporter::InternReadFile( const std::string& pFile,
         aiVector3D& v = tempPositions[i];
 
         sz = line; SkipSpaces(&sz);
-        sz = fast_atoreal_move<float>(sz,(float&)v.x); SkipSpaces(&sz);
-        sz = fast_atoreal_move<float>(sz,(float&)v.y); SkipSpaces(&sz);
-        fast_atoreal_move<float>(sz,(float&)v.z);
+        sz = fast_atoreal_move<double>(sz,(double&)v.x); SkipSpaces(&sz);
+        sz = fast_atoreal_move<double>(sz,(double&)v.y); SkipSpaces(&sz);
+        fast_atoreal_move<double>(sz,(double&)v.z);
     }
 
 

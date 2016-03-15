@@ -50,14 +50,14 @@ extern std::string g_szCheckerBackgroundShader;
 
 struct SVertex
 {
-    float x,y,z,w,u,v;
+    double x,y,z,w,u,v;
 };
 
 CDisplay CDisplay::s_cInstance;
 
 extern COLORREF g_aclCustomColors[16] /*= {0}*/;
 extern HKEY g_hRegistry;
-extern float g_fLoadTime;
+extern double g_fLoadTime;
 
 //-------------------------------------------------------------------------------
 // Table of colors used for normal vectors.
@@ -372,7 +372,7 @@ int CDisplay::AddTextureToDisplayList(unsigned int iType,
     const aiString* szPath,
     HTREEITEM hFX,
     unsigned int iUVIndex       /*= 0*/,
-    const float fBlendFactor    /*= 0.0f*/,
+    const double fBlendFactor    /*= 0.0f*/,
     aiTextureOp eTextureOp      /*= aiTextureOp_Multiply*/,
     unsigned int iMesh      /*= 0*/)
 {
@@ -572,7 +572,7 @@ int CDisplay::AddMaterialToDisplayList(HTREEITEM hRoot,
 
     // for each texture in the list ... add it
     unsigned int iUV;
-    float fBlend;
+    double fBlend;
     aiTextureOp eOp;
     aiString szPath;
     bool bNoOpacity = true;
@@ -841,7 +841,7 @@ int CDisplay::FillDefaultStatistics(void)
     sprintf(szOut,"%i", CMaterialManager::Instance().GetShaderCount());
     SetDlgItemText(g_hDlg,IDC_ESHADER,szOut);
 
-    sprintf(szOut,"%.5f",(float)g_fLoadTime);
+    sprintf(szOut,"%.5f",(double)g_fLoadTime);
     SetDlgItemText(g_hDlg,IDC_ELOAD,szOut);
 
     UpdateColorFieldsInUI();
@@ -1258,9 +1258,9 @@ int CDisplay::HandleTreeViewPopup(WPARAM wParam,LPARAM lParam)
 
         ChooseColor(&clr);
 
-        clrOld.r = (float)(((unsigned int)clr.rgbResult)       & 0xFF) / 255.0f;
-        clrOld.g = (float)(((unsigned int)clr.rgbResult >> 8)  & 0xFF) / 255.0f;
-        clrOld.b = (float)(((unsigned int)clr.rgbResult >> 16) & 0xFF) / 255.0f;
+        clrOld.r = (double)(((unsigned int)clr.rgbResult)       & 0xFF) / 255.0f;
+        clrOld.g = (double)(((unsigned int)clr.rgbResult >> 8)  & 0xFF) / 255.0f;
+        clrOld.b = (double)(((unsigned int)clr.rgbResult >> 16) & 0xFF) / 255.0f;
 
         // update the color values in the mesh instances and
         // update all shaders ...
@@ -1496,7 +1496,7 @@ int CDisplay::SetupStereoView()
             D3DCOLORWRITEENABLE_GREEN);
 
         // move the camera a little bit to the left
-        g_sCamera.vPos -= g_sCamera.vRight * 0.03f;
+        g_sCamera.vPos -= g_sCamera.vRight * 0.03;
     }
     return 1;
 }
@@ -1517,7 +1517,7 @@ int CDisplay::RenderStereoView(const aiMatrix4x4& m)
         g_piDevice->Clear(0,NULL,D3DCLEAR_ZBUFFER,0,1.0f,0);
 
         // move the camera a little bit to the right
-        g_sCamera.vPos += g_sCamera.vRight * 0.06f;
+        g_sCamera.vPos += g_sCamera.vRight * 0.06;
 
         RenderNode(g_pcAsset->pcScene->mRootNode,m,false);
         g_piDevice->SetRenderState(D3DRS_ZWRITEENABLE,FALSE);
@@ -1644,8 +1644,8 @@ int CDisplay::DrawHUD()
     D3DSURFACE_DESC sDesc;
     g_pcTexture->GetLevelDesc(0,&sDesc);
     SVertex as[4];
-    float fHalfX = ((float)sRect.right-(float)sDesc.Width) / 2.0f;
-    float fHalfY = ((float)sRect.bottom-(float)sDesc.Height) / 2.0f;
+    double fHalfX = ((double)sRect.right-(double)sDesc.Width) / 2.0f;
+    double fHalfY = ((double)sRect.bottom-(double)sDesc.Height) / 2.0f;
     as[1].x = fHalfX;
     as[1].y = fHalfY;
     as[1].z = 0.2f;
@@ -1653,7 +1653,7 @@ int CDisplay::DrawHUD()
     as[1].u = 0.0f;
     as[1].v = 0.0f;
 
-    as[3].x = (float)sRect.right-fHalfX;
+    as[3].x = (double)sRect.right-fHalfX;
     as[3].y = fHalfY;
     as[3].z = 0.2f;
     as[3].w = 1.0f;
@@ -1661,14 +1661,14 @@ int CDisplay::DrawHUD()
     as[3].v = 0.0f;
 
     as[0].x = fHalfX;
-    as[0].y = (float)sRect.bottom-fHalfY;
+    as[0].y = (double)sRect.bottom-fHalfY;
     as[0].z = 0.2f;
     as[0].w = 1.0f;
     as[0].u = 0.0f;
     as[0].v = 1.0f;
 
-    as[2].x = (float)sRect.right-fHalfX;
-    as[2].y = (float)sRect.bottom-fHalfY;
+    as[2].x = (double)sRect.right-fHalfX;
+    as[2].y = (double)sRect.bottom-fHalfY;
     as[2].z = 0.2f;
     as[2].w = 1.0f;
     as[2].u = 1.0f;
@@ -1988,8 +1988,8 @@ int CDisplay::RenderNode (aiNode* piNode,const aiMatrix4x4& piMatrix,
             {
                 if( helper->piEffect)
                 {
-                    static float matrices[4*4*60];
-                    float* tempmat = matrices;
+                    static double matrices[4*4*60];
+                    double* tempmat = matrices;
                     const std::vector<aiMatrix4x4>& boneMats = g_pcAsset->mAnimator->GetBoneMatrices( piNode, i);
                     ai_assert( boneMats.size() == mesh->mNumBones);
 
@@ -2144,21 +2144,21 @@ int CDisplay::RenderPatternBG()
 
     struct SVertex
     {
-        float x,y,z,w;
+        double x,y,z,w;
     };
     // build the screen-filling rectangle
     SVertex as[4];
     as[1].x = 0.0f;
     as[1].y = 0.0f;
     as[1].z = 0.2f;
-    as[3].x = (float)sRect.right;
+    as[3].x = (double)sRect.right;
     as[3].y = 0.0f;
     as[3].z = 0.2f;
     as[0].x = 0.0f;
-    as[0].y = (float)sRect.bottom;
+    as[0].y = (double)sRect.bottom;
     as[0].z = 0.2f;
-    as[2].x = (float)sRect.right;
-    as[2].y = (float)sRect.bottom;
+    as[2].x = (double)sRect.right;
+    as[2].y = (double)sRect.bottom;
     as[2].z = 0.2f;
 
     as[0].w = 1.0f;
@@ -2240,17 +2240,17 @@ int CDisplay::RenderTextureView()
     if ( m_pcCurrentTexture->piTexture && *m_pcCurrentTexture->piTexture) { /* just a dirty fix */
         (*m_pcCurrentTexture->piTexture)->GetLevelDesc(0,&sDesc);
 
-        struct SVertex{float x,y,z,w,u,v;};
+        struct SVertex{double x,y,z,w,u,v;};
         SVertex as[4];
 
-        const float nx = (float)sRect.right;
-        const float ny = (float)sRect.bottom;
-        const float  x = (float)sDesc.Width;
-        const float  y = (float)sDesc.Height;
-        float f = min((nx-30) / x,(ny-30) / y) * (m_fTextureZoom/1000.0f);
+        const double nx = (double)sRect.right;
+        const double ny = (double)sRect.bottom;
+        const double  x = (double)sDesc.Width;
+        const double  y = (double)sDesc.Height;
+        double f = min((nx-30) / x,(ny-30) / y) * (m_fTextureZoom/1000.0f);
 
-        float fHalfX = (nx - (f * x)) / 2.0f;
-        float fHalfY = (ny - (f * y)) / 2.0f;
+        double fHalfX = (nx - (f * x)) / 2.0f;
+        double fHalfY = (ny - (f * y)) / 2.0f;
         as[1].x = fHalfX + m_vTextureOffset.x;
         as[1].y = fHalfY + m_vTextureOffset.y;
         as[1].z = 0.2f;

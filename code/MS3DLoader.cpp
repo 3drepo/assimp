@@ -116,15 +116,15 @@ const aiImporterDesc* MS3DImporter::GetInfo () const
 // ------------------------------------------------------------------------------------------------
 void ReadColor(StreamReaderLE& stream, aiColor4D& ambient)
 {
-    // aiColor4D is packed on gcc, implicit binding to float& fails therefore.
-    stream >> (float&)ambient.r >> (float&)ambient.g >> (float&)ambient.b >> (float&)ambient.a;
+    // aiColor4D is packed on gcc, implicit binding to double& fails therefore.
+    stream >> (double&)ambient.r >> (double&)ambient.g >> (double&)ambient.b >> (double&)ambient.a;
 }
 
 // ------------------------------------------------------------------------------------------------
 void ReadVector(StreamReaderLE& stream, aiVector3D& pos)
 {
     // See note in ReadColor()
-    stream >> (float&)pos.x >> (float&)pos.y >> (float&)pos.z;
+    stream >> (double&)pos.x >> (double&)pos.y >> (double&)pos.z;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -268,10 +268,10 @@ void MS3DImporter::InternReadFile( const std::string& pFile,
         }
 
         for (unsigned int i = 0; i < 3; ++i) {
-            stream >> (float&)(t.uv[i].x); // see note in ReadColor()
+            stream >> (double&)(t.uv[i].x); // see note in ReadColor()
         }
         for (unsigned int i = 0; i < 3; ++i) {
-            stream >> (float&)(t.uv[i].y);
+            stream >> (double&)(t.uv[i].y);
         }
 
         t.sg    = stream.GetI1();
@@ -328,7 +328,7 @@ void MS3DImporter::InternReadFile( const std::string& pFile,
         t.alphamap[128] = '\0';
     }
 
-    float animfps, currenttime;
+    double animfps, currenttime;
     uint32_t totalframes;
     stream >> animfps >> currenttime >> totalframes;
 
@@ -392,7 +392,7 @@ void MS3DImporter::InternReadFile( const std::string& pFile,
                     v.weights[3]=1.f;
                     for(unsigned int n = 0; n < 3; v.weights[3]-=v.weights[n++]) {
                         v.bone_id[n+1] = stream.GetI1();
-                        v.weights[n] = static_cast<float>(static_cast<unsigned int>(stream.GetI1()))/255.f;
+                        v.weights[n] = static_cast<double>(static_cast<unsigned int>(stream.GetI1()))/255.f;
                     }
                     stream.IncPtr((subversion-1)<<2u);
                 }

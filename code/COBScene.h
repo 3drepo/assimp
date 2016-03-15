@@ -121,7 +121,7 @@ struct Node : public ChunkInfo
     aiMatrix4x4 transform;
 
     // scaling for this node to get to the metric system
-    float unit_scale;
+    double unit_scale;
 };
 
 // ------------------
@@ -186,7 +186,7 @@ struct Light : public Node
     Light() : Node(TYPE_LIGHT),angle(),inner_angle(),ltype(SPOT) {}
 
     aiColor3D color;
-    float angle,inner_angle;
+    double angle,inner_angle;
 
     LightType ltype;
 };
@@ -229,13 +229,13 @@ struct Material : ChunkInfo
     std::string type;
 
     aiColor3D rgb;
-    float alpha, exp, ior,ka,ks;
+    double alpha, exp, ior,ka,ks;
 
     unsigned int matnum;
     Shader shader;
 
     AutoFacet autofacet;
-    float autofacet_angle;
+    double autofacet_angle;
 
     boost::shared_ptr<Texture> tex_env,tex_bump,tex_color;
 };

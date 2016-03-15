@@ -106,7 +106,7 @@ struct aiMetadataEntry
 inline aiMetadataType GetAiType( bool ) { return AI_BOOL; }
 inline aiMetadataType GetAiType( int ) { return AI_INT; }
 inline aiMetadataType GetAiType( uint64_t ) { return AI_UINT64; }
-inline aiMetadataType GetAiType( float ) { return AI_FLOAT; }
+inline aiMetadataType GetAiType( double ) { return AI_FLOAT; }
 inline aiMetadataType GetAiType( aiString ) { return AI_AISTRING; }
 inline aiMetadataType GetAiType( aiVector3D ) { return AI_AIVECTOR3D; }
 
@@ -169,7 +169,7 @@ struct aiMetadata
                     delete static_cast<uint64_t*>(data);
                     break;
                 case AI_FLOAT:
-                    delete static_cast<float*>(data);
+                    delete static_cast<double*>(data);
                     break;
                 case AI_AISTRING:
                     delete static_cast<aiString*>(data);

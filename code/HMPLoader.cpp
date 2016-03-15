@@ -243,7 +243,7 @@ void HMPImporter::InternReadFile_HMP5( )
         {
             pcVertOut->x = x * pcHeader->ftrisize_x;
             pcVertOut->y = y * pcHeader->ftrisize_y;
-            pcVertOut->z = (((float)src->z / 0xffff)-0.5f) * pcHeader->ftrisize_x * 8.0f;
+            pcVertOut->z = (((double)src->z / 0xffff)-0.5f) * pcHeader->ftrisize_x * 8.0f;
             MD2::LookupNormalIndex(src->normals162index, *pcNorOut );
             ++pcVertOut;++pcNorOut;++src;
         }
@@ -308,10 +308,10 @@ void HMPImporter::InternReadFile_HMP7( )
             // FIXME: What exctly is the correct scaling factor to use?
             // possibly pcHeader->scale_origin[2] in combination with a
             // signed interpretation of src->z?
-            pcVertOut->z = (((float)src->z / 0xffff)-0.5f) * pcHeader->ftrisize_x * 8.0f;
+            pcVertOut->z = (((double)src->z / 0xffff)-0.5f) * pcHeader->ftrisize_x * 8.0f;
 
-            pcNorOut->x = ((float)src->normal_x / 0x80 ); // * pcHeader->scale_origin[0];
-            pcNorOut->y = ((float)src->normal_y / 0x80 ); // * pcHeader->scale_origin[1];
+            pcNorOut->x = ((double)src->normal_x / 0x80 ); // * pcHeader->scale_origin[0];
+            pcNorOut->y = ((double)src->normal_y / 0x80 ); // * pcHeader->scale_origin[1];
             pcNorOut->z = 1.0f;
             pcNorOut->Normalize();
 
@@ -498,8 +498,8 @@ void HMPImporter::GenerateTextureCoords(
 
     aiVector3D* uv = pScene->mMeshes[0]->mTextureCoords[0];
 
-    const float fY = (1.0f / height) + (1.0f / height) / (height-1);
-    const float fX = (1.0f / width) + (1.0f / width) / (width-1);
+    const double fY = (1.0f / height) + (1.0f / height) / (height-1);
+    const double fX = (1.0f / width) + (1.0f / width) / (width-1);
 
     for (unsigned int y = 0; y < height;++y)    {
         for (unsigned int x = 0; x < width;++x,++uv)    {

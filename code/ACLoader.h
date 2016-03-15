@@ -91,10 +91,10 @@ public:
         aiColor3D spec;
 
         // shininess exponent
-        float shin;
+        double shin;
 
         // transparency. 0 == opaque
-        float trans;
+        double trans;
 
         // name of the material. optional.
         std::string name;
@@ -174,7 +174,7 @@ public:
         unsigned int subDiv;
 
         // max angle limit for smoothing
-        float crease;
+        double crease;
     };
 
 

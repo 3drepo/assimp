@@ -359,7 +359,7 @@ void MD2Importer::InternReadFile( const std::string& pFile,
     // now read all triangles of the first frame, apply scaling and translation
     unsigned int iCurrent = 0;
 
-    float fDivisorU = 1.0f,fDivisorV = 1.0f;
+    double fDivisorU = 1.0f,fDivisorV = 1.0f;
     if (m_pcHeader->numTexCoords)   {
         // allocate storage for texture coordinates, too
         pcMesh->mTextureCoords[0] = new aiVector3D[pcMesh->mNumVertices];
@@ -370,11 +370,11 @@ void MD2Importer::InternReadFile( const std::string& pFile,
         if (!m_pcHeader->skinWidth) {
             DefaultLogger::get()->error("MD2: No valid skin width given");
         }
-        else fDivisorU = (float)m_pcHeader->skinWidth;
+        else fDivisorU = (double)m_pcHeader->skinWidth;
         if (!m_pcHeader->skinHeight){
             DefaultLogger::get()->error("MD2: No valid skin height given");
         }
-        else fDivisorV = (float)m_pcHeader->skinHeight;
+        else fDivisorV = (double)m_pcHeader->skinHeight;
     }
 
     for (unsigned int i = 0; i < (unsigned int)m_pcHeader->numTriangles;++i)    {
@@ -397,13 +397,13 @@ void MD2Importer::InternReadFile( const std::string& pFile,
             // read x,y, and z component of the vertex
             aiVector3D& vec = pcMesh->mVertices[iCurrent];
 
-            vec.x = (float)pcVerts[iIndex].vertex[0] * pcFrame->scale[0];
+            vec.x = (double)pcVerts[iIndex].vertex[0] * pcFrame->scale[0];
             vec.x += pcFrame->translate[0];
 
-            vec.y = (float)pcVerts[iIndex].vertex[1] * pcFrame->scale[1];
+            vec.y = (double)pcVerts[iIndex].vertex[1] * pcFrame->scale[1];
             vec.y += pcFrame->translate[1];
 
-            vec.z = (float)pcVerts[iIndex].vertex[2] * pcFrame->scale[2];
+            vec.z = (double)pcVerts[iIndex].vertex[2] * pcFrame->scale[2];
             vec.z += pcFrame->translate[2];
 
             // read the normal vector from the precalculated normal table
@@ -411,8 +411,8 @@ void MD2Importer::InternReadFile( const std::string& pFile,
             LookupNormalIndex(pcVerts[iIndex].lightNormalIndex,vNormal);
 
             // flip z and y to become right-handed
-            std::swap((float&)vNormal.z,(float&)vNormal.y);
-            std::swap((float&)vec.z,(float&)vec.y);
+            std::swap((double&)vNormal.z,(double&)vNormal.y);
+            std::swap((double&)vec.z,(double&)vec.y);
 
             if (m_pcHeader->numTexCoords)   {
                 // validate texture coordinates

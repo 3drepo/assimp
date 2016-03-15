@@ -102,7 +102,7 @@ private:
     {
         aiVector3D pos;
         unsigned int bone_id[4], ref_cnt;
-        float weights[4];
+        double weights[4];
     };
 
     struct TempTriangle
@@ -130,13 +130,13 @@ private:
         char alphamap[129];
 
         aiColor4D diffuse,specular,ambient,emissive;
-        float shininess,transparency;
+        double shininess,transparency;
         std::string comment;
     };
 
     struct TempKeyFrame
     {
-        float time;
+        double time;
         aiVector3D value;
     };
 

@@ -598,7 +598,7 @@ void ProcessMetadata(const ListOf< Lazy< IfcProperty >, 1, 0 >& set, ConversionD
                     properties[key]=value;
                 }
                 else if (const EXPRESS::REAL* val = singleValue->NominalValue.Get()->ToPtr<EXPRESS::REAL>()) {
-                    float value = static_cast<float>(*val);
+                    double value = static_cast<double>(*val);
                     std::stringstream s;
                     s << value;
                     properties[key]=s.str();
@@ -622,7 +622,7 @@ void ProcessMetadata(const ListOf< Lazy< IfcProperty >, 1, 0 >& set, ConversionD
                     ss << "'" << value << "'";
                 }
                 else if (const EXPRESS::REAL* val = v->ToPtr<EXPRESS::REAL>()) {
-                    float value = static_cast<float>(*val);
+                    double value = static_cast<double>(*val);
                     ss << value;
                 }
                 else if (const EXPRESS::INTEGER* val = v->ToPtr<EXPRESS::INTEGER>()) {

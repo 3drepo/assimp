@@ -126,15 +126,15 @@ private:
 
 
         // common parameters
-        float speed;
+        double speed;
         aiVector3D direction;
 
         // FLY_CIRCLE
         aiVector3D circleCenter;
-        float circleRadius;
+        double circleRadius;
 
         // FOLLOW_SPLINE
-        float tightness;
+        double tightness;
         std::vector<aiVectorKey> splineKeys;
 
         // ROTATION (angles given in direction)
@@ -201,7 +201,7 @@ private:
 
         // Animated meshes: frames per second
         // 0.f if not specified
-        float framesPerSecond;
+        double framesPerSecond;
 
         // Meshes: path to the mesh to be loaded
         std::string meshPath;
@@ -212,7 +212,7 @@ private:
         std::vector< std::pair<aiMaterial*, unsigned int> > materials;
 
         // Spheres: radius of the sphere to be generates
-        float sphereRadius;
+        double sphereRadius;
 
         // Spheres: Number of polygons in the x,y direction
         unsigned int spherePolyCountX,spherePolyCountY;
@@ -229,9 +229,9 @@ private:
         {}
 
         //! Construction from single vertex components
-        SkyboxVertex(float px, float py, float pz,
-            float nx, float ny, float nz,
-            float uvx, float uvy)
+        SkyboxVertex(double px, double py, double pz,
+            double nx, double ny, double nz,
+            double uvx, double uvy)
 
             :   position    (px,py,pz)
             ,   normal      (nx,ny,nz)

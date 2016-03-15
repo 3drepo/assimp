@@ -109,7 +109,7 @@ inline size_t Write<uint16_t>(IOStream * stream, const uint16_t& w)
 }
 
 // -----------------------------------------------------------------------------------
-// Serialize a float
+// Serialize a double
 template <>
 inline size_t Write<float>(IOStream * stream, const float& f)
 {
@@ -133,9 +133,9 @@ inline size_t Write<double>(IOStream * stream, const double& f)
 template <>
 inline size_t Write<aiVector3D>(IOStream * stream, const aiVector3D& v)
 {
-    size_t t = Write<float>(stream,v.x);
-    t += Write<float>(stream,v.y);
-    t += Write<float>(stream,v.z);
+    size_t t = Write<double>(stream,v.x);
+    t += Write<double>(stream,v.y);
+    t += Write<double>(stream,v.z);
     return t;
 }
 
@@ -144,10 +144,10 @@ inline size_t Write<aiVector3D>(IOStream * stream, const aiVector3D& v)
 template <>
 inline size_t Write<aiColor4D>(IOStream * stream, const aiColor4D& v)
 {
-    size_t t = Write<float>(stream,v.r);
-    t += Write<float>(stream,v.g);
-    t += Write<float>(stream,v.b);
-    t += Write<float>(stream,v.a);
+    size_t t = Write<double>(stream,v.r);
+    t += Write<double>(stream,v.g);
+    t += Write<double>(stream,v.b);
+    t += Write<double>(stream,v.a);
     return t;
 }
 
@@ -156,10 +156,10 @@ inline size_t Write<aiColor4D>(IOStream * stream, const aiColor4D& v)
 template <>
 inline size_t Write<aiQuaternion>(IOStream * stream, const aiQuaternion& v)
 {
-    size_t t = Write<float>(stream,v.w);
-    t += Write<float>(stream,v.x);
-    t += Write<float>(stream,v.y);
-    t += Write<float>(stream,v.z);
+    size_t t = Write<double>(stream,v.w);
+    t += Write<double>(stream,v.x);
+    t += Write<double>(stream,v.y);
+    t += Write<double>(stream,v.z);
     return 16;
 }
 
@@ -170,7 +170,7 @@ template <>
 inline size_t Write<aiVertexWeight>(IOStream * stream, const aiVertexWeight& v)
 {
     size_t t = Write<unsigned int>(stream,v.mVertexId);
-    return t+Write<float>(stream,v.mWeight);
+    return t+Write<double>(stream,v.mWeight);
 }
 
 // -----------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ inline size_t Write<aiMatrix4x4>(IOStream * stream, const aiMatrix4x4& m)
 {
     for (unsigned int i = 0; i < 4;++i) {
         for (unsigned int i2 = 0; i2 < 4;++i2) {
-            Write<float>(stream,m[i][i2]);
+            Write<double>(stream,m[i][i2]);
         }
     }
     return 64;
@@ -593,9 +593,9 @@ inline size_t WriteArray(IOStream * stream, const T* in, unsigned int size)
             Write<unsigned int>(&chunk,l->mType);
 
             if (l->mType != aiLightSource_DIRECTIONAL) {
-                Write<float>(&chunk,l->mAttenuationConstant);
-                Write<float>(&chunk,l->mAttenuationLinear);
-                Write<float>(&chunk,l->mAttenuationQuadratic);
+                Write<double>(&chunk,l->mAttenuationConstant);
+                Write<double>(&chunk,l->mAttenuationLinear);
+                Write<double>(&chunk,l->mAttenuationQuadratic);
             }
 
             Write<aiVector3D>(&chunk,(const aiVector3D&)l->mColorDiffuse);
@@ -603,8 +603,8 @@ inline size_t WriteArray(IOStream * stream, const T* in, unsigned int size)
             Write<aiVector3D>(&chunk,(const aiVector3D&)l->mColorAmbient);
 
             if (l->mType == aiLightSource_SPOT) {
-                Write<float>(&chunk,l->mAngleInnerCone);
-                Write<float>(&chunk,l->mAngleOuterCone);
+                Write<double>(&chunk,l->mAngleInnerCone);
+                Write<double>(&chunk,l->mAngleOuterCone);
             }
 
         }
@@ -618,10 +618,10 @@ inline size_t WriteArray(IOStream * stream, const T* in, unsigned int size)
             Write<aiVector3D>(&chunk,cam->mPosition);
             Write<aiVector3D>(&chunk,cam->mLookAt);
             Write<aiVector3D>(&chunk,cam->mUp);
-            Write<float>(&chunk,cam->mHorizontalFOV);
-            Write<float>(&chunk,cam->mClipPlaneNear);
-            Write<float>(&chunk,cam->mClipPlaneFar);
-            Write<float>(&chunk,cam->mAspect);
+            Write<double>(&chunk,cam->mHorizontalFOV);
+            Write<double>(&chunk,cam->mClipPlaneNear);
+            Write<double>(&chunk,cam->mClipPlaneFar);
+            Write<double>(&chunk,cam->mAspect);
         }
 
         // -----------------------------------------------------------------------------------

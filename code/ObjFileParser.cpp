@@ -246,23 +246,23 @@ void ObjFileParser::getVector( std::vector<aiVector3D> &point3d_array ) {
         SkipToken( tmp );
         ++numComponents;
     }
-    float x, y, z;
+    double x, y, z;
     if( 2 == numComponents ) {
         copyNextWord( m_buffer, Buffersize );
-        x = ( float ) fast_atof( m_buffer );
+        x = ( double ) fast_atof( m_buffer );
 
         copyNextWord( m_buffer, Buffersize );
-        y = ( float ) fast_atof( m_buffer );
+        y = ( double ) fast_atof( m_buffer );
         z = 0.0;
     } else if( 3 == numComponents ) {
         copyNextWord( m_buffer, Buffersize );
-        x = ( float ) fast_atof( m_buffer );
+        x = ( double ) fast_atof( m_buffer );
 
         copyNextWord( m_buffer, Buffersize );
-        y = ( float ) fast_atof( m_buffer );
+        y = ( double ) fast_atof( m_buffer );
 
         copyNextWord( m_buffer, Buffersize );
-        z = ( float ) fast_atof( m_buffer );
+        z = ( double ) fast_atof( m_buffer );
     } else {
         throw DeadlyImportError( "OBJ: Invalid number of components" );
     }
@@ -273,15 +273,15 @@ void ObjFileParser::getVector( std::vector<aiVector3D> &point3d_array ) {
 // -------------------------------------------------------------------
 //  Get values for a new 3D vector instance
 void ObjFileParser::getVector3(std::vector<aiVector3D> &point3d_array) {
-    float x, y, z;
+    double x, y, z;
     copyNextWord(m_buffer, Buffersize);
-    x = (float) fast_atof(m_buffer);
+    x = (double) fast_atof(m_buffer);
 
     copyNextWord(m_buffer, Buffersize);
-    y = (float) fast_atof(m_buffer);
+    y = (double) fast_atof(m_buffer);
 
     copyNextWord( m_buffer, Buffersize );
-    z = ( float ) fast_atof( m_buffer );
+    z = ( double ) fast_atof( m_buffer );
 
     point3d_array.push_back( aiVector3D( x, y, z ) );
     m_DataIt = skipLine<DataArrayIt>( m_DataIt, m_DataItEnd, m_uiLine );
@@ -290,12 +290,12 @@ void ObjFileParser::getVector3(std::vector<aiVector3D> &point3d_array) {
 // -------------------------------------------------------------------
 //  Get values for a new 2D vector instance
 void ObjFileParser::getVector2( std::vector<aiVector2D> &point2d_array ) {
-    float x, y;
+    double x, y;
     copyNextWord(m_buffer, Buffersize);
-    x = (float) fast_atof(m_buffer);
+    x = (double) fast_atof(m_buffer);
 
     copyNextWord(m_buffer, Buffersize);
-    y = (float) fast_atof(m_buffer);
+    y = (double) fast_atof(m_buffer);
 
     point2d_array.push_back(aiVector2D(x, y));
 

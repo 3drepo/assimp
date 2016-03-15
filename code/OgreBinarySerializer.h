@@ -178,7 +178,7 @@ enum MeshChunkId
                 // Optional bone weights (repeating section)
                 // unsigned int vertexIndex;
                 // unsigned short boneIndex;
-                // float weight;
+                // double weight;
             // Optional chunk that matches a texture name to an alias
             // a texture alias is sent to the submesh material to use this texture name
             // instead of the one in the texture unit with a matching alias name
@@ -207,7 +207,7 @@ enum MeshChunkId
             // Optional bone weights (repeating section)
             // unsigned int vertexIndex;
             // unsigned short boneIndex;
-            // float weight;
+            // double weight;
         M_MESH_LOD = 0x8000,
             // Optional LOD information
             // string strategyName;
@@ -217,7 +217,7 @@ enum MeshChunkId
             // Repeating section, ordered in increasing depth
             // NB LOD 0 (full detail from 0 depth) is omitted
             // LOD value - this is a distance, a pixel count etc, based on strategy
-            // float lodValue;
+            // double lodValue;
                 M_MESH_LOD_MANUAL = 0x8110,
                 // Required if M_MESH_LOD section manual = true
                 // String manualMeshName;
@@ -230,9 +230,9 @@ enum MeshChunkId
                 // OR
                 // unsigned int* faceIndexes;  (indexCount)
         M_MESH_BOUNDS = 0x9000,
-            // float minx, miny, minz
-            // float maxx, maxy, maxz
-            // float radius
+            // double minx, miny, minz
+            // double maxx, maxy, maxz
+            // double radius
 
         // Added By DrEvil
         // optional chunk that contains a table of submesh indexes and the names of
@@ -256,7 +256,7 @@ enum MeshChunkId
                         // unsigned long vertexSet
                         // unsigned long vertIndex[3]
                         // unsigned long sharedVertIndex[3]
-                        // float normal[4]
+                        // double normal[4]
 
                     M_EDGE_GROUP = 0xB110,
                         // unsigned long vertexSet
@@ -277,34 +277,34 @@ enum MeshChunkId
                 // bool includesNormals [1.8+]
                 M_POSE_VERTEX = 0xC111,
                     // unsigned long vertexIndex
-                    // float xoffset, yoffset, zoffset
-                    // float xnormal, ynormal, znormal (optional, 1.8+)
+                    // double xoffset, yoffset, zoffset
+                    // double xnormal, ynormal, znormal (optional, 1.8+)
         // Optional vertex animation chunk
         M_ANIMATIONS = 0xD000,
             M_ANIMATION = 0xD100,
             // char* name
-            // float length
+            // double length
             M_ANIMATION_BASEINFO = 0xD105,
             // [Optional] base keyframe information (pose animation only)
             // char* baseAnimationName (blank for self)
-            // float baseKeyFrameTime
+            // double baseKeyFrameTime
             M_ANIMATION_TRACK = 0xD110,
                 // unsigned short type          // 1 == morph, 2 == pose
                 // unsigned short target        // 0 for shared geometry,
                                                 // 1+ for submesh index + 1
                 M_ANIMATION_MORPH_KEYFRAME = 0xD111,
-                    // float time
+                    // double time
                     // bool includesNormals [1.8+]
-                    // float x,y,z          // repeat by number of vertices in original geometry
+                    // double x,y,z          // repeat by number of vertices in original geometry
                 M_ANIMATION_POSE_KEYFRAME = 0xD112,
-                    // float time
+                    // double time
                     M_ANIMATION_POSE_REF = 0xD113, // repeat for number of referenced poses
                         // unsigned short poseIndex
-                        // float influence
+                        // double influence
         // Optional submesh extreme vertex list chink
         M_TABLE_EXTREMES = 0xE000
         // unsigned short submesh_index;
-        // float extremes [n_extremes][3];
+        // double extremes [n_extremes][3];
 };
 
 /*
@@ -374,11 +374,11 @@ enum SkeletonChunkId
     SKELETON_ANIMATION          = 0x4000,
     // A single animation for this skeleton
         // char* name                      : Name of the animation
-        // float length                   : Length of the animation in seconds
+        // double length                   : Length of the animation in seconds
         SKELETON_ANIMATION_BASEINFO = 0x4010,
         // [Optional] base keyframe information
         // char* baseAnimationName (blank for self)
-        // float baseKeyFrameTime
+        // double baseKeyFrameTime
         SKELETON_ANIMATION_TRACK    = 0x4100,
         // A single animation track (relates to a single bone)
         // Repeating section (within SKELETON_ANIMATION)
@@ -386,14 +386,14 @@ enum SkeletonChunkId
             SKELETON_ANIMATION_TRACK_KEYFRAME = 0x4110,
             // A single keyframe within the track
             // Repeating section
-                // float time                   : The time position (seconds)
+                // double time                   : The time position (seconds)
                 // Quaternion rotate            : Rotation to apply at this keyframe
                 // Vector3 translate            : Translation to apply at this keyframe
                 // Vector3 scale                : Scale to apply at this keyframe
     SKELETON_ANIMATION_LINK     = 0x5000
     // Link to another skeleton, to re-use its animations
         // char* skeletonName                   : name of skeleton to get animations from
-        // float scale                          : scale to apply to trans/scale keys
+        // double scale                          : scale to apply to trans/scale keys
 };
 
 /*

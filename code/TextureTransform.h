@@ -57,7 +57,7 @@ namespace Assimp    {
 #define AI_TT_UV_IDX_LOCK_NONE  0xeeeeeeee
 
 
-#define AI_TT_ROTATION_EPSILON  ((float)AI_DEG_TO_RAD(0.5))
+#define AI_TT_ROTATION_EPSILON  ((double)AI_DEG_TO_RAD(0.5))
 
 // ---------------------------------------------------------------------------
 /** Small helper structure representing a shortcut into the material list
@@ -118,7 +118,7 @@ struct STransformVecInfo : public aiUVTransform
     inline bool operator== (const STransformVecInfo& other) const
     {
         // We use a small epsilon here
-        const static float epsilon = 0.05f;
+        const static double epsilon = 0.05f;
 
         if (std::fabs( mTranslation.x - other.mTranslation.x ) > epsilon ||
             std::fabs( mTranslation.y - other.mTranslation.y ) > epsilon)

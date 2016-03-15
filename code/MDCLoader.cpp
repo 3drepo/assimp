@@ -79,9 +79,9 @@ void MDC::BuildVertex(const Frame& frame,
     aiVector3D& vNorOut)
 {
     // compute the position
-    const float xd = (cvert.xd - AI_MDC_CVERT_BIAS) * AI_MDC_DELTA_SCALING;
-    const float yd = (cvert.yd - AI_MDC_CVERT_BIAS) * AI_MDC_DELTA_SCALING;
-    const float zd = (cvert.zd - AI_MDC_CVERT_BIAS) * AI_MDC_DELTA_SCALING;
+    const double xd = (cvert.xd - AI_MDC_CVERT_BIAS) * AI_MDC_DELTA_SCALING;
+    const double yd = (cvert.yd - AI_MDC_CVERT_BIAS) * AI_MDC_DELTA_SCALING;
+    const double zd = (cvert.zd - AI_MDC_CVERT_BIAS) * AI_MDC_DELTA_SCALING;
     vXYZOut.x = frame.localOrigin.x + AI_MDC_BASE_SCALING * (bvert.x + xd);
     vXYZOut.y = frame.localOrigin.y + AI_MDC_BASE_SCALING * (bvert.y + yd);
     vXYZOut.z = frame.localOrigin.z + AI_MDC_BASE_SCALING * (bvert.z + zd);

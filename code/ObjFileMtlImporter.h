@@ -84,8 +84,8 @@ private:
     void getColorRGBA( aiColor3D *pColor);
     /// Get illumination model from loaded data
     void getIlluminationModel( int &illum_model );
-    /// Gets a float value from data.
-    void getFloatValue( float &value );
+    /// Gets a double value from data.
+    void getFloatValue( double &value );
     /// Creates a new material from loaded data.
     void createMaterial();
     /// Get texture name from loaded data.

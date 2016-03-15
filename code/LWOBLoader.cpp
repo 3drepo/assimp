@@ -336,7 +336,7 @@ void LWOImporter::LoadLWOBSurface(unsigned int size)
         case AI_LWO_GLOS:
             {
                 AI_LWO_VALIDATE_CHUNK_LENGTH(head.length,GLOS,2);
-                surf.mGlossiness = (float)GetU2();
+                surf.mGlossiness = (double)GetU2();
                 break;
             }
         // color texture
@@ -388,7 +388,7 @@ void LWOImporter::LoadLWOBSurface(unsigned int size)
             {
                 AI_LWO_VALIDATE_CHUNK_LENGTH(head.length,TVAL,1);
                 if (pTex)   {
-                    pTex->mStrength = (float)GetU1()/ 255.f;
+                    pTex->mStrength = (double)GetU1()/ 255.f;
                 }
                 else DefaultLogger::get()->warn("LWOB: Unexpected TVAL chunk");
                 break;

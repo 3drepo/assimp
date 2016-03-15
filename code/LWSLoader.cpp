@@ -213,11 +213,11 @@ void LWSImporter::ReadEnvelope(const LWS::Element& dad, LWO::Envelope& fill )
             fill.keys.push_back(LWO::Key());
             LWO::Key& key = fill.keys.back();
 
-            float f;
+            double f;
             SkipSpaces(&c);
-            c = fast_atoreal_move<float>(c,key.value);
+            c = fast_atoreal_move<double>(c,key.value);
             SkipSpaces(&c);
-            c = fast_atoreal_move<float>(c,f);
+            c = fast_atoreal_move<double>(c,f);
 
             key.time = f;
 
@@ -250,7 +250,7 @@ void LWSImporter::ReadEnvelope(const LWS::Element& dad, LWO::Envelope& fill )
             }
             for (unsigned int i = 0; i < num;++i) {
                 SkipSpaces(&c);
-                c = fast_atoreal_move<float>(c,key.params[i]);
+                c = fast_atoreal_move<double>(c,key.params[i]);
             }
         }
         else if ((*it).tokens[0] == "Behaviors") {
@@ -291,10 +291,10 @@ void LWSImporter::ReadEnvelope_Old(
 
             // parse value and time, skip the rest for the moment.
             LWO::Key key;
-            const char* c = fast_atoreal_move<float>((*it).tokens[0].c_str(),key.value);
+            const char* c = fast_atoreal_move<double>((*it).tokens[0].c_str(),key.value);
             SkipSpaces(&c);
-            float f;
-            fast_atoreal_move<float>((*it).tokens[0].c_str(),f);
+            double f;
+            fast_atoreal_move<double>((*it).tokens[0].c_str(),f);
             key.time = f;
 
             envl.keys.push_back(key);
@@ -412,8 +412,8 @@ void LWSImporter::BuildGraph(aiNode* nd, LWS::NodeDesc& src, std::vector<Attachm
         if (src.lightType == 2) { /* spot light */
 
             lit->mType = aiLightSource_SPOT;
-            lit->mAngleInnerCone = (float)AI_DEG_TO_RAD( src.lightConeAngle );
-            lit->mAngleOuterCone = lit->mAngleInnerCone+(float)AI_DEG_TO_RAD( src.lightEdgeAngle );
+            lit->mAngleInnerCone = (double)AI_DEG_TO_RAD( src.lightConeAngle );
+            lit->mAngleOuterCone = lit->mAngleInnerCone+(double)AI_DEG_TO_RAD( src.lightEdgeAngle );
 
         }
         else if (src.lightType == 1) { /* directional light source */
@@ -765,7 +765,7 @@ void LWSImporter::InternReadFile( const std::string& pFile, aiScene* pScene,
             if (nodes.empty() || nodes.back().type != LWS::NodeDesc::LIGHT)
                 DefaultLogger::get()->error("LWS: Unexpected keyword: \'LightIntensity\'");
 
-            else fast_atoreal_move<float>(c, nodes.back().lightIntensity );
+            else fast_atoreal_move<double>(c, nodes.back().lightIntensity );
 
         }
         // 'LightType': set type of currently active light
@@ -806,11 +806,11 @@ void LWSImporter::InternReadFile( const std::string& pFile, aiScene* pScene,
                 DefaultLogger::get()->error("LWS: Unexpected keyword: \'LightColor\'");
 
             else {
-                c = fast_atoreal_move<float>(c, (float&) nodes.back().lightColor.r );
+                c = fast_atoreal_move<double>(c, (double&) nodes.back().lightColor.r );
                 SkipSpaces(&c);
-                c = fast_atoreal_move<float>(c, (float&) nodes.back().lightColor.g );
+                c = fast_atoreal_move<double>(c, (double&) nodes.back().lightColor.g );
                 SkipSpaces(&c);
-                c = fast_atoreal_move<float>(c, (float&) nodes.back().lightColor.b );
+                c = fast_atoreal_move<double>(c, (double&) nodes.back().lightColor.b );
             }
         }
 
@@ -819,11 +819,11 @@ void LWSImporter::InternReadFile( const std::string& pFile, aiScene* pScene,
             if (nodes.empty())
                 DefaultLogger::get()->error("LWS: Unexpected keyword: \'PivotPosition\'");
             else {
-                c = fast_atoreal_move<float>(c, (float&) nodes.back().pivotPos.x );
+                c = fast_atoreal_move<double>(c, (double&) nodes.back().pivotPos.x );
                 SkipSpaces(&c);
-                c = fast_atoreal_move<float>(c, (float&) nodes.back().pivotPos.y );
+                c = fast_atoreal_move<double>(c, (double&) nodes.back().pivotPos.y );
                 SkipSpaces(&c);
-                c = fast_atoreal_move<float>(c, (float&) nodes.back().pivotPos.z );
+                c = fast_atoreal_move<double>(c, (double&) nodes.back().pivotPos.z );
                 // Mark pivotPos as set
                 nodes.back().isPivotSet = true;
             }

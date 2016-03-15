@@ -312,7 +312,7 @@ private:
 
         out_light->mName.Set(FixNodeName(model.Name()));
 
-        const float intensity = light.Intensity();
+        const double intensity = light.Intensity();
         const aiVector3D& col = light.Color();
 
         out_light->mColorDiffuse = aiColor3D(col.x,col.y,col.z);
@@ -493,7 +493,7 @@ private:
             return;
         }
 
-        const float angle_epsilon = 1e-6f;
+        const double angle_epsilon = 1e-6f;
 
         out = aiMatrix4x4();
 
@@ -583,7 +583,7 @@ private:
         const PropertyTable& props = model.Props();
         bool ok;
 
-        const float zero_epsilon = 1e-6f;
+        const double zero_epsilon = 1e-6f;
         for (size_t i = 0; i < TransformationComp_MAXIMUM; ++i) {
             const TransformationComp comp = static_cast<TransformationComp>(i);
 
@@ -624,7 +624,7 @@ private:
         std::fill_n(chain, static_cast<unsigned int>(TransformationComp_MAXIMUM), aiMatrix4x4());
 
         // generate transformation matrices for all the different transformation components
-        const float zero_epsilon = 1e-6f;
+        const double zero_epsilon = 1e-6f;
         bool is_complex = false;
 
         const aiVector3D& PreRotation = PropertyGet<aiVector3D>(props,"PreRotation",ok);
@@ -781,7 +781,7 @@ private:
                 data->Set(index++, prop.first, interpreted->Value());
             else if (const TypedProperty<uint64_t>* interpreted = prop.second->As<TypedProperty<uint64_t> >())
                 data->Set(index++, prop.first, interpreted->Value());
-            else if (const TypedProperty<float>* interpreted = prop.second->As<TypedProperty<float> >())
+            else if (const TypedProperty<double>* interpreted = prop.second->As<TypedProperty<double> >())
                 data->Set(index++, prop.first, interpreted->Value());
             else if (const TypedProperty<std::string>* interpreted = prop.second->As<TypedProperty<std::string> >())
                 data->Set(index++, prop.first, aiString(interpreted->Value()));
@@ -1734,7 +1734,7 @@ private:
         else {
             aiVector3D DiffuseColor = PropertyGet<aiVector3D>(props,baseName + "Color",ok);
             if(ok) {
-                float DiffuseFactor = PropertyGet<float>(props,baseName + "Factor",ok);
+                double DiffuseFactor = PropertyGet<double>(props,baseName + "Factor",ok);
                 if(ok) {
                     DiffuseColor *= DiffuseFactor;
                 }
@@ -1776,22 +1776,22 @@ private:
             out_mat->AddProperty(&Specular,1,AI_MATKEY_COLOR_SPECULAR);
         }
 
-        const float Opacity = PropertyGet<float>(props,"Opacity",ok);
+        const double Opacity = PropertyGet<double>(props,"Opacity",ok);
         if(ok) {
             out_mat->AddProperty(&Opacity,1,AI_MATKEY_OPACITY);
         }
 
-        const float Reflectivity = PropertyGet<float>(props,"Reflectivity",ok);
+        const double Reflectivity = PropertyGet<double>(props,"Reflectivity",ok);
         if(ok) {
             out_mat->AddProperty(&Reflectivity,1,AI_MATKEY_REFLECTIVITY);
         }
 
-        const float Shininess = PropertyGet<float>(props,"Shininess",ok);
+        const double Shininess = PropertyGet<double>(props,"Shininess",ok);
         if(ok) {
             out_mat->AddProperty(&Shininess,1,AI_MATKEY_SHININESS_STRENGTH);
         }
 
-        const float ShininessExponent = PropertyGet<float>(props,"ShininessExponent",ok);
+        const double ShininessExponent = PropertyGet<double>(props,"ShininessExponent",ok);
         if(ok) {
             out_mat->AddProperty(&ShininessExponent,1,AI_MATKEY_SHININESS);
         }
@@ -1859,7 +1859,7 @@ private:
     {
         // first of all determine framerate
         const FileGlobalSettings::FrameRate fps = doc.GlobalSettings().TimeMode();
-        const float custom = doc.GlobalSettings().CustomFrameRate();
+        const double custom = doc.GlobalSettings().CustomFrameRate();
         anim_fps = FrameRateToDouble(fps, custom);
 
         const std::vector<const AnimationStack*>& animations = doc.AnimationStacks();
@@ -2367,7 +2367,7 @@ private:
             TransformationCompDefaultValue(comp)
         );
 
-        const float epsilon = 1e-6f;
+        const double epsilon = 1e-6f;
         return (dyn_val - static_val).SquareLength() < epsilon;
     }
 
@@ -2754,7 +2754,7 @@ private:
         next_pos.resize(inputs.size(),0);
 
         BOOST_FOREACH(KeyTimeList::value_type time, keys) {
-            float result[3] = {0.0f, 0.0f, 0.0f};
+            double result[3] = {0.0f, 0.0f, 0.0f};
             if(geom) {
                 result[0] = result[1] = result[2] = 1.0f;
             }
@@ -2780,7 +2780,7 @@ private:
                 // do the actual interpolation in double-precision arithmetics
                 // because it is a bit sensitive to rounding errors.
                 const double factor = timeB == timeA ? 0. : static_cast<double>((time - timeA) / (timeB - timeA));
-                const float interpValue = static_cast<float>(valueA + (valueB - valueA) * factor);
+                const double interpValue = static_cast<double>(valueA + (valueB - valueA) * factor);
 
                 if(geom) {
                     result[kfl.get<2>()] *= interpValue;

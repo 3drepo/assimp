@@ -194,8 +194,8 @@ namespace Assimp
         void MakeFacesFromTriangles( std::vector< p2t::Triangle* >& triangles ) const;
 
         // Adapted from: http://missingbytes.blogspot.co.uk/2012/06/fitting-plane-to-point-cloud.html
-        float FindLargestMatrixElem( const aiMatrix3x3& mtx ) const;
-        aiMatrix3x3 ScaleMatrix( const aiMatrix3x3& mtx, float scale ) const;
+        double FindLargestMatrixElem( const aiMatrix3x3& mtx ) const;
+        aiMatrix3x3 ScaleMatrix( const aiMatrix3x3& mtx, double scale ) const;
         aiVector3D GetEigenVectorFromLargestEigenValue( const aiMatrix3x3& mtx ) const;
         Blender::PlaneP2T FindLLSQPlane( const std::vector< Blender::PointP2T >& points ) const;
 

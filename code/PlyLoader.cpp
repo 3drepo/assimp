@@ -464,13 +464,13 @@ void PLYImporter::LoadTextureCoordinates(std::vector<aiVector2D>* pvOut)
 
             if (0xFFFFFFFF != aiPositions[0])
             {
-                vOut.x = PLY::PropertyInstance::ConvertTo<float>(
+                vOut.x = PLY::PropertyInstance::ConvertTo<double>(
                     GetProperty((*i).alProperties, aiPositions[0]).avList.front(),aiTypes[0]);
             }
 
             if (0xFFFFFFFF != aiPositions[1])
             {
-                vOut.y = PLY::PropertyInstance::ConvertTo<float>(
+                vOut.y = PLY::PropertyInstance::ConvertTo<double>(
                     GetProperty((*i).alProperties, aiPositions[1]).avList.front(),aiTypes[1]);
             }
             // and add them to our nice list
@@ -574,19 +574,19 @@ void PLYImporter::LoadVertices(std::vector<aiVector3D>* pvOut, bool p_bNormals)
 
             if (0xFFFFFFFF != aiPositions[0])
             {
-                vOut.x = PLY::PropertyInstance::ConvertTo<float>(
+                vOut.x = PLY::PropertyInstance::ConvertTo<double>(
                     GetProperty((*i).alProperties, aiPositions[0]).avList.front(),aiTypes[0]);
             }
 
             if (0xFFFFFFFF != aiPositions[1])
             {
-                vOut.y = PLY::PropertyInstance::ConvertTo<float>(
+                vOut.y = PLY::PropertyInstance::ConvertTo<double>(
                     GetProperty((*i).alProperties, aiPositions[1]).avList.front(),aiTypes[1]);
             }
 
             if (0xFFFFFFFF != aiPositions[2])
             {
-                vOut.z = PLY::PropertyInstance::ConvertTo<float>(
+                vOut.z = PLY::PropertyInstance::ConvertTo<double>(
                     GetProperty((*i).alProperties, aiPositions[2]).avList.front(),aiTypes[2]);
             }
 
@@ -598,7 +598,7 @@ void PLYImporter::LoadVertices(std::vector<aiVector3D>* pvOut, bool p_bNormals)
 
 // ------------------------------------------------------------------------------------------------
 // Convert a color component to [0...1]
-float PLYImporter::NormalizeColorValue (PLY::PropertyInstance::ValueUnion val,
+double PLYImporter::NormalizeColorValue (PLY::PropertyInstance::ValueUnion val,
     PLY::EDataType eType)
 {
     switch (eType)
@@ -606,20 +606,20 @@ float PLYImporter::NormalizeColorValue (PLY::PropertyInstance::ValueUnion val,
     case EDT_Float:
         return val.fFloat;
     case EDT_Double:
-        return (float)val.fDouble;
+        return (double)val.fDouble;
 
     case EDT_UChar:
-        return (float)val.iUInt / (float)0xFF;
+        return (double)val.iUInt / (double)0xFF;
     case EDT_Char:
-        return (float)(val.iInt+(0xFF/2)) / (float)0xFF;
+        return (double)(val.iInt+(0xFF/2)) / (double)0xFF;
     case EDT_UShort:
-        return (float)val.iUInt / (float)0xFFFF;
+        return (double)val.iUInt / (double)0xFFFF;
     case EDT_Short:
-        return (float)(val.iInt+(0xFFFF/2)) / (float)0xFFFF;
+        return (double)(val.iInt+(0xFFFF/2)) / (double)0xFFFF;
     case EDT_UInt:
-        return (float)val.iUInt / (float)0xFFFF;
+        return (double)val.iUInt / (double)0xFFFF;
     case EDT_Int:
-        return ((float)val.iInt / (float)0xFF) + 0.5f;
+        return ((double)val.iInt / (double)0xFF) + 0.5f;
     default: ;
     };
     return 0.0f;
@@ -1059,14 +1059,14 @@ void PLYImporter::LoadMaterial(std::vector<aiMaterial*>* pvOut)
             // handle phong power and shading mode
             int iMode;
             if (0xFFFFFFFF != iPhong)   {
-                float fSpec = PLY::PropertyInstance::ConvertTo<float>(GetProperty((*i).alProperties, iPhong).avList.front(),ePhong);
+                double fSpec = PLY::PropertyInstance::ConvertTo<double>(GetProperty((*i).alProperties, iPhong).avList.front(),ePhong);
 
                 // if shininess is 0 (and the pow() calculation would therefore always
                 // become 1, not depending on the angle), use gouraud lighting
                 if (fSpec)  {
                     // scale this with 15 ... hopefully this is correct
                     fSpec *= 15;
-                    pcHelper->AddProperty<float>(&fSpec, 1, AI_MATKEY_SHININESS);
+                    pcHelper->AddProperty<double>(&fSpec, 1, AI_MATKEY_SHININESS);
 
                     iMode = (int)aiShadingMode_Phong;
                 }
@@ -1077,8 +1077,8 @@ void PLYImporter::LoadMaterial(std::vector<aiMaterial*>* pvOut)
 
             // handle opacity
             if (0xFFFFFFFF != iOpacity) {
-                float fOpacity = PLY::PropertyInstance::ConvertTo<float>(GetProperty((*i).alProperties, iPhong).avList.front(),eOpacity);
-                pcHelper->AddProperty<float>(&fOpacity, 1, AI_MATKEY_OPACITY);
+                double fOpacity = PLY::PropertyInstance::ConvertTo<double>(GetProperty((*i).alProperties, iPhong).avList.front(),eOpacity);
+                pcHelper->AddProperty<double>(&fOpacity, 1, AI_MATKEY_OPACITY);
             }
 
             // The face order is absolutely undefined for PLY, so we have to

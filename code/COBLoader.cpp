@@ -67,7 +67,7 @@ using namespace Assimp::Formatter;
 #define for_each BOOST_FOREACH
 
 
-static const float units[] = {
+static const double units[] = {
     1000.f,
     100.f,
     1.f,
@@ -1158,7 +1158,7 @@ void COBImporter::ReadMat1_Binary(COB::Scene& out, StreamReaderLE& reader, const
             LogError_Ascii(format("Unrecognized faceting mode in `Mat1` chunk with id ")<<nfo.id);
             mat.autofacet = Material::FACETED;
     }
-    mat.autofacet_angle = static_cast<float>(reader.GetI1());
+    mat.autofacet_angle = static_cast<double>(reader.GetI1());
 
     mat.rgb.r = reader.GetF4();
     mat.rgb.g = reader.GetF4();

@@ -249,7 +249,7 @@ namespace STEP {
         };
 
         // -------------------------------------------------------------------------------
-        /** Shared implementation for some of the primitive data type, i.e. int, float */
+        /** Shared implementation for some of the primitive data type, i.e. int, double */
         // -------------------------------------------------------------------------------
         template <typename T>
         class PrimitiveDataType : public DataType

@@ -99,7 +99,7 @@ const aiImporterDesc* NFFImporter::GetInfo () const
 // ------------------------------------------------------------------------------------------------
 #define AI_NFF_PARSE_FLOAT(f) \
     SkipSpaces(&sz); \
-    if (!::IsLineEnd(*sz))sz = fast_atoreal_move<float>(sz, (float&)f);
+    if (!::IsLineEnd(*sz))sz = fast_atoreal_move<double>(sz, (double&)f);
 
 // ------------------------------------------------------------------------------------------------
 #define AI_NFF_PARSE_TRIPLE(v) \
@@ -260,7 +260,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
 
     // camera parameters
     aiVector3D camPos, camUp(0.f,1.f,0.f), camLookAt(0.f,0.f,1.f);
-    float angle = 45.f;
+    double angle = 45.f;
     aiVector2D resolution;
 
     bool hasCam = false;
@@ -290,7 +290,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
     // check whether this is the NFF2 file format
     if (TokenMatch(buffer,"nff",3))
     {
-        const float qnan = get_qnan();
+        const double qnan = get_qnan();
         const aiColor4D  cQNAN = aiColor4D (qnan,0.f,0.f,1.f);
         const aiVector3D vQNAN = aiVector3D(qnan,0.f,0.f);
 
@@ -791,7 +791,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
             // 'f' - shading information block
             else if (TokenMatch(sz,"f",1))
             {
-                float d;
+                double d;
 
                 // read the RGB colors
                 AI_NFF_PARSE_TRIPLE(s.color);
@@ -951,7 +951,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                 sz = line;
 
                 // read the two center points and the respective radii
-                aiVector3D center1, center2; float radius1, radius2;
+                aiVector3D center1, center2; double radius1, radius2;
                 AI_NFF_PARSE_TRIPLE(center1);
                 AI_NFF_PARSE_FLOAT(radius1);
 
@@ -968,10 +968,10 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                 // compute the center point of the cone/cylinder -
                 // it is its local transformation origin
                 currentMesh.dir    =  center2-center1;
-                currentMesh.center =  center1+currentMesh.dir/2.f;
+                currentMesh.center =  center1+currentMesh.dir/2.0;
 
-                float f;
-                if (( f = currentMesh.dir.Length()) < 10e-3f )
+                double f;
+                if (( f = currentMesh.dir.Length()) < 10e-3)
                 {
                     DefaultLogger::get()->error("NFF: Cone height is close to zero");
                     continue;

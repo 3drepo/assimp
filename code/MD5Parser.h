@@ -168,7 +168,7 @@ typedef std::vector< BaseFrameDesc > BaseFrameList;
 */
 struct CameraAnimFrameDesc : BaseFrameDesc
 {
-    float fFOV;
+    double fFOV;
 };
 
 typedef std::vector< CameraAnimFrameDesc > CameraFrameList;
@@ -182,7 +182,7 @@ struct FrameDesc
     unsigned int iIndex;
 
     //! Animation keyframes - a large blob of data at first
-    std::vector< float > mValues;
+    std::vector< double > mValues;
 };
 
 typedef std::vector< FrameDesc > FrameList;
@@ -219,7 +219,7 @@ struct WeightDesc
     unsigned int mBone;
 
     //! The weight value
-    float mWeight;
+    double mWeight;
 
     //! The offset position of this weight
     // ! (in the coordinate system defined by the parent bone)
@@ -257,7 +257,7 @@ inline void ConvertQuaternion (const aiVector3D& in, aiQuaternion& out) {
     out.y = in.y;
     out.z = in.z;
 
-    const float t = 1.0f - (in.x*in.x) - (in.y*in.y) - (in.z*in.z);
+    const double t = 1.0f - (in.x*in.x) - (in.y*in.y) - (in.z*in.z);
 
     if (t < 0.0f)
         out.w = 0.0f;
@@ -309,7 +309,7 @@ public:
 
 
     //! Output frame rate
-    float fFrameRate;
+    double fFrameRate;
 
     //! List of animation bones
     AnimBoneList mAnimatedBones;
@@ -341,7 +341,7 @@ public:
 
 
     //! Output frame rate
-    float fFrameRate;
+    double fFrameRate;
 
     //! List of cuts
     std::vector<unsigned int> cuts;

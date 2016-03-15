@@ -120,7 +120,7 @@ public:
     unsigned int mNumBones;
     unsigned int mNumBonesCanDoWithout;
 
-    float mThreshold;
+    double mThreshold;
     bool mAllOrNone;
 
     /// Per mesh index: Array of indices of the new submeshes.

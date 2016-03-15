@@ -421,10 +421,10 @@ void ProcessSweptDiskSolid(const IfcSweptDiskSolid solid, TempMesh& result, Conv
 
         // locate corresponding point on next sample ring
         unsigned int best_pair_offset = 0;
-        float best_distance_squared = 1e10f;
+        double best_distance_squared = 1e10f;
         for (unsigned int seg = 0; seg < cnt_segments; ++seg) {
             const aiVector3D& p = points[ (i+1) * cnt_segments + seg];
-            const float l = (p-this_start).SquareLength();
+            const double l = (p-this_start).SquareLength();
 
             if(l < best_distance_squared) {
                 best_pair_offset = seg;

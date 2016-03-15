@@ -67,7 +67,7 @@ void SGSpatialSort::Add(const aiVector3D& vPosition, unsigned int index,
     unsigned int smoothingGroup)
 {
     // store position by index and distance
-    float distance = vPosition * mPlaneNormal;
+    double distance = vPosition * mPlaneNormal;
     mPositions.push_back( Entry( index, vPosition,
         distance, smoothingGroup));
 }
@@ -81,12 +81,12 @@ void SGSpatialSort::Prepare()
 // Returns an iterator for all positions close to the given position.
 void SGSpatialSort::FindPositions( const aiVector3D& pPosition,
     uint32_t pSG,
-    float pRadius,
+    double pRadius,
     std::vector<unsigned int>& poResults,
     bool exactMatch /*= false*/) const
 {
-    float dist = pPosition * mPlaneNormal;
-    float minDist = dist - pRadius, maxDist = dist + pRadius;
+    double dist = pPosition * mPlaneNormal;
+    double minDist = dist - pRadius, maxDist = dist + pRadius;
 
     // clear the array in this strange fashion because a simple clear() would also deallocate
     // the array which we want to avoid
@@ -123,7 +123,7 @@ void SGSpatialSort::FindPositions( const aiVector3D& pPosition,
     // Mow start iterating from there until the first position lays outside of the distance range.
     // Add all positions inside the distance range within the given radius to the result aray
 
-    float squareEpsilon = pRadius * pRadius;
+    double squareEpsilon = pRadius * pRadius;
     std::vector<Entry>::const_iterator it  = mPositions.begin() + index;
     std::vector<Entry>::const_iterator end = mPositions.end();
 

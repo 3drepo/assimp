@@ -145,7 +145,7 @@ struct aiLight
      *  This member corresponds to the att0 variable in the equation.
      *  Naturally undefined for directional lights.
      */
-    float mAttenuationConstant;
+    double mAttenuationConstant;
 
     /** Linear light attenuation factor.
      *
@@ -157,7 +157,7 @@ struct aiLight
      *  This member corresponds to the att1 variable in the equation.
      *  Naturally undefined for directional lights.
      */
-    float mAttenuationLinear;
+    double mAttenuationLinear;
 
     /** Quadratic light attenuation factor.
      *
@@ -169,7 +169,7 @@ struct aiLight
      *  This member corresponds to the att2 variable in the equation.
      *  Naturally undefined for directional lights.
      */
-    float mAttenuationQuadratic;
+    double mAttenuationQuadratic;
 
     /** Diffuse color of the light source
      *
@@ -203,7 +203,7 @@ struct aiLight
      *  angle. The angle is given in radians. It is 2PI for point
      *  lights and undefined for directional lights.
      */
-    float mAngleInnerCone;
+    double mAngleInnerCone;
 
     /** Outer angle of a spot light's light cone.
      *
@@ -215,7 +215,7 @@ struct aiLight
      *  interpolation between the inner and the outer cone of the
      *  spot light.
      */
-    float mAngleOuterCone;
+    double mAngleOuterCone;
 
 #ifdef __cplusplus
 
@@ -224,8 +224,8 @@ struct aiLight
         ,   mAttenuationConstant  (0.f)
         ,   mAttenuationLinear    (1.f)
         ,   mAttenuationQuadratic (0.f)
-        ,   mAngleInnerCone       ((float)AI_MATH_TWO_PI)
-        ,   mAngleOuterCone       ((float)AI_MATH_TWO_PI)
+        ,   mAngleInnerCone       ((double)AI_MATH_TWO_PI)
+        ,   mAngleOuterCone       ((double)AI_MATH_TWO_PI)
     {
     }
 

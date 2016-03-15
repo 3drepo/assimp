@@ -67,16 +67,16 @@ struct Header_HMP5
     int32_t     version;
 
     // ignored
-    float   scale[3];
-    float   scale_origin[3];
-    float   boundingradius;
+    double   scale[3];
+    double   scale_origin[3];
+    double   boundingradius;
 
     //! Size of one triangle in x direction
-    float   ftrisize_x;
+    double   ftrisize_x;
     //! Size of one triangle in y direction
-    float   ftrisize_y;
+    double   ftrisize_y;
     //! Number of vertices in x direction
-    float   fnumverts_x;
+    double   fnumverts_x;
 
     //! Number of skins in the file
     int32_t     numskins;
@@ -97,7 +97,7 @@ struct Header_HMP5
     //! Always 0 ...
     int32_t     num_stverts;
     int32_t     flags;
-    float   size;
+    double   size;
 } PACK_STRUCT;
 
 // ---------------------------------------------------------------------------

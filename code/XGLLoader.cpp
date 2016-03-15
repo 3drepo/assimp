@@ -469,7 +469,7 @@ aiNode* XGLImporter::ReadObject(TempScope& scope, bool skipFirst, const char* cl
 aiMatrix4x4 XGLImporter::ReadTrafo()
 {
     aiVector3D forward, up, right, position;
-    float scale = 1.0f;
+    double scale = 1.0f;
 
     while (ReadElementUpToClosing("transform")) {
         const std::string& s = GetElementName();
@@ -760,11 +760,11 @@ void XGLImporter::ReadMaterial(TempScope& scope)
             mat->AddProperty(&c,1,AI_MATKEY_COLOR_EMISSIVE);
         }
         else if (s == "alpha") {
-            const float f = ReadFloat();
+            const double f = ReadFloat();
             mat->AddProperty(&f,1,AI_MATKEY_OPACITY);
         }
         else if (s == "shine") {
-            const float f = ReadFloat();
+            const double f = ReadFloat();
             mat->AddProperty(&f,1,AI_MATKEY_SHININESS);
         }
     }
@@ -841,24 +841,24 @@ unsigned int XGLImporter::ReadIDAttr()
 }
 
 // ------------------------------------------------------------------------------------------------
-float XGLImporter::ReadFloat()
+double XGLImporter::ReadFloat()
 {
     if(!SkipToText()) {
-        LogError("unexpected EOF reading float element contents");
+        LogError("unexpected EOF reading double element contents");
         return 0.f;
     }
     const char* s = reader->getNodeData(), *se;
 
     if(!SkipSpaces(&s)) {
-        LogError("unexpected EOL, failed to parse float");
+        LogError("unexpected EOL, failed to parse double");
         return 0.f;
     }
 
-    float t;
+    double t;
     se = fast_atoreal_move(s,t);
 
     if (se == s) {
-        LogError("failed to read float text");
+        LogError("failed to read double text");
         return 0.f;
     }
 

@@ -82,7 +82,7 @@ struct Vertex
     //! pair.second is the vertex weight.
     //! WARN: The remaining weight (to reach 1.0f) is assigned
     //! to the parent node/bone
-    std::vector<std::pair<unsigned int, float> > aiBoneLinks;
+    std::vector<std::pair<unsigned int, double> > aiBoneLinks;
 };
 
 // ---------------------------------------------------------------------------
@@ -310,7 +310,7 @@ protected:
     /** Parse a floating-point value
      */
     bool ParseFloat(const char* szCurrent,
-        const char** szCurrentOut, float& out);
+        const char** szCurrentOut, double& out);
 
     // -------------------------------------------------------------------
     /** Parse an unsigned integer. There may be no sign!

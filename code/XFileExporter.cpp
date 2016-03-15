@@ -163,7 +163,7 @@ void XFileExporter::WriteHeader()
     mOutput << startstr << "template Matrix4x4 {" << endstr;
     PushTag();
     mOutput << startstr << "<f6f23f45-7686-11cf-8f52-0040333594a3>" << endstr;
-    mOutput << startstr << "array FLOAT matrix[16];" << endstr;
+    mOutput << startstr << "array double matrix[16];" << endstr;
     PopTag();
     mOutput << startstr << "}" << endstr;
     mOutput << endstr;
@@ -177,9 +177,9 @@ void XFileExporter::WriteHeader()
     mOutput << startstr << "template Vector {" << endstr;
     PushTag();
     mOutput << startstr << "<3d82ab5e-62da-11cf-ab39-0020af71e433>" << endstr;
-    mOutput << startstr << "FLOAT x;" << endstr;
-    mOutput << startstr << "FLOAT y;" << endstr;
-    mOutput << startstr << "FLOAT z;" << endstr;
+    mOutput << startstr << "double x;" << endstr;
+    mOutput << startstr << "double y;" << endstr;
+    mOutput << startstr << "double z;" << endstr;
     PopTag();
     mOutput << startstr << "}" << endstr;
     mOutput << endstr;
@@ -215,8 +215,8 @@ void XFileExporter::WriteHeader()
     mOutput << startstr << "template Coords2d {" << endstr;
     PushTag();
     mOutput << startstr << "<f6f23f44-7686-11cf-8f52-0040333594a3>" << endstr;
-    mOutput << startstr << "FLOAT u;" << endstr;
-    mOutput << startstr << "FLOAT v;" << endstr;
+    mOutput << startstr << "double u;" << endstr;
+    mOutput << startstr << "double v;" << endstr;
     PopTag();
     mOutput << startstr << "}" << endstr;
     mOutput << endstr;
@@ -231,10 +231,10 @@ void XFileExporter::WriteHeader()
     mOutput << startstr << "template ColorRGBA {" << endstr;
     PushTag();
     mOutput << startstr << "<35ff44e0-6c7c-11cf-8f52-0040333594a3>" << endstr;
-    mOutput << startstr << "FLOAT red;" << endstr;
-    mOutput << startstr << "FLOAT green;" << endstr;
-    mOutput << startstr << "FLOAT blue;" << endstr;
-    mOutput << startstr << "FLOAT alpha;" << endstr;
+    mOutput << startstr << "double red;" << endstr;
+    mOutput << startstr << "double green;" << endstr;
+    mOutput << startstr << "double blue;" << endstr;
+    mOutput << startstr << "double alpha;" << endstr;
     PopTag();
     mOutput << startstr << "}" << endstr;
     mOutput << endstr;

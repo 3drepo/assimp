@@ -189,19 +189,19 @@ inline char_t CopyNextWord( char_t it, char_t end, char *pBuffer, size_t length 
     return it;
 }
 
-/** @brief  Get next float from given line
+/** @brief  Get next double from given line
  *  @param  it      set to current position
  *  @param  end     set to end of scratch buffer for readout
- *  @param  value   Separated float value.
+ *  @param  value   Separated double value.
  *  @return Current-iterator with new position
  */
 template<class char_t>
-inline char_t getFloat( char_t it, char_t end, float &value )
+inline char_t getFloat( char_t it, char_t end, double &value )
 {
     static const size_t BUFFERSIZE = 1024;
     char buffer[ BUFFERSIZE ];
     it = CopyNextWord<char_t>( it, end, buffer, BUFFERSIZE );
-    value = (float) fast_atof( buffer );
+    value = (double) fast_atof( buffer );
 
     return it;
 }

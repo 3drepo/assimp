@@ -81,7 +81,7 @@ void CalcTangentsProcess::SetupProperties(const Importer* pImp)
 
     // get the current value of the property
     configMaxAngle = pImp->GetPropertyFloat(AI_CONFIG_PP_CT_MAX_SMOOTHING_ANGLE,45.f);
-    configMaxAngle = std::max(std::min(configMaxAngle,45.0f),0.0f);
+    configMaxAngle = std::max(std::min(configMaxAngle,45.0),0.0);
     configMaxAngle = AI_DEG_TO_RAD(configMaxAngle);
 
     configSourceUV = pImp->GetPropertyInteger(AI_CONFIG_PP_CT_TEXTURE_CHANNEL_INDEX,0);
@@ -140,10 +140,10 @@ bool CalcTangentsProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
         return false;
     }
 
-    const float angleEpsilon = 0.9999f;
+    const double angleEpsilon = 0.9999f;
 
     std::vector<bool> vertexDone( pMesh->mNumVertices, false);
-    const float qnan = get_qnan();
+    const double qnan = get_qnan();
 
     // create space for the tangents and bitangents
     pMesh->mTangents = new aiVector3D[pMesh->mNumVertices];
@@ -184,9 +184,9 @@ bool CalcTangentsProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
         aiVector3D v = meshPos[p1] - meshPos[p0], w = meshPos[p2] - meshPos[p0];
 
         // texture offset p1->p2 and p1->p3
-        float sx = meshTex[p1].x - meshTex[p0].x, sy = meshTex[p1].y - meshTex[p0].y;
-        float tx = meshTex[p2].x - meshTex[p0].x, ty = meshTex[p2].y - meshTex[p0].y;
-        float dirCorrection = (tx * sy - ty * sx) < 0.0f ? -1.0f : 1.0f;
+        double sx = meshTex[p1].x - meshTex[p0].x, sy = meshTex[p1].y - meshTex[p0].y;
+        double tx = meshTex[p2].x - meshTex[p0].x, ty = meshTex[p2].y - meshTex[p0].y;
+        double dirCorrection = (tx * sy - ty * sx) < 0.0f ? -1.0f : 1.0f;
         // when t1, t2, t3 in same position in UV space, just use default UV direction.
         if ( 0 == sx && 0 ==sy && 0 == tx && 0 == ty ) {
             sx = 0.0; sy = 1.0;
@@ -236,14 +236,14 @@ bool CalcTangentsProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
     // FIX: check whether we can reuse the SpatialSort of a previous step
     SpatialSort* vertexFinder = NULL;
     SpatialSort  _vertexFinder;
-    float posEpsilon;
+    double posEpsilon;
     if (shared)
     {
-        std::vector<std::pair<SpatialSort,float> >* avf;
+        std::vector<std::pair<SpatialSort,double> >* avf;
         shared->GetProperty(AI_SPP_SPATIAL_SORT,avf);
         if (avf)
         {
-            std::pair<SpatialSort,float>& blubb = avf->operator [] (meshIndex);
+            std::pair<SpatialSort,double>& blubb = avf->operator [] (meshIndex);
             vertexFinder = &blubb.first;
             posEpsilon = blubb.second;;
         }
@@ -256,7 +256,7 @@ bool CalcTangentsProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
     }
     std::vector<unsigned int> verticesFound;
 
-    const float fLimit = cosf(configMaxAngle);
+    const double fLimit = cosf(configMaxAngle);
     std::vector<unsigned int> closeVertices;
 
     // in the second pass we now smooth out all tangents and bitangents at the same local position

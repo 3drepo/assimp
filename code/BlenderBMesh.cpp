@@ -184,16 +184,16 @@ void BlenderBMeshConverter::AddFace( int v1, int v2, int v3, int v4 )
 }
 
 // ------------------------------------------------------------------------------------------------
-void BlenderBMeshConverter::AddTFace( const float* uv1, const float *uv2, const float *uv3, const float* uv4 )
+void BlenderBMeshConverter::AddTFace( const double* uv1, const double *uv2, const double *uv3, const double* uv4 )
 {
     MTFace mtface;
-    memcpy( &mtface.uv[ 0 ], uv1, sizeof(float) * 2 );
-    memcpy( &mtface.uv[ 1 ], uv2, sizeof(float) * 2 );
-    memcpy( &mtface.uv[ 2 ], uv3, sizeof(float) * 2 );
+    memcpy( &mtface.uv[ 0 ], uv1, sizeof(double) * 2 );
+    memcpy( &mtface.uv[ 1 ], uv2, sizeof(double) * 2 );
+    memcpy( &mtface.uv[ 2 ], uv3, sizeof(double) * 2 );
 
     if ( uv4 )
     {
-        memcpy( &mtface.uv[ 3 ], uv4, sizeof(float) * 2 );
+        memcpy( &mtface.uv[ 3 ], uv4, sizeof(double) * 2 );
     }
 
     triMesh->mtface.push_back( mtface );

@@ -127,7 +127,7 @@ protected:
     unsigned short ReadBinWord();
     unsigned int ReadBinDWord();
     unsigned int ReadInt();
-    float ReadFloat();
+    double ReadFloat();
     aiVector2D ReadVector2();
     aiVector3D ReadVector3();
     aiColor3D ReadRGB();
@@ -144,7 +144,7 @@ protected:
 protected:
     unsigned int mMajorVersion, mMinorVersion; ///< version numbers
     bool mIsBinaryFormat; ///< true if the file is in binary, false if it's in text form
-    unsigned int mBinaryFloatSize; ///< float size in bytes, either 4 or 8
+    unsigned int mBinaryFloatSize; ///< double size in bytes, either 4 or 8
     // counter for number arrays in binary format
     unsigned int mBinaryNumCount;
 

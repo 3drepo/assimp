@@ -55,7 +55,7 @@ using namespace Assimp;
 
 // ------------------------------------------------------------------------------------------------
 template <class T>
-T lerp(const T& one, const T& two, float val)
+T lerp(const T& one, const T& two, double val)
 {
     return one + (two-one)*val;
 }
@@ -160,7 +160,7 @@ bool LWOImporter::HandleTextures(aiMaterial* pcMat, const TextureList& in, aiTex
                 trafo.mScaling.x = (*it).wrapAmountW;
                 trafo.mScaling.y = (*it).wrapAmountH;
 
-                BOOST_STATIC_ASSERT(sizeof(aiUVTransform)/sizeof(float) == 5);
+                BOOST_STATIC_ASSERT(sizeof(aiUVTransform)/sizeof(double) == 5);
                 pcMat->AddProperty(&trafo,1,AI_MATKEY_UVTRANSFORM(type,cur));
             }
             DefaultLogger::get()->debug("LWO2: Setting up non-UV mapping");
@@ -220,7 +220,7 @@ bool LWOImporter::HandleTextures(aiMaterial* pcMat, const TextureList& in, aiTex
         pcMat->AddProperty(&s,AI_MATKEY_TEXTURE(type,cur));
 
         // add the blend factor
-        pcMat->AddProperty<float>(&(*it).mStrength,1,AI_MATKEY_TEXBLEND(type,cur));
+        pcMat->AddProperty<double>(&(*it).mStrength,1,AI_MATKEY_TEXBLEND(type,cur));
 
         // add the blend operation
         switch ((*it).blendType)
@@ -285,7 +285,7 @@ void LWOImporter::ConvertMaterial(const LWO::Surface& surf,aiMaterial* pcMat)
     aiShadingMode m;
     if (surf.mSpecularValue && surf.mGlossiness)
     {
-        float fGloss;
+        double fGloss;
         if (mIsLWO2)    {
             fGloss = std::pow( surf.mGlossiness*10.0f+2.0f, 2.0f);
         }
@@ -326,7 +326,7 @@ void LWOImporter::ConvertMaterial(const LWO::Surface& surf,aiMaterial* pcMat)
 
     else if (10e10f != surf.mTransparency)  {
         const int def = aiBlendMode_Default;
-        const float f = 1.0f-surf.mTransparency;
+        const double f = 1.0f-surf.mTransparency;
         pcMat->AddProperty(&f,1,AI_MATKEY_OPACITY);
         pcMat->AddProperty(&def,1,AI_MATKEY_BLEND_FUNC);
     }

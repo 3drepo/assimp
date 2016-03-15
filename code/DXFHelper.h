@@ -111,7 +111,7 @@ public:
     }
 
     // -----------------------------------------
-    float ValueAsFloat() const {
+    double ValueAsFloat() const {
         return fast_atof(value.c_str());
     }
 
@@ -202,7 +202,7 @@ struct InsertBlock
 
     aiVector3D pos;
     aiVector3D scale;
-    float angle;
+    double angle;
 
     std::string name;
 };

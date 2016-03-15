@@ -139,7 +139,7 @@ void TerragenImporter::InternReadFile( const std::string& pFile,
         throw DeadlyImportError( "TER: Magic string \'TERRAIN\' not found" );
 
     unsigned int x = 0,y = 0,mode = 0;
-    float rad  = 6370.f;
+    double rad  = 6370.f;
     (void)rad;
 
 
@@ -197,8 +197,8 @@ void TerragenImporter::InternReadFile( const std::string& pFile,
         // actual terrain data
         else if (!::strncmp(head,AI_TERR_CHUNK_ALTW,4))
         {
-            float hscale  = (float)reader.GetI2()  / 65536;
-            float bheight = (float)reader.GetI2();
+            double hscale  = (double)reader.GetI2()  / 65536;
+            double bheight = (double)reader.GetI2();
 
             if (!hscale)hscale = 1;
 
@@ -218,7 +218,7 @@ void TerragenImporter::InternReadFile( const std::string& pFile,
             aiVector3D* pv = m->mVertices = new aiVector3D[m->mNumVertices = m->mNumFaces*4];
 
             aiVector3D *uv( NULL );
-            float step_y( 0.0f ), step_x( 0.0f );
+            double step_y( 0.0f ), step_x( 0.0f );
             if (configComputeUVs) {
                 uv = m->mTextureCoords[0] = new aiVector3D[m->mNumVertices];
                 step_y = 1.f/y;
@@ -230,12 +230,12 @@ void TerragenImporter::InternReadFile( const std::string& pFile,
                 for (unsigned int xx = 0; xx < x-1;++xx,++f)    {
 
                     // make verts
-                    const float fy = (float)yy, fx = (float)xx;
+                    const double fy = (double)yy, fx = (double)xx;
                     unsigned tmp,tmp2;
-                    *pv++ = aiVector3D(fx,fy,    (float)data[(tmp2=x*yy)    + xx] * hscale + bheight);
-                    *pv++ = aiVector3D(fx,fy+1,  (float)data[(tmp=x*(yy+1)) + xx] * hscale + bheight);
-                    *pv++ = aiVector3D(fx+1,fy+1,(float)data[tmp  + xx+1]         * hscale + bheight);
-                    *pv++ = aiVector3D(fx+1,fy,  (float)data[tmp2 + xx+1]         * hscale + bheight);
+                    *pv++ = aiVector3D(fx,fy,    (double)data[(tmp2=x*yy)    + xx] * hscale + bheight);
+                    *pv++ = aiVector3D(fx,fy+1,  (double)data[(tmp=x*(yy+1)) + xx] * hscale + bheight);
+                    *pv++ = aiVector3D(fx+1,fy+1,(double)data[tmp  + xx+1]         * hscale + bheight);
+                    *pv++ = aiVector3D(fx+1,fy,  (double)data[tmp2 + xx+1]         * hscale + bheight);
 
                     // also make texture coordinates, if necessary
                     if (configComputeUVs) {

@@ -623,7 +623,7 @@ void BlenderImporter::BuildMaterials(ConversionData& conv_data)
 
         // is hardness/shininess set?
         if( mat->har ) {
-            const float har = mat->har;
+            const double har = mat->har;
             mout->AddProperty(&har,1,AI_MATKEY_SHININESS);
         }
 

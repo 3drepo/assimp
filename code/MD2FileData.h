@@ -97,7 +97,7 @@ struct Header
  */
 struct GLCommand
 {
-   float s, t;
+   double s, t;
    uint32_t vertexIndex;
 } PACK_STRUCT;
 
@@ -124,8 +124,8 @@ struct Vertex
  */
 struct Frame
 {
-    float scale[3];
-    float translate[3];
+    double scale[3];
+    double translate[3];
     char name[16];
     Vertex vertices[1];
 } PACK_STRUCT;

@@ -1237,7 +1237,7 @@ void SceneCombiner::Copy (aiMetadata** _dest, const aiMetadata* src)
             out.mData = new uint64_t(*static_cast<uint64_t*>(in.mData));
             break;
         case AI_FLOAT:
-            out.mData = new float(*static_cast<float*>(in.mData));
+            out.mData = new double(*static_cast<double*>(in.mData));
             break;
         case AI_AISTRING:
             out.mData = new aiString(*static_cast<aiString*>(in.mData));

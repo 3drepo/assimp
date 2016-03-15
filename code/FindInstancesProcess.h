@@ -82,7 +82,7 @@ inline uint64_t GetMeshHash(aiMesh* in)
  *  @return true if the arrays are identical
  */
 inline bool CompareArrays(const aiVector3D* first, const aiVector3D* second,
-    unsigned int size, float e)
+    unsigned int size, double e)
 {
     for (const aiVector3D* end = first+size; first != end; ++first,++second) {
         if ( (*first - *second).SquareLength() >= e)
@@ -93,7 +93,7 @@ inline bool CompareArrays(const aiVector3D* first, const aiVector3D* second,
 
 // and the same for colors ...
 inline bool CompareArrays(const aiColor4D* first, const aiColor4D* second,
-    unsigned int size, float e)
+    unsigned int size, double e)
 {
     for (const aiColor4D* end = first+size; first != end; ++first,++second) {
         if ( GetColorDifference(*first,*second) >= e)

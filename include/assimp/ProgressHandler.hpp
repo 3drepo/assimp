@@ -82,7 +82,7 @@ public:
      *   caller). If the loading is aborted, #Importer::ReadFile()
      *   returns always NULL.
      *   */
-    virtual bool Update(float percentage = -1.f) = 0;
+    virtual bool Update(double percentage = -1.f) = 0;
 
     // -------------------------------------------------------------------
     /** @brief Progress callback for file loading steps
@@ -97,7 +97,7 @@ public:
      *   of the file parsing.
      *   */
     virtual void UpdateFileRead(int currentStep /*= 0*/, int numberOfSteps /*= 0*/) {
-        float f = numberOfSteps ? currentStep / (float)numberOfSteps : 1.0f;
+        double f = numberOfSteps ? currentStep / (double)numberOfSteps : 1.0f;
         Update( f * 0.5f );
     }
 
@@ -111,7 +111,7 @@ public:
      *   increasing, although not necessarily linearly.
      *   */
     virtual void UpdatePostProcess(int currentStep /*= 0*/, int numberOfSteps /*= 0*/) {
-        float f = numberOfSteps ? currentStep / (float)numberOfSteps : 1.0f;
+        double f = numberOfSteps ? currentStep / (double)numberOfSteps : 1.0f;
         Update( f * 0.5f + 0.5f );
     }
 

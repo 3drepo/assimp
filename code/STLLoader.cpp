@@ -308,11 +308,11 @@ void STLImporter::LoadASCIIFile()
                     }
                     sz += 7;
                     SkipSpaces(&sz);
-                    sz = fast_atoreal_move<float>(sz, (float&)vn->x );
+                    sz = fast_atoreal_move<double>(sz, (double&)vn->x );
                     SkipSpaces(&sz);
-                    sz = fast_atoreal_move<float>(sz, (float&)vn->y );
+                    sz = fast_atoreal_move<double>(sz, (double&)vn->y );
                     SkipSpaces(&sz);
-                    sz = fast_atoreal_move<float>(sz, (float&)vn->z );
+                    sz = fast_atoreal_move<double>(sz, (double&)vn->z );
                     normalBuffer.push_back(*vn);
                     normalBuffer.push_back(*vn);
                 }
@@ -333,11 +333,11 @@ void STLImporter::LoadASCIIFile()
                     SkipSpaces(&sz);
                     positionBuffer.push_back(aiVector3D());
                     aiVector3D* vn = &positionBuffer.back();
-                    sz = fast_atoreal_move<float>(sz, (float&)vn->x );
+                    sz = fast_atoreal_move<double>(sz, (double&)vn->x );
                     SkipSpaces(&sz);
-                    sz = fast_atoreal_move<float>(sz, (float&)vn->y );
+                    sz = fast_atoreal_move<double>(sz, (double&)vn->y );
                     SkipSpaces(&sz);
-                    sz = fast_atoreal_move<float>(sz, (float&)vn->z );
+                    sz = fast_atoreal_move<double>(sz, (double&)vn->z );
                     faceVertexCounter++;
                 }
             }

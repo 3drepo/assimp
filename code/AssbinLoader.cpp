@@ -108,9 +108,9 @@ template <>
 aiVector3D Read<aiVector3D>(IOStream * stream)
 {
     aiVector3D v;
-    v.x = Read<float>(stream);
-    v.y = Read<float>(stream);
-    v.z = Read<float>(stream);
+    v.x = Read<double>(stream);
+    v.y = Read<double>(stream);
+    v.z = Read<double>(stream);
     return v;
 }
 
@@ -118,10 +118,10 @@ template <>
 aiColor4D Read<aiColor4D>(IOStream * stream)
 {
     aiColor4D c;
-    c.r = Read<float>(stream);
-    c.g = Read<float>(stream);
-    c.b = Read<float>(stream);
-    c.a = Read<float>(stream);
+    c.r = Read<double>(stream);
+    c.g = Read<double>(stream);
+    c.b = Read<double>(stream);
+    c.a = Read<double>(stream);
     return c;
 }
 
@@ -129,10 +129,10 @@ template <>
 aiQuaternion Read<aiQuaternion>(IOStream * stream)
 {
     aiQuaternion v;
-    v.w = Read<float>(stream);
-    v.x = Read<float>(stream);
-    v.y = Read<float>(stream);
-    v.z = Read<float>(stream);
+    v.w = Read<double>(stream);
+    v.x = Read<double>(stream);
+    v.y = Read<double>(stream);
+    v.z = Read<double>(stream);
     return v;
 }
 
@@ -151,7 +151,7 @@ aiVertexWeight Read<aiVertexWeight>(IOStream * stream)
 {
     aiVertexWeight w;
     w.mVertexId = Read<unsigned int>(stream);
-    w.mWeight = Read<float>(stream);
+    w.mWeight = Read<double>(stream);
     return w;
 }
 
@@ -161,7 +161,7 @@ aiMatrix4x4 Read<aiMatrix4x4>(IOStream * stream)
     aiMatrix4x4 m;
     for (unsigned int i = 0; i < 4;++i) {
         for (unsigned int i2 = 0; i2 < 4;++i2) {
-            m[i][i2] = Read<float>(stream);
+            m[i][i2] = Read<double>(stream);
         }
     }
     return m;
@@ -521,9 +521,9 @@ void AssbinImporter::ReadBinaryLight( IOStream * stream, aiLight* l )
     l->mType = (aiLightSourceType)Read<unsigned int>(stream);
 
     if (l->mType != aiLightSource_DIRECTIONAL) {
-        l->mAttenuationConstant = Read<float>(stream);
-        l->mAttenuationLinear = Read<float>(stream);
-        l->mAttenuationQuadratic = Read<float>(stream);
+        l->mAttenuationConstant = Read<double>(stream);
+        l->mAttenuationLinear = Read<double>(stream);
+        l->mAttenuationQuadratic = Read<double>(stream);
     }
 
     l->mColorDiffuse = Read<aiColor3D>(stream);
@@ -531,8 +531,8 @@ void AssbinImporter::ReadBinaryLight( IOStream * stream, aiLight* l )
     l->mColorAmbient = Read<aiColor3D>(stream);
 
     if (l->mType == aiLightSource_SPOT) {
-        l->mAngleInnerCone = Read<float>(stream);
-        l->mAngleOuterCone = Read<float>(stream);
+        l->mAngleInnerCone = Read<double>(stream);
+        l->mAngleOuterCone = Read<double>(stream);
     }
 
 }
@@ -548,10 +548,10 @@ void AssbinImporter::ReadBinaryCamera( IOStream * stream, aiCamera* cam )
     cam->mPosition = Read<aiVector3D>(stream);
     cam->mLookAt = Read<aiVector3D>(stream);
     cam->mUp = Read<aiVector3D>(stream);
-    cam->mHorizontalFOV = Read<float>(stream);
-    cam->mClipPlaneNear = Read<float>(stream);
-    cam->mClipPlaneFar = Read<float>(stream);
-    cam->mAspect = Read<float>(stream);
+    cam->mHorizontalFOV = Read<double>(stream);
+    cam->mClipPlaneNear = Read<double>(stream);
+    cam->mClipPlaneFar = Read<double>(stream);
+    cam->mAspect = Read<double>(stream);
 }
 
 void AssbinImporter::ReadBinaryScene( IOStream * stream, aiScene* scene )

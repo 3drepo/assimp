@@ -140,14 +140,14 @@ struct aiCamera
      *  line of the screen and the left or right border.
      *  The default value is 1/4PI.
      */
-    float mHorizontalFOV;
+    double mHorizontalFOV;
 
     /** Distance of the near clipping plane from the camera.
      *
      * The value may not be 0.f (for arithmetic reasons to prevent
      * a division through zero). The default value is 0.1f.
      */
-    float mClipPlaneNear;
+    double mClipPlaneNear;
 
     /** Distance of the far clipping plane from the camera.
      *
@@ -157,7 +157,7 @@ struct aiCamera
      * large (between 1000-10000 should be ok) to avoid floating-point
      * inaccuracies which could lead to z-fighting.
      */
-    float mClipPlaneFar;
+    double mClipPlaneFar;
 
 
     /** Screen aspect ratio.
@@ -167,14 +167,14 @@ struct aiCamera
      * 0 if the aspect ratio is not defined in the source file.
      * 0 is also the default value.
      */
-    float mAspect;
+    double mAspect;
 
 #ifdef __cplusplus
 
     aiCamera()
         : mUp               (0.f,1.f,0.f)
         , mLookAt           (0.f,0.f,1.f)
-        , mHorizontalFOV    (0.25f * (float)AI_MATH_PI)
+        , mHorizontalFOV    (0.25f * (double)AI_MATH_PI)
         , mClipPlaneNear    (0.1f)
         , mClipPlaneFar     (1000.f)
         , mAspect           (0.f)

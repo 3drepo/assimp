@@ -117,10 +117,10 @@ public:
     // deprecated, use overloaded operator>> instead
 
     // ---------------------------------------------------------------------
-    /** Read a float from the stream  */
-    float GetF4()
+    /** Read a double from the stream  */
+    double GetF4()
     {
-        return Get<float>();
+        return Get<double>();
     }
 
     // ---------------------------------------------------------------------

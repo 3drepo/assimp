@@ -5,7 +5,7 @@
 // ------------------------------------------------------------------------------------
 // Original description: (Schrompf)
 // Adapted to the ASSIMP library because the builtin atof indeed takes AGES to parse a
-// float inside a large string. Before parsing, it does a strlen on the given point.
+// double inside a large string. Before parsing, it does a strlen on the given point.
 // Changes:
 //  22nd October 08 (Aramis_acg): Added temporary cast to double, added strtoul10_64
 //     to ensure long numbers are handled correctly
@@ -250,7 +250,7 @@ inline int64_t strtol10_64(const char* in, const char** out = 0, unsigned int* m
 #define AI_FAST_ATOF_RELAVANT_DECIMALS 15
 
 // ------------------------------------------------------------------------------------
-//! Provides a fast function for converting a string into a float,
+//! Provides a fast function for converting a string into a double,
 //! about 6 times faster than atof in win32.
 // If you find any bugs, please send them to me, niko (at) irrlicht3d.org.
 // ------------------------------------------------------------------------------------
@@ -303,7 +303,7 @@ inline const char* fast_atoreal_move(const char* c, Real& out, bool check_comma 
         ++c;
 
         // NOTE: The original implementation is highly inaccurate here. The precision of a single
-        // IEEE 754 float is not high enough, everything behind the 6th digit tends to be more
+        // IEEE 754 double is not high enough, everything behind the 6th digit tends to be more
         // inaccurate than it would need to be. Casting to double seems to solve the problem.
         // strtol_64 is used to prevent integer overflow.
 
@@ -331,9 +331,9 @@ inline const char* fast_atoreal_move(const char* c, Real& out, bool check_comma 
             ++c;
         }
 
-        // The reason float constants are used here is that we've seen cases where compilers
+        // The reason double constants are used here is that we've seen cases where compilers
         // would perform such casts on compile-time constants at runtime, which would be
-        // bad considering how frequently fast_atoreal_move<float> is called in Assimp.
+        // bad considering how frequently fast_atoreal_move<double> is called in Assimp.
         Real exp = static_cast<Real>( strtoul10_64(c, &c) );
         if (einv) {
             exp = -exp;
@@ -350,26 +350,26 @@ inline const char* fast_atoreal_move(const char* c, Real& out, bool check_comma 
 
 // ------------------------------------------------------------------------------------
 // The same but more human.
-inline float fast_atof(const char* c)
+inline double fast_atof(const char* c)
 {
-    float ret;
-    fast_atoreal_move<float>(c, ret);
+    double ret;
+    fast_atoreal_move<double>(c, ret);
     return ret;
 }
 
 
-inline float fast_atof( const char* c, const char** cout)
+inline double fast_atof( const char* c, const char** cout)
 {
-    float ret;
-    *cout = fast_atoreal_move<float>(c, ret);
+    double ret;
+    *cout = fast_atoreal_move<double>(c, ret);
 
     return ret;
 }
 
-inline float fast_atof( const char** inout)
+inline double fast_atof( const char** inout)
 {
-    float ret;
-    *inout = fast_atoreal_move<float>(*inout, ret);
+    double ret;
+    *inout = fast_atoreal_move<double>(*inout, ret);
 
     return ret;
 }

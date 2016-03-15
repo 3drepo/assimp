@@ -118,7 +118,7 @@ public:
         bool skipCurveRepresentations;
         bool useCustomTriangulation;
         bool skipAnnotations;
-        float conicSamplingAngle;
+        double conicSamplingAngle;
     };
 
 

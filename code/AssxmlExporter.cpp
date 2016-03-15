@@ -212,10 +212,10 @@ void WriteDump(const aiScene* scene, IOStream* io, bool shortened)
             "\t\t<Vector3 name=\"up\"        > %0 8f %0 8f %0 8f </Vector3>\n"
             "\t\t<Vector3 name=\"lookat\"    > %0 8f %0 8f %0 8f </Vector3>\n"
             "\t\t<Vector3 name=\"pos\"       > %0 8f %0 8f %0 8f </Vector3>\n"
-            "\t\t<Float   name=\"fov\"       > %f </Float>\n"
-            "\t\t<Float   name=\"aspect\"    > %f </Float>\n"
-            "\t\t<Float   name=\"near_clip\" > %f </Float>\n"
-            "\t\t<Float   name=\"far_clip\"  > %f </Float>\n"
+            "\t\t<double   name=\"fov\"       > %f </double>\n"
+            "\t\t<double   name=\"aspect\"    > %f </double>\n"
+            "\t\t<double   name=\"near_clip\" > %f </double>\n"
+            "\t\t<double   name=\"far_clip\"  > %f </double>\n"
             "\t</Camera>\n",
             name.data,
             cam->mUp.x,cam->mUp.y,cam->mUp.z,
@@ -244,9 +244,9 @@ void WriteDump(const aiScene* scene, IOStream* io, bool shortened)
         if (l->mType != aiLightSource_DIRECTIONAL) {
             ioprintf(io,
                 "\t\t<Vector3 name=\"pos\"       > %0 8f %0 8f %0 8f </Vector3>\n"
-                "\t\t<Float   name=\"atten_cst\" > %f </Float>\n"
-                "\t\t<Float   name=\"atten_lin\" > %f </Float>\n"
-                "\t\t<Float   name=\"atten_sqr\" > %f </Float>\n",
+                "\t\t<double   name=\"atten_cst\" > %f </double>\n"
+                "\t\t<double   name=\"atten_lin\" > %f </double>\n"
+                "\t\t<double   name=\"atten_sqr\" > %f </double>\n",
                 l->mPosition.x,l->mPosition.y,l->mPosition.z,
                 l->mAttenuationConstant,l->mAttenuationLinear,l->mAttenuationQuadratic);
         }
@@ -259,8 +259,8 @@ void WriteDump(const aiScene* scene, IOStream* io, bool shortened)
 
         if (l->mType == aiLightSource_SPOT) {
             ioprintf(io,
-                "\t\t<Float   name=\"cone_out\" > %f </Float>\n"
-                "\t\t<Float   name=\"cone_inn\" > %f </Float>\n",
+                "\t\t<double   name=\"cone_out\" > %f </double>\n"
+                "\t\t<double   name=\"cone_inn\" > %f </double>\n",
                 l->mAngleOuterCone,l->mAngleInnerCone);
         }
         ioprintf(io,"\t</Light>\n");
@@ -325,7 +325,7 @@ void WriteDump(const aiScene* scene, IOStream* io, bool shortened)
                 const aiMaterialProperty* prop = mat->mProperties[n];
                 const char* sz = "";
                 if (prop->mType == aiPTI_Float) {
-                    sz = "float";
+                    sz = "double";
                 }
                 else if (prop->mType == aiPTI_Integer) {
                     sz = "integer";
@@ -343,10 +343,10 @@ void WriteDump(const aiScene* scene, IOStream* io, bool shortened)
 
                 if (prop->mType == aiPTI_Float) {
                     ioprintf(io," size=\"%i\">\n\t\t\t\t",
-                        static_cast<int>(prop->mDataLength/sizeof(float)));
+                        static_cast<int>(prop->mDataLength/sizeof(double)));
 
-                    for (unsigned int p = 0; p < prop->mDataLength/sizeof(float);++p) {
-                        ioprintf(io,"%f ",*((float*)(prop->mData+p*sizeof(float))));
+                    for (unsigned int p = 0; p < prop->mDataLength/sizeof(double);++p) {
+                        ioprintf(io,"%f ",*((double*)(prop->mData+p*sizeof(double))));
                     }
                 }
                 else if (prop->mType == aiPTI_Integer) {

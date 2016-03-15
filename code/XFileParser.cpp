@@ -132,14 +132,14 @@ XFileParser::XFileParser( const std::vector<char>& pBuffer)
     else ThrowException( boost::str(boost::format("Unsupported xfile format '%c%c%c%c'")
         % P[8] % P[9] % P[10] % P[11]));
 
-    // float size
+    // double size
     mBinaryFloatSize = (unsigned int)(P[12] - 48) * 1000
         + (unsigned int)(P[13] - 48) * 100
         + (unsigned int)(P[14] - 48) * 10
         + (unsigned int)(P[15] - 48);
 
     if( mBinaryFloatSize != 32 && mBinaryFloatSize != 64)
-        ThrowException( boost::str( boost::format( "Unknown float size %1% specified in xfile header.")
+        ThrowException( boost::str( boost::format( "Unknown double size %1% specified in xfile header.")
             % mBinaryFloatSize));
 
     // The x format specifies size in bits, but we work in bytes
@@ -1133,7 +1133,7 @@ std::string XFileParser::GetNextToken()
             case 0x29:
                 return "DWORD";
             case 0x2a:
-                return "FLOAT";
+                return "double";
             case 0x2b:
                 return "DOUBLE";
             case 0x2c:
@@ -1326,7 +1326,7 @@ unsigned int XFileParser::ReadInt()
 }
 
 // ------------------------------------------------------------------------------------------------
-float XFileParser::ReadFloat()
+double XFileParser::ReadFloat()
 {
     if( mIsBinaryFormat)
     {
@@ -1335,7 +1335,7 @@ float XFileParser::ReadFloat()
             unsigned short tmp = ReadBinWord(); // 0x07 or 0x42
             if( tmp == 0x07 && End - P >= 4) // array of floats following
                 mBinaryNumCount = ReadBinDWord();
-            else // single float following
+            else // single double following
                 mBinaryNumCount = 1;
         }
 
@@ -1343,7 +1343,7 @@ float XFileParser::ReadFloat()
         if( mBinaryFloatSize == 8)
         {
             if( End - P >= 8) {
-                float result = (float) (*(double*) P);
+                double result = (double) (*(double*) P);
                 P += 8;
                 return result;
             } else {
@@ -1353,7 +1353,7 @@ float XFileParser::ReadFloat()
         } else
         {
             if( End - P >= 4) {
-                float result = *(float*) P;
+                double result = *(double*) P;
                 P += 4;
                 return result;
             } else {
@@ -1381,8 +1381,8 @@ float XFileParser::ReadFloat()
         return 0.0f;
     }
 
-    float result = 0.0f;
-    P = fast_atoreal_move<float>( P, result);
+    double result = 0.0f;
+    P = fast_atoreal_move<double>( P, result);
 
     CheckForSeparator();
 

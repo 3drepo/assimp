@@ -420,7 +420,7 @@ struct Interpolator
      *  The interpolation algorithm depends on the type of the operands.
      *  aiQuaternion's and aiQuatKey's SLERP, the rest does a simple
      *  linear interpolation. */
-    void operator () (T& out,const T& a, const T& b, float d) const {
+    void operator () (T& out,const T& a, const T& b, double d) const {
         out = a + (b-a)*d;
     }
 }; // ! Interpolator <T>
@@ -430,7 +430,7 @@ struct Interpolator
 template <>
 struct Interpolator <aiQuaternion>  {
     void operator () (aiQuaternion& out,const aiQuaternion& a,
-        const aiQuaternion& b, float d) const
+        const aiQuaternion& b, double d) const
     {
         aiQuaternion::Interpolate(out,a,b,d);
     }
@@ -439,7 +439,7 @@ struct Interpolator <aiQuaternion>  {
 template <>
 struct Interpolator <unsigned int>  {
     void operator () (unsigned int& out,unsigned int a,
-        unsigned int b, float d) const
+        unsigned int b, double d) const
     {
         out = d>0.5f ? b : a;
     }
@@ -448,7 +448,7 @@ struct Interpolator <unsigned int>  {
 template <>
 struct Interpolator  <aiVectorKey>  {
     void operator () (aiVector3D& out,const aiVectorKey& a,
-        const aiVectorKey& b, float d) const
+        const aiVectorKey& b, double d) const
     {
         Interpolator<aiVector3D> ipl;
         ipl(out,a.mValue,b.mValue,d);
@@ -458,7 +458,7 @@ struct Interpolator  <aiVectorKey>  {
 template <>
 struct Interpolator <aiQuatKey>     {
     void operator () (aiQuaternion& out, const aiQuatKey& a,
-        const aiQuatKey& b, float d) const
+        const aiQuatKey& b, double d) const
     {
         Interpolator<aiQuaternion> ipl;
         ipl(out,a.mValue,b.mValue,d);
@@ -468,7 +468,7 @@ struct Interpolator <aiQuatKey>     {
 template <>
 struct Interpolator <aiMeshKey>     {
     void operator () (unsigned int& out, const aiMeshKey& a,
-        const aiMeshKey& b, float d) const
+        const aiMeshKey& b, double d) const
     {
         Interpolator<unsigned int> ipl;
         ipl(out,a.mValue,b.mValue,d);

@@ -83,7 +83,7 @@ public:
 
 
     // setter for configMaxAngle
-    inline void SetMaxSmoothAngle(float f)
+    inline void SetMaxSmoothAngle(double f)
     {
         configMaxAngle =f;
     }
@@ -106,7 +106,7 @@ protected:
 private:
 
     /** Configuration option: maximum smoothing angle, in radians*/
-    float configMaxAngle;
+    double configMaxAngle;
     unsigned int configSourceUV;
 };
 

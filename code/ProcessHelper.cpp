@@ -91,7 +91,7 @@ void FindAABBTransformed (const aiMesh* mesh, aiVector3D& min, aiVector3D& max,
 void FindMeshCenter (aiMesh* mesh, aiVector3D& out, aiVector3D& min, aiVector3D& max)
 {
     ArrayBounds(mesh->mVertices,mesh->mNumVertices, min,max);
-    out = min + (max-min)*0.5f;
+    out = min + (max-min)*0.5;
 }
 
 // -------------------------------------------------------------------------------
@@ -110,7 +110,7 @@ void FindSceneCenter (aiScene* scene, aiVector3D& out, aiVector3D& min, aiVector
         if (max[1] < tmax[1]) max[1] = tmax[1];
         if (max[2] < tmax[2]) max[2] = tmax[2];
     }
-    out = min + (max-min)*0.5f;
+    out = min + (max-min)*0.5;
 }
 
 
@@ -119,7 +119,7 @@ void FindMeshCenterTransformed (aiMesh* mesh, aiVector3D& out, aiVector3D& min,
     aiVector3D& max, const aiMatrix4x4& m)
 {
     FindAABBTransformed(mesh,min,max,m);
-    out = min + (max-min)*0.5f;
+    out = min + (max-min)*0.5;
 }
 
 // -------------------------------------------------------------------------------
@@ -138,9 +138,9 @@ void FindMeshCenterTransformed (aiMesh* mesh, aiVector3D& out,
 }
 
 // -------------------------------------------------------------------------------
-float ComputePositionEpsilon(const aiMesh* pMesh)
+double ComputePositionEpsilon(const aiMesh* pMesh)
 {
-    const float epsilon = 1e-4f;
+    const double epsilon = 1e-4f;
 
     // calculate the position bounds so we have a reliable epsilon to check position differences against
     aiVector3D minVec, maxVec;
@@ -149,9 +149,9 @@ float ComputePositionEpsilon(const aiMesh* pMesh)
 }
 
 // -------------------------------------------------------------------------------
-float ComputePositionEpsilon(const aiMesh* const* pMeshes, size_t num)
+double ComputePositionEpsilon(const aiMesh* const* pMeshes, size_t num)
 {
-    const float epsilon = 1e-4f;
+    const double epsilon = 1e-4f;
 
     // calculate the position bounds so we have a reliable epsilon to check position differences against
     aiVector3D minVec, maxVec, mi, ma;
@@ -216,7 +216,7 @@ VertexWeightTable* ComputeVertexBoneWeightTable(const aiMesh* pMesh)
         aiBone* bone = pMesh->mBones[i];
         for (unsigned int a = 0; a < bone->mNumWeights;++a) {
             const aiVertexWeight& weight = bone->mWeights[a];
-            avPerVertexWeights[weight.mVertexId].push_back( std::pair<unsigned int,float>(i,weight.mWeight) );
+            avPerVertexWeights[weight.mVertexId].push_back( std::pair<unsigned int,double>(i,weight.mWeight) );
         }
     }
     return avPerVertexWeights;

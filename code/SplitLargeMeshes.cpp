@@ -414,7 +414,7 @@ void SplitLargeMeshesProcess_Vertex::SplitMesh(
 {
     if (pMesh->mNumVertices > SplitLargeMeshesProcess_Vertex::LIMIT)
     {
-		typedef std::vector< std::pair<unsigned int,float> > VertexWeightTable;
+		typedef std::vector< std::pair<unsigned int,double> > VertexWeightTable;
 
         // build a per-vertex weight list if necessary
         VertexWeightTable* avPerVertexWeights = ComputeVertexBoneWeightTable(pMesh);

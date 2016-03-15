@@ -300,8 +300,8 @@ void BVHLoader::ReadNodeOffset( aiNode* pNode)
 // Reads the animation channels for the given node
 void BVHLoader::ReadNodeChannels( BVHLoader::Node& pNode)
 {
-    // number of channels. Use the float reader because we're lazy
-    float numChannelsFloat = GetNextTokenAsFloat();
+    // number of channels. Use the double reader because we're lazy
+    double numChannelsFloat = GetNextTokenAsFloat();
     unsigned int numChannels = (unsigned int) numChannelsFloat;
 
     for( unsigned int a = 0; a < numChannels; a++)
@@ -334,7 +334,7 @@ void BVHLoader::ReadMotion( aiScene* /*pScene*/)
     if( tokenFrames != "Frames:")
         ThrowException( boost::str( boost::format( "Expected frame count \"Frames:\", but found \"%s\".") % tokenFrames));
 
-    float numFramesFloat = GetNextTokenAsFloat();
+    double numFramesFloat = GetNextTokenAsFloat();
     mAnimNumFrames = (unsigned int) numFramesFloat;
 
     // Read frame duration
@@ -401,17 +401,17 @@ std::string BVHLoader::GetNextToken()
 }
 
 // ------------------------------------------------------------------------------------------------
-// Reads the next token as a float
-float BVHLoader::GetNextTokenAsFloat()
+// Reads the next token as a double
+double BVHLoader::GetNextTokenAsFloat()
 {
     std::string token = GetNextToken();
     if( token.empty())
-        ThrowException( "Unexpected end of file while trying to read a float");
+        ThrowException( "Unexpected end of file while trying to read a double");
 
-    // check if the float is valid by testing if the atof() function consumed every char of the token
+    // check if the double is valid by testing if the atof() function consumed every char of the token
     const char* ctoken = token.c_str();
-    float result = 0.0f;
-    ctoken = fast_atoreal_move<float>( ctoken, result);
+    double result = 0.0f;
+    ctoken = fast_atoreal_move<double>( ctoken, result);
 
     if( ctoken != token.c_str() + token.length())
         ThrowException( boost::str( boost::format( "Expected a floating point number, but found \"%s\".") % token));
@@ -511,7 +511,7 @@ void BVHLoader::CreateAnimation( aiScene* pScene)
                 for( unsigned int channel = 0; channel < 3; ++channel)
                 {
                     // translate ZXY euler angels into a quaternion
-                    const float angle = node.mChannelValues[fr * node.mChannels.size() + rotOffset + channel] * float( AI_MATH_PI) / 180.0f;
+                    const double angle = node.mChannelValues[fr * node.mChannels.size() + rotOffset + channel] * double( AI_MATH_PI) / 180.0f;
 
                     // Compute rotation transformations in the right order
                     switch (node.mChannels[rotOffset+channel])

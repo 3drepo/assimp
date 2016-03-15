@@ -152,7 +152,7 @@ struct Frame
     aiVector3D localOrigin ;
 
     //! radius of the BB
-    float radius ;
+    double radius ;
 
     //! Name of the frame
     char name [ 16 ] ;
@@ -171,7 +171,7 @@ struct Triangle
  */
 struct TexturCoord
 {
-    float u,v;
+    double u,v;
 } PACK_STRUCT;
 
 // ---------------------------------------------------------------------------

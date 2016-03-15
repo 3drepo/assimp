@@ -66,7 +66,7 @@ void HandleMouseInputFPS( void )
 
         if( 0 != nYDiff)
             {
-            D3DXMatrixRotationAxis( &matRotation, (D3DXVECTOR3*)& g_sCamera.vRight, D3DXToRadian((float)nYDiff / 6.0f));
+            D3DXMatrixRotationAxis( &matRotation, (D3DXVECTOR3*)& g_sCamera.vRight, D3DXToRadian((double)nYDiff / 6.0f));
             D3DXVec3TransformCoord( (D3DXVECTOR3*)&g_sCamera.vLookAt, (D3DXVECTOR3*)& g_sCamera.vLookAt, &matRotation );
             D3DXVec3TransformCoord( (D3DXVECTOR3*)&g_sCamera.vUp, (D3DXVECTOR3*)&g_sCamera.vUp, &matRotation );
             }
@@ -74,7 +74,7 @@ void HandleMouseInputFPS( void )
         if( 0 != nXDiff )
             {
             D3DXVECTOR3 v(0,1,0);
-            D3DXMatrixRotationAxis( &matRotation, (D3DXVECTOR3*)&g_sCamera.vUp, D3DXToRadian((float)nXDiff / 6.0f) );
+            D3DXMatrixRotationAxis( &matRotation, (D3DXVECTOR3*)&g_sCamera.vUp, D3DXToRadian((double)nXDiff / 6.0f) );
             D3DXVec3TransformCoord( (D3DXVECTOR3*)&g_sCamera.vLookAt, (D3DXVECTOR3*)&g_sCamera.vLookAt, &matRotation );
             D3DXVec3TransformCoord( (D3DXVECTOR3*)&g_sCamera.vRight,(D3DXVECTOR3*) &g_sCamera.vRight, &matRotation );
             }
@@ -103,8 +103,8 @@ void HandleMouseInputTextureView( void )
 
     if (g_bMousePressed)
         {
-        CDisplay::Instance().SetTextureViewOffsetX((float)(g_mousePos.x - g_LastmousePos.x));
-        CDisplay::Instance().SetTextureViewOffsetY((float)(g_mousePos.y - g_LastmousePos.y));
+        CDisplay::Instance().SetTextureViewOffsetX((double)(g_mousePos.x - g_LastmousePos.x));
+        CDisplay::Instance().SetTextureViewOffsetY((double)(g_mousePos.y - g_LastmousePos.y));
         }
 
     g_LastmousePos.x = g_mousePos.x;
@@ -132,12 +132,12 @@ void HandleMouseInputLightRotate( void )
 
         aiVector3D v = aiVector3D(1.0f,0.0f,0.0f);
         aiMatrix4x4 mTemp;
-        D3DXMatrixRotationAxis( (D3DXMATRIX*) &mTemp, (D3DXVECTOR3*)&v, D3DXToRadian((float)nYDiff / 2.0f));
+        D3DXMatrixRotationAxis( (D3DXMATRIX*) &mTemp, (D3DXVECTOR3*)&v, D3DXToRadian((double)nYDiff / 2.0f));
         D3DXVec3TransformCoord((D3DXVECTOR3*)&g_avLightDirs[0],
             (const D3DXVECTOR3*)&g_avLightDirs[0],(const D3DXMATRIX*)&mTemp);
 
         v = aiVector3D(0.0f,1.0f,0.0f);
-        D3DXMatrixRotationAxis( (D3DXMATRIX*) &mTemp, (D3DXVECTOR3*)&v, D3DXToRadian((float)nXDiff / 2.0f));
+        D3DXMatrixRotationAxis( (D3DXMATRIX*) &mTemp, (D3DXVECTOR3*)&v, D3DXToRadian((double)nXDiff / 2.0f));
         D3DXVec3TransformCoord((D3DXVECTOR3*)&g_avLightDirs[0],
             (const D3DXVECTOR3*)&g_avLightDirs[0],(const D3DXMATRIX*)&mTemp);
         }
@@ -172,7 +172,7 @@ void HandleMouseInputSkyBox( void )
         if( 0 != nYDiff)
             {
             aiVector3D v = aiVector3D(1.0f,0.0f,0.0f);
-            D3DXMatrixRotationAxis( (D3DXMATRIX*) &matWorld, (D3DXVECTOR3*)&v, D3DXToRadian((float)nYDiff / 2.0f));
+            D3DXMatrixRotationAxis( (D3DXMATRIX*) &matWorld, (D3DXVECTOR3*)&v, D3DXToRadian((double)nYDiff / 2.0f));
             CBackgroundPainter::Instance().RotateSB(&matWorld);
             }
 
@@ -185,7 +185,7 @@ void HandleMouseInputSkyBox( void )
                 }
 
             aiVector3D v = aiVector3D(0.0f,1.0f,0.0f);
-            D3DXMatrixRotationAxis( (D3DXMATRIX*)&matWorld, (D3DXVECTOR3*)&v, D3DXToRadian((float)nXDiff / 2.0f) );
+            D3DXMatrixRotationAxis( (D3DXMATRIX*)&matWorld, (D3DXVECTOR3*)&v, D3DXToRadian((double)nXDiff / 2.0f) );
             matWorld =  matWorldOld * matWorld;
             CBackgroundPainter::Instance().RotateSB(&matWorld);
             }
@@ -208,7 +208,7 @@ void HandleMouseInputLightIntensityAndColor( void )
         int nXDiff = -(g_mousePos.x - g_LastmousePos.x);
         int nYDiff = -(g_mousePos.y - g_LastmousePos.y);
 
-        g_fLightIntensity -= (float)nXDiff / 400.0f;
+        g_fLightIntensity -= (double)nXDiff / 400.0f;
         if ((nYDiff > 2 || nYDiff < -2) && (nXDiff < 20 && nXDiff > -20))
         {
             if (!g_bFPSView)
@@ -217,7 +217,7 @@ void HandleMouseInputLightIntensityAndColor( void )
             }
             else
             {
-                g_sCamera.vPos += (nYDiff / 120.0f) * g_sCamera.vLookAt.Normalize();
+                g_sCamera.vPos += (nYDiff / 120.0) * g_sCamera.vLookAt.Normalize();
             }
         }
     }
@@ -248,14 +248,14 @@ void HandleMouseInputLocal( void )
             if( 0 != nYDiff && g_eClick != EClickPos_CircleHor)
                 {
                 aiVector3D v = aiVector3D(1.0f,0.0f,0.0f);
-                D3DXMatrixRotationAxis( (D3DXMATRIX*) &matWorld, (D3DXVECTOR3*)&v, D3DXToRadian((float)nYDiff / 2.0f));
+                D3DXMatrixRotationAxis( (D3DXMATRIX*) &matWorld, (D3DXVECTOR3*)&v, D3DXToRadian((double)nYDiff / 2.0f));
                 g_mWorldRotate = g_mWorldRotate * matWorld;
                 }
 
             if( 0 != nXDiff && g_eClick != EClickPos_CircleVert)
                 {
                 aiVector3D v = aiVector3D(0.0f,1.0f,0.0f);
-                D3DXMatrixRotationAxis( (D3DXMATRIX*)&matWorld, (D3DXVECTOR3*)&v, D3DXToRadian((float)nXDiff / 2.0f) );
+                D3DXMatrixRotationAxis( (D3DXMATRIX*)&matWorld, (D3DXVECTOR3*)&v, D3DXToRadian((double)nXDiff / 2.0f) );
                 g_mWorldRotate = g_mWorldRotate * matWorld;
                 }
             }
@@ -271,24 +271,24 @@ void HandleMouseInputLocal( void )
 
                 int xPos = g_mousePos.x - sRect.right/2;
                 int yPos = g_mousePos.y - sRect.bottom/2;
-                float fXDist = (float)xPos;
-                float fYDist = (float)yPos / sqrtf((float)(yPos * yPos + xPos * xPos));
+                double fXDist = (double)xPos;
+                double fYDist = (double)yPos / sqrtf((double)(yPos * yPos + xPos * xPos));
 
                 bool bSign1;
                 if (fXDist < 0.0f)bSign1 = false;
                 else bSign1 = true;
-                float fAngle = asin(fYDist);
+                double fAngle = asin(fYDist);
 
                 xPos = g_LastmousePos.x - sRect.right/2;
                 yPos = g_LastmousePos.y - sRect.bottom/2;
 
-                fXDist = (float)xPos;
-                fYDist = (float)yPos / sqrtf((float)(yPos * yPos + xPos * xPos));
+                fXDist = (double)xPos;
+                fYDist = (double)yPos / sqrtf((double)(yPos * yPos + xPos * xPos));
 
                 bool bSign2;
                 if (fXDist < 0.0f)bSign2 = false;
                 else bSign2 = true;
-                float fAngle2 = asin(fYDist);
+                double fAngle2 = asin(fYDist);
                 fAngle -= fAngle2;
 
                 if (bSign1 != bSign2)
@@ -298,7 +298,7 @@ void HandleMouseInputLocal( void )
                 if (g_bInvert)fAngle *= -1.0f;
 
                 aiVector3D v = aiVector3D(0.0f,0.0f,1.0f);
-                D3DXMatrixRotationAxis( (D3DXMATRIX*)&matWorld, (D3DXVECTOR3*)&v, (float) (fAngle * 1.2) );
+                D3DXMatrixRotationAxis( (D3DXMATRIX*)&matWorld, (D3DXVECTOR3*)&v, (double) (fAngle * 1.2) );
                 g_mWorldRotate = g_mWorldRotate * matWorld;
                 }
             }

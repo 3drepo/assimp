@@ -61,7 +61,7 @@ std::vector<std::string> g_aPreviousFiles;
 // history menu item
 HMENU g_hHistoryMenu = NULL;
 
-float g_fACMR = 3.0f;
+double g_fACMR = 3.0f;
 
 #define AI_VIEW_NUM_RECENT_FILES 0x8
 #define AI_VIEW_RECENT_FILE_ID(_n_) (5678 + _n_)
@@ -1367,7 +1367,7 @@ INT_PTR CALLBACK SMMessageProc(HWND hwndDlg,UINT uMsg,
         if (IDOK == LOWORD(wParam)) {
             char s[30];
             GetDlgItemText(hwndDlg,IDC_EDITSM,s,30);
-            g_smoothAngle = (float)atof(s);
+            g_smoothAngle = (double)atof(s);
 
             EndDialog(hwndDlg,0);
         }
@@ -1438,11 +1438,11 @@ INT_PTR CALLBACK MessageProc(HWND hwndDlg,UINT uMsg,
             {
                 if (!g_bFPSView)
                     {
-                    g_sCamera.vPos.z += GET_WHEEL_DELTA_WPARAM(wParam) / 50.0f;
+                    g_sCamera.vPos.z += GET_WHEEL_DELTA_WPARAM(wParam) / 50.0;
                     }
                 else
                     {
-                    g_sCamera.vPos += (GET_WHEEL_DELTA_WPARAM(wParam) / 50.0f) *
+                    g_sCamera.vPos += (GET_WHEEL_DELTA_WPARAM(wParam) / 50.0) *
                         g_sCamera.vLookAt.Normalize();
                     }
             }
@@ -1678,8 +1678,8 @@ INT_PTR CALLBACK MessageProc(HWND hwndDlg,UINT uMsg,
             D3DSURFACE_DESC sDesc;
             g_pcTexture->GetLevelDesc(0,&sDesc);
 
-            fHalfX = (int)(((float)sRect.right-(float)sDesc.Width) / 2.0f);
-            fHalfY = (int)(((float)sRect.bottom-(float)sDesc.Height) / 2.0f);
+            fHalfX = (int)(((double)sRect.right-(double)sDesc.Width) / 2.0f);
+            fHalfY = (int)(((double)sRect.bottom-(double)sDesc.Height) / 2.0f);
 
             // Determine the input operation to perform for this position
             g_eClick = EClickPos_Outside;
@@ -2621,7 +2621,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
         // measure FPS, average it out
         g_dCurTime     = timeGetTime();
-        g_fElpasedTime = (float)((g_dCurTime - g_dLastTime) * 0.001);
+        g_fElpasedTime = (double)((g_dCurTime - g_dLastTime) * 0.001);
         g_dLastTime    = g_dCurTime;
 
         adLast[iCurrent++] = 1.0f / g_fElpasedTime;
@@ -2639,7 +2639,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 g_fFPS = dFPS;
                 char szOut[256];
 
-                sprintf(szOut,"%i",(int)floorf((float)dFPS+0.5f));
+                sprintf(szOut,"%i",(int)floorf((double)dFPS+0.5f));
                 SetDlgItemText(g_hDlg,IDC_EFPS,szOut);
                 }
             }

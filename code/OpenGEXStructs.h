@@ -57,10 +57,10 @@ struct BoneIndexArray;
 struct BoneWeightArray;
 
 struct Metric {
-    float m_distance;
-    float m_angle;
-    float m_time;
-    float m_up;
+    double m_distance;
+    double m_angle;
+    double m_time;
+    double m_up;
 };
 
 struct VertexArray {
@@ -115,9 +115,9 @@ struct LightObject {
 
 
 struct CameraObject {
-    float focalLength;
-    float nearDepth;
-    float farDepth;
+    double focalLength;
+    double nearDepth;
+    double farDepth;
 };
 
 struct Matrix {
@@ -127,7 +127,7 @@ struct Matrix {
 struct Transform {
     Matrix *matrix;
     int transformCount;
-    const float *transformArray;
+    const double *transformArray;
 };
 
 struct Translation {
@@ -176,7 +176,7 @@ struct BoneIndex {
 
 struct BoneWeight {
     int boneWeightCount;
-    const float *boneWeightArray;
+    const double *boneWeightArray;
 };
 
 struct Skeleton {
@@ -201,11 +201,11 @@ struct Attrib {
 };
 
 struct Param {
-    float param;
+    double param;
 };
 
 struct Color {
-    float color[ 4 ];
+    double color[ 4 ];
 };
 
 struct Texture {
@@ -217,17 +217,17 @@ struct Atten {
     std::string attenKind;
     std::string curveType;
 
-    float beginParam;
-    float endParam;
+    double beginParam;
+    double endParam;
 
-    float scaleParam;
-    float offsetParam;
+    double scaleParam;
+    double offsetParam;
 
-    float constantParam;
-    float linearParam;
-    float quadraticParam;
+    double constantParam;
+    double linearParam;
+    double quadraticParam;
 
-    float powerParam;
+    double powerParam;
 };
 
 struct Key {
@@ -248,14 +248,14 @@ struct Animation {
     int clipIndex;
     bool beginFlag;
     bool endFlag;
-    float beginTime;
-    float endTime;
+    double beginTime;
+    double endTime;
 };
 
 struct OpenGexDataDescription {
-    float distanceScale;
-    float angleScale;
-    float timeScale;
+    double distanceScale;
+    double angleScale;
+    double timeScale;
     int upDirection;
 };
 

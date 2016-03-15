@@ -499,7 +499,7 @@ void LWOImporter::ComputeNormals(aiMesh* mesh, const std::vector<unsigned int>& 
             out[face.mIndices[i]] = vNor;
     }
     if (!surface.mMaximumSmoothAngle)return;
-    const float posEpsilon = ComputePositionEpsilon(mesh);
+    const double posEpsilon = ComputePositionEpsilon(mesh);
 
     // Now generate the spatial sort tree
     SGSpatialSort sSort;
@@ -521,7 +521,7 @@ void LWOImporter::ComputeNormals(aiMesh* mesh, const std::vector<unsigned int>& 
     // Generate vertex normals. We have O(logn) for the binary lookup, which we need
     // for n elements, thus the EXPECTED complexity is O(nlogn)
     if (surface.mMaximumSmoothAngle < 3.f && !configSpeedFlag)  {
-        const float fLimit = std::cos(surface.mMaximumSmoothAngle);
+        const double fLimit = std::cos(surface.mMaximumSmoothAngle);
 
         for( begin =  mesh->mFaces, it = smoothingGroups.begin(); begin != end; ++begin, ++it)  {
             const aiFace& face = *begin;
@@ -948,7 +948,7 @@ inline void CreateNewEntry(std::vector< T >& list, unsigned int srcIdx)
 
 // ------------------------------------------------------------------------------------------------
 inline void LWOImporter::DoRecursiveVMAPAssignment(VMapEntry* base, unsigned int numRead,
-    unsigned int idx, float* data)
+    unsigned int idx, double* data)
 {
     ai_assert(NULL != data);
     LWO::ReferrerList& refList  = mCurLayer->mPointReferrers;
@@ -1059,7 +1059,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
     LWO::PointList& pointList = mCurLayer->mTempPoints;
     LWO::ReferrerList& refList = mCurLayer->mPointReferrers;
 
-    float temp[4];
+    double temp[4];
 
     const unsigned int numPoints = (unsigned int)pointList.size();
     const unsigned int numFaces  = (unsigned int)list.size();

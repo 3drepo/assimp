@@ -221,16 +221,16 @@ inline bool ProcessArray(T*& in, unsigned int num,const char* name,
 
 // ------------------------------------------------------------------------------------------------
 template <typename T>
-AI_FORCE_INLINE bool EpsilonCompare(const T& n, const T& s, float epsilon);
+AI_FORCE_INLINE bool EpsilonCompare(const T& n, const T& s, double epsilon);
 
 // ------------------------------------------------------------------------------------------------
-AI_FORCE_INLINE bool EpsilonCompare(float n, float s, float epsilon) {
+AI_FORCE_INLINE bool EpsilonCompare(double n, double s, double epsilon) {
     return std::fabs(n-s)>epsilon;
 }
 
 // ------------------------------------------------------------------------------------------------
 template <>
-bool EpsilonCompare<aiVectorKey>(const aiVectorKey& n, const aiVectorKey& s, float epsilon) {
+bool EpsilonCompare<aiVectorKey>(const aiVectorKey& n, const aiVectorKey& s, double epsilon) {
     return
         EpsilonCompare(n.mValue.x,s.mValue.x,epsilon) &&
         EpsilonCompare(n.mValue.y,s.mValue.y,epsilon) &&
@@ -239,7 +239,7 @@ bool EpsilonCompare<aiVectorKey>(const aiVectorKey& n, const aiVectorKey& s, flo
 
 // ------------------------------------------------------------------------------------------------
 template <>
-bool EpsilonCompare<aiQuatKey>(const aiQuatKey& n, const aiQuatKey& s, float epsilon)   {
+bool EpsilonCompare<aiQuatKey>(const aiQuatKey& n, const aiQuatKey& s, double epsilon)   {
     return
         EpsilonCompare(n.mValue.x,s.mValue.x,epsilon) &&
         EpsilonCompare(n.mValue.y,s.mValue.y,epsilon) &&
@@ -249,7 +249,7 @@ bool EpsilonCompare<aiQuatKey>(const aiQuatKey& n, const aiQuatKey& s, float eps
 
 // ------------------------------------------------------------------------------------------------
 template <typename T>
-inline bool AllIdentical(T* in, unsigned int num, float epsilon)
+inline bool AllIdentical(T* in, unsigned int num, double epsilon)
 {
     if (num <= 1) {
         return true;

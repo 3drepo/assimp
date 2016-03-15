@@ -301,7 +301,7 @@ void SMDImporter::CreateOutputMeshes()
         pcMesh->mMaterialIndex = i;
 
         // storage for bones
-        typedef std::pair<unsigned int,float> TempWeightListEntry;
+        typedef std::pair<unsigned int,double> TempWeightListEntry;
         typedef std::vector< TempWeightListEntry > TempBoneWeightList;
 
         TempBoneWeightList* aaiBones = new TempBoneWeightList[asBones.size()]();
@@ -353,7 +353,7 @@ void SMDImporter::CreateOutputMeshes()
 
             for (unsigned int iVert = 0; iVert < 3;++iVert)
             {
-                float fSum = 0.0f;
+                double fSum = 0.0f;
                 for (unsigned int iBone = 0;iBone < face.avVertices[iVert].aiBoneLinks.size();++iBone)
                 {
                     TempWeightListEntry& pairval = face.avVertices[iVert].aiBoneLinks[iBone];
@@ -960,32 +960,32 @@ void SMDImporter::ParseSkeletonElement(const char* szCurrent,
     SMD::Bone::Animation::MatrixKey& key = bone.sAnim.asKeys.back();
 
     key.dTime = (double)iTime;
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vPos.x))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vPos.x))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing bone.pos.x");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vPos.y))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vPos.y))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing bone.pos.y");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vPos.z))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vPos.z))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing bone.pos.z");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vRot.x))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vRot.x))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing bone.rot.x");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vRot.y))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vRot.y))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing bone.rot.y");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vRot.z))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vRot.z))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing bone.rot.z");
         SMDI_PARSE_RETURN;
@@ -1037,14 +1037,14 @@ void SMDImporter::ParseTriangle(const char* szCurrent,
 }
 
 // ------------------------------------------------------------------------------------------------
-// Parse a float
+// Parse a double
 bool SMDImporter::ParseFloat(const char* szCurrent,
-    const char** szCurrentOut, float& out)
+    const char** szCurrentOut, double& out)
 {
     if(!SkipSpaces(&szCurrent))
         return false;
 
-    *szCurrentOut = fast_atoreal_move<float>(szCurrent,out);
+    *szCurrentOut = fast_atoreal_move<double>(szCurrent,out);
     return true;
 }
 
@@ -1088,32 +1088,32 @@ void SMDImporter::ParseVertex(const char* szCurrent,
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.parent");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vertex.pos.x))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vertex.pos.x))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.pos.x");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vertex.pos.y))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vertex.pos.y))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.pos.y");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vertex.pos.z))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vertex.pos.z))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.pos.z");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vertex.nor.x))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vertex.nor.x))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.nor.x");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vertex.nor.y))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vertex.nor.y))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.nor.y");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vertex.nor.z))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vertex.nor.z))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.nor.z");
         SMDI_PARSE_RETURN;
@@ -1121,12 +1121,12 @@ void SMDImporter::ParseVertex(const char* szCurrent,
 
     if (bVASection)SMDI_PARSE_RETURN;
 
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vertex.uv.x))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vertex.uv.x))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.uv.x");
         SMDI_PARSE_RETURN;
     }
-    if(!ParseFloat(szCurrent,&szCurrent,(float&)vertex.uv.y))
+    if(!ParseFloat(szCurrent,&szCurrent,(double&)vertex.uv.y))
     {
         LogErrorNoThrow("Unexpected EOF/EOL while parsing vertex.uv.y");
         SMDI_PARSE_RETURN;
@@ -1136,9 +1136,9 @@ void SMDImporter::ParseVertex(const char* szCurrent,
     // all elements from now are fully optional, we don't need them
     unsigned int iSize = 0;
     if(!ParseUnsignedInt(szCurrent,&szCurrent,iSize))SMDI_PARSE_RETURN;
-    vertex.aiBoneLinks.resize(iSize,std::pair<unsigned int, float>(0,0.0f));
+    vertex.aiBoneLinks.resize(iSize,std::pair<unsigned int, double>(0,0.0f));
 
-    for (std::vector<std::pair<unsigned int, float> >::iterator
+    for (std::vector<std::pair<unsigned int, double> >::iterator
         i =  vertex.aiBoneLinks.begin();
         i != vertex.aiBoneLinks.end();++i)
     {

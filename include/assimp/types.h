@@ -123,7 +123,7 @@ struct aiPlane
 {
 #ifdef __cplusplus
     aiPlane () : a(0.f), b(0.f), c(0.f), d(0.f) {}
-    aiPlane (float _a, float _b, float _c, float _d)
+    aiPlane (double _a, double _b, double _c, double _d)
         : a(_a), b(_b), c(_c), d(_d) {}
 
     aiPlane (const aiPlane& o) : a(o.a), b(o.b), c(o.c), d(o.d) {}
@@ -131,7 +131,7 @@ struct aiPlane
 #endif // !__cplusplus
 
     //! Plane equation
-    float a,b,c,d;
+    double a,b,c,d;
 } PACK_STRUCT; // !struct aiPlane
 
 // ----------------------------------------------------------------------------------
@@ -159,8 +159,8 @@ struct aiColor3D
 {
 #ifdef __cplusplus
     aiColor3D () : r(0.0f), g(0.0f), b(0.0f) {}
-    aiColor3D (float _r, float _g, float _b) : r(_r), g(_g), b(_b) {}
-    aiColor3D (float _r) : r(_r), g(_r), b(_r) {}
+    aiColor3D (double _r, double _g, double _b) : r(_r), g(_g), b(_b) {}
+    aiColor3D (double _r) : r(_r), g(_r), b(_r) {}
     aiColor3D (const aiColor3D& o) : r(o.r), g(o.g), b(o.b) {}
 
     /** Component-wise comparison */
@@ -199,30 +199,30 @@ struct aiColor3D
     }
 
     /** Multiply with a scalar */
-    aiColor3D operator*(float f) const {
+    aiColor3D operator*(double f) const {
         return aiColor3D(r*f,g*f,b*f);
     }
 
     /** Access a specific color component */
-    float operator[](unsigned int i) const {
+    double operator[](unsigned int i) const {
         return *(&r + i);
     }
 
     /** Access a specific color component */
-    float& operator[](unsigned int i) {
+    double& operator[](unsigned int i) {
         return *(&r + i);
     }
 
     /** Check whether a color is black */
     bool IsBlack() const {
-        static const float epsilon = 10e-3f;
+        static const double epsilon = 10e-3f;
         return std::fabs( r ) < epsilon && std::fabs( g ) < epsilon && std::fabs( b ) < epsilon;
     }
 
 #endif // !__cplusplus
 
     //! Red, green and blue color values
-    float r, g, b;
+    double r, g, b;
 } PACK_STRUCT;  // !struct aiColor3D
 #include "./Compiler/poppack1.h"
 

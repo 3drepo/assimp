@@ -290,13 +290,13 @@ aiMaterial* OgreImporter::ReadMaterial(const std::string &pFile, Assimp::IOSyste
                 else if (linePart=="$shininess_strength")
                 {
                     ss >> linePart;
-                    float Shininess = fast_atof(linePart.c_str());
+                    double Shininess = fast_atof(linePart.c_str());
                     material->AddProperty(&Shininess, 1, AI_MATKEY_SHININESS_STRENGTH);
                 }
                 else if (linePart=="$shininess_exponent")
                 {
                     ss >> linePart;
-                    float Shininess = fast_atof(linePart.c_str());
+                    double Shininess = fast_atof(linePart.c_str());
                     material->AddProperty(&Shininess, 1, AI_MATKEY_SHININESS);
                 }
                 //Properties from Venetica:
@@ -411,7 +411,7 @@ bool OgreImporter::ReadPass(const std::string &passName, stringstream &ss, aiMat
         /// @todo Support alpha via aiColor4D.
         if (linePart == partAmbient || linePart == partDiffuse || linePart == partSpecular || linePart == partEmissive)
         {
-            float r, g, b;
+            double r, g, b;
             ss >> r >> g >> b;
             const aiColor3D color(r, g, b);
 

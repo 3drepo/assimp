@@ -108,7 +108,7 @@ void SpatialSort::Append( const aiVector3D* pPositions, unsigned int pNumPositio
         const aiVector3D* vec   = reinterpret_cast<const aiVector3D*> (tempPointer + a * pElementOffset);
 
         // store position by index and distance
-        float distance = *vec * mPlaneNormal;
+        double distance = *vec * mPlaneNormal;
         mPositions.push_back( Entry( a+initial, *vec, distance));
     }
 
@@ -121,10 +121,10 @@ void SpatialSort::Append( const aiVector3D* pPositions, unsigned int pNumPositio
 // ------------------------------------------------------------------------------------------------
 // Returns an iterator for all positions close to the given position.
 void SpatialSort::FindPositions( const aiVector3D& pPosition,
-    float pRadius, std::vector<unsigned int>& poResults) const
+    double pRadius, std::vector<unsigned int>& poResults) const
 {
-    const float dist = pPosition * mPlaneNormal;
-    const float minDist = dist - pRadius, maxDist = dist + pRadius;
+    const double dist = pPosition * mPlaneNormal;
+    const double minDist = dist - pRadius, maxDist = dist + pRadius;
 
     // clear the array in this strange fashion because a simple clear() would also deallocate
     // the array which we want to avoid
@@ -161,7 +161,7 @@ void SpatialSort::FindPositions( const aiVector3D& pPosition,
     // Mow start iterating from there until the first position lays outside of the distance range.
     // Add all positions inside the distance range within the given radius to the result aray
     std::vector<Entry>::const_iterator it = mPositions.begin() + index;
-    const float pSquared = pRadius*pRadius;
+    const double pSquared = pRadius*pRadius;
     while( it->mDistance < maxDist)
     {
         if( (it->mPosition - pPosition).SquareLength() < pSquared)
@@ -187,9 +187,9 @@ namespace {
 
     // --------------------------------------------------------------------------------------------
     // Converts the bit pattern of a floating-point number to its signed integer representation.
-    BinFloat ToBinary( const float & pValue) {
+    BinFloat ToBinary( const double & pValue) {
 
-        // If this assertion fails, signed int is not big enough to store a float on your platform.
+        // If this assertion fails, signed int is not big enough to store a double on your platform.
         //  Please correct the declaration of BinFloat a few lines above - but do it in a portable,
         //  #ifdef'd manner!
         BOOST_STATIC_ASSERT( sizeof(BinFloat) >= sizeof(float));
@@ -204,13 +204,13 @@ namespace {
             // This works best on Visual C++, but other compilers have their problems with it.
             const BinFloat binValue = reinterpret_cast<BinFloat const &>(pValue);
         #else
-            // On many compilers, reinterpreting a float address as an integer causes aliasing
+            // On many compilers, reinterpreting a double address as an integer causes aliasing
             // problems. This is an ugly but more or less safe way of doing it.
             union {
-                float       asFloat;
+                double       asFloat;
                 BinFloat    asBin;
             } conversion;
-            conversion.asBin    = 0; // zero empty space in case sizeof(BinFloat) > sizeof(float)
+            conversion.asBin    = 0; // zero empty space in case sizeof(BinFloat) > sizeof(double)
             conversion.asFloat  = pValue;
             const BinFloat binValue = conversion.asBin;
         #endif
@@ -245,7 +245,7 @@ void SpatialSort::FindIdenticalPositions( const aiVector3D& pPosition,
     //  if you apply it to 0.001, it is enormous.
 
     // The best way to overcome this is the unit in the last place (ULP). A precision of 2 ULPs
-    //  tells us that a float does not differ more than 2 bits from the "real" value. ULPs are of
+    //  tells us that a double does not differ more than 2 bits from the "real" value. ULPs are of
     //  logarithmic precision - around 1, they are 1÷(2^24) and around 10000, they are 0.00125.
 
     // For standard C math, we can assume a precision of 0.5 ULPs according to IEEE 754. The
@@ -309,13 +309,13 @@ void SpatialSort::FindIdenticalPositions( const aiVector3D& pPosition,
 }
 
 // ------------------------------------------------------------------------------------------------
-unsigned int SpatialSort::GenerateMappingTable(std::vector<unsigned int>& fill,float pRadius) const
+unsigned int SpatialSort::GenerateMappingTable(std::vector<unsigned int>& fill,double pRadius) const
 {
     fill.resize(mPositions.size(),UINT_MAX);
-    float dist, maxDist;
+    double dist, maxDist;
 
     unsigned int t=0;
-    const float pSquared = pRadius*pRadius;
+    const double pSquared = pRadius*pRadius;
     for (size_t i = 0; i < mPositions.size();) {
         dist = mPositions[i].mPosition * mPlaneNormal;
         maxDist = dist + pRadius;

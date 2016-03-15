@@ -98,12 +98,12 @@ public:
     TReal x, y;
 } PACK_STRUCT;
 
-typedef aiVector2t<float> aiVector2D;
+typedef aiVector2t<double> aiVector2D;
 
 #else
 
 struct aiVector2D {
-    float x,y;
+    double x,y;
 };
 
 #endif // __cplusplus
