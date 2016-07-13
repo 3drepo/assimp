@@ -1181,10 +1181,9 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 
     IfcVector3 wall_extrusion_axis_norm = wall_extrusion_axis;
     wall_extrusion_axis_norm.Normalize();
-	std::cout << "#openings : " << openings.size() << std::endl; 
 	static int count = -1;	
 	++count;
-	bool dump = count == 16;
+	bool dump = false;
 
 	if (dump)
 	{
@@ -1653,6 +1652,404 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 	}
 
     return true;
+}
+
+// ------------------------------------------------------------------------------------------------
+bool GenerateWindowFaces(std::vector<TempOpening>& openings,
+	const std::vector<IfcVector3>& nors,
+	TempMesh& curmesh,
+	const IfcVector3& wall_extrusion_axis)
+{
+
+	//We need to perform the patching up within the holes created
+	// This is a replacement of the closeWindows function in IFCOpenings.cpp
+	//To do this, we:
+	// - project the cut mesh into 2D Space.
+	// - project the openings into 2D Space to figure out its contour
+	// - project its wall points into this 2D space and group them by its contours?
+	// - find it's pair (the point on the other side of the wall)
+	// - find it's neighbours (based on contour)
+
+
+	OpeningRefVector contours_to_openings;
+
+	// Try to derive a solid base plane within the current surface for use as
+	// working coordinate system. Map all vertices onto this plane and
+	// rescale them to [0,1] range. This normalization means all further
+	// epsilons need not be scaled.
+	bool ok = true;
+
+	std::vector<IfcVector2> contour_flat;
+
+	IfcVector3 nor;
+	const IfcMatrix4 m = ProjectOntoPlane(contour_flat, curmesh, ok, nor);
+	if (!ok) {
+		std::cout << "not ok." << std::endl;
+		return false;
+	}
+
+	if (true)
+	{
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindowNew_contour_flat.obj";
+		std::ofstream outputStream(fileName.c_str());
+	
+		for (int i = 0; i < contour_flat.size(); ++i)
+		{
+			outputStream << "v " << contour_flat[i].x << " " << contour_flat[i].y << " 0" << std::endl;
+		}
+		outputStream << "f";
+		for (int i = 0; i < contour_flat.size(); ++i)
+		{			
+			
+			outputStream << " " << i + 1;
+			
+			
+		}
+		outputStream << std::endl;
+	}
+
+	// Obtain inverse transform for getting back to world space later on
+	const IfcMatrix4 minv = IfcMatrix4(m).Inverse();
+
+	// Compute bounding boxes for all 2D openings in projection space
+	ContourVector contours;
+
+	std::vector<IfcVector2> temp_contour;
+	std::vector<IfcVector2> temp_contour2;
+
+	IfcVector3 wall_extrusion_axis_norm = wall_extrusion_axis;
+	wall_extrusion_axis_norm.Normalize();
+	bool dump = true;
+
+	if (dump)
+	{
+		std::cout << " Contour: size - " << contour_flat.size() << std::endl;
+		for (const auto &v : contour_flat)
+		{
+			std::cout << v.x << " " << v.y << std::endl;
+		}
+	}
+
+	BOOST_FOREACH(TempOpening& opening, openings) {
+
+		// extrusionDir may be 0,0,0 on case where the opening mesh is not an
+		// IfcExtrudedAreaSolid but something else (i.e. a brep)
+		IfcVector3 norm_extrusion_dir = opening.extrusionDir;
+		if (norm_extrusion_dir.SquareLength() > 1e-10) {
+			norm_extrusion_dir.Normalize();
+		}
+		else {
+			norm_extrusion_dir = IfcVector3();
+		}
+
+		TempMesh* profile_data = opening.profileMesh.get();
+		bool is_2d_source = false;
+
+		if (opening.profileMesh2D && norm_extrusion_dir.SquareLength() > 0) {
+
+			if (std::fabs(norm_extrusion_dir * wall_extrusion_axis_norm) < 0.1) {
+				// horizontal extrusion
+				if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
+					profile_data = opening.profileMesh2D.get();
+					is_2d_source = true;
+					std::cout << "2D Source - Horizontal Extrusion" << std::endl;
+				}
+			}
+			else {
+				// vertical extrusion
+				if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
+					profile_data = opening.profileMesh2D.get();
+					is_2d_source = true;
+					std::cout << "2D Source - Vertical Extrusion" << std::endl;
+				}
+			}
+		}
+		if (dump)
+		{
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindowNew_openingMesh.obj";
+			std::ofstream outputStream(fileName.c_str());
+			aiMesh *mesh = profile_data->ToMesh();
+			for (int i = 0; i < mesh->mNumVertices; ++i)
+			{
+				outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+			}
+
+			for (int i = 0; i < mesh->mNumFaces; ++i)
+			{
+				auto face = mesh->mFaces[i];
+				outputStream << "f";
+				for (int j = 0; j < face.mNumIndices; ++j)
+				{
+					outputStream << " " << face.mIndices[j] + 1;
+				}
+				outputStream << std::endl;
+			}
+		}
+		std::vector<IfcVector3> profile_verts = profile_data->verts;
+		std::vector<unsigned int> profile_vertcnts = profile_data->vertcnt;
+		if (profile_verts.size() <= 2) {
+			continue;
+		}
+
+		// The opening meshes are real 3D meshes so skip over all faces
+		// clearly facing into the wrong direction. Also, we need to check
+		// whether the meshes do actually intersect the base surface plane.
+		// This is done by recording minimum and maximum values for the
+		// d component of the plane equation for all polys and checking
+		// against surface d.
+
+		// Use the sign of the dot product of the face normal to the plane
+		// normal to determine to which side of the difference mesh a
+		// triangle belongs. Get independent bounding boxes and vertex
+		// sets for both sides and take the better one (we can't just
+		// take both - this would likely cause major screwup of vertex
+		// winding, producing errors as late as in CloseWindows()).
+		IfcFloat dmin, dmax;
+		MinMaxChooser<IfcFloat>()(dmin, dmax);
+
+		temp_contour.clear();
+		temp_contour2.clear();
+
+		IfcVector2 vpmin, vpmax;
+		MinMaxChooser<IfcVector2>()(vpmin, vpmax);
+
+		IfcVector2 vpmin2, vpmax2;
+		MinMaxChooser<IfcVector2>()(vpmin2, vpmax2);
+
+		std::vector<IfcVector3> vertices[2];
+		std::vector<std::vector<int>> faceMap[2];
+		faceMap[0].push_back(std::vector<int>());
+		faceMap[1].push_back(std::vector<int>());
+
+		std::cout << "profile vertice counts - " << profile_vertcnts.size() << std::endl;
+		
+
+		for (size_t f = 0, vi_total = 0, fend = profile_vertcnts.size(); f < fend; ++f) {
+
+			bool side_flag = true;
+			if (!is_2d_source) {
+				const IfcVector3 face_nor = ((profile_verts[vi_total + 2] - profile_verts[vi_total]) ^
+					(profile_verts[vi_total + 1] - profile_verts[vi_total])).Normalize();
+
+				const IfcFloat abs_dot_face_nor = std::abs(nor * face_nor);
+				if (abs_dot_face_nor < 0.9) {
+					vi_total += profile_vertcnts[f];
+					continue;
+				}
+
+				side_flag = nor * face_nor > 0;
+			}
+			for (unsigned int vi = 0, vend = profile_vertcnts[f]; vi < vend; ++vi, ++vi_total) {
+				const IfcVector3& x = profile_verts[vi_total];
+				std::cout << "profile vertice counts[" << f << "] - " << profile_vertcnts[f] << std::endl;
+
+				const IfcVector3 v = m * x;
+				IfcVector2 vv(v.x, v.y);
+
+				//if(check_intersection) {
+				dmin = std::min(dmin, v.z);
+				dmax = std::max(dmax, v.z);
+				//}
+
+				// sanity rounding
+				vv = std::max(vv, IfcVector2());
+				vv = std::min(vv, one_vec);
+
+				if (side_flag) {
+					vpmin = std::min(vpmin, vv);
+					vpmax = std::max(vpmax, vv);
+				}
+				else {
+					vpmin2 = std::min(vpmin2, vv);
+					vpmax2 = std::max(vpmax2, vv);
+				}
+
+				std::vector<IfcVector2>& store = side_flag ? temp_contour : temp_contour2;
+
+				if (!IsDuplicateVertex(vv, store)) {
+					store.push_back(vv);
+				}
+				else
+				{
+					std::cout << " duplicated vertex found." << std::endl;
+				}
+				IfcVector3 point(vv.x, vv.y, 0);
+				vertices[(int)side_flag].push_back(point);
+				faceMap[(int)side_flag].back().push_back(f + vi + 1);
+
+			}
+			faceMap[(int)side_flag].push_back(std::vector<int>());
+		}
+		if (dump)
+		{
+			for (int i = 0; i < 2; ++i)
+			{
+				if (!faceMap[0].size()) continue;
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindowNew_openingProfile_" + std::to_string(i) + ".obj";
+				std::ofstream outputStream(fileName.c_str());
+				for (const auto &point : vertices[i])
+				{
+					outputStream << "v " << point.x << " " << point.y << " " << point.z << std::endl;
+				}
+				for (const auto &face : faceMap[i])
+				{
+					outputStream << "f";
+					for (const auto pos : face)
+					{
+						outputStream << " " << pos;
+					}
+					outputStream << std::endl;
+
+				}
+			}
+
+		}
+
+
+		if (temp_contour2.size() > 2) {
+			ai_assert(!is_2d_source);
+			const IfcVector2 area = vpmax - vpmin;
+			const IfcVector2 area2 = vpmax2 - vpmin2;
+			if (temp_contour.size() <= 2 || std::fabs(area2.x * area2.y) > std::fabs(area.x * area.y)) {
+				temp_contour.swap(temp_contour2);
+
+				vpmax = vpmax2;
+				vpmin = vpmin2;
+			}
+		}
+		if (temp_contour.size() <= 2) {
+			continue;
+		}
+
+		// TODO: This epsilon may be too large
+		const IfcFloat epsilon = std::fabs(dmax - dmin) * 0.0001;
+		if (!is_2d_source  && (0 < dmin - epsilon || 0 > dmax + epsilon)) {
+			continue;
+		}
+
+		BoundingBox bb = BoundingBox(vpmin, vpmax);
+
+		// Skip over very small openings - these are likely projection errors
+		// (i.e. they don't belong to this side of the wall)
+		if (std::fabs(vpmax.x - vpmin.x) * std::fabs(vpmax.y - vpmin.y) < static_cast<IfcFloat>(1e-10)) {
+			continue;
+		}
+		std::vector<TempOpening*> joined_openings(1, &opening);
+
+		bool is_rectangle = temp_contour.size() == 4;
+		// See if this BB intersects or is in close adjacency to any other BB we have so far.
+		for (ContourVector::iterator it = contours.begin(); it != contours.end();) {
+			const BoundingBox& ibb = (*it).bb;
+
+			if (BoundingBoxesOverlapping(ibb, bb)) {
+
+				if (!(*it).is_rectangular) {
+					is_rectangle = false;
+				}
+
+				const std::vector<IfcVector2>& other = (*it).contour;
+				ClipperLib::ExPolygons poly;
+
+				// First check whether subtracting the old contour (to which ibb belongs)
+				// from the new contour (to which bb belongs) yields an updated bb which
+				// no longer overlaps ibb
+				MakeDisjunctWindowContours(other, temp_contour, poly);
+				if (poly.size() == 1) {
+
+					const BoundingBox newbb = GetBoundingBox(poly[0].outer);
+					if (!BoundingBoxesOverlapping(ibb, newbb)) {
+						// Good guy bounding box
+						bb = newbb;
+
+						ExtractVerticesFromClipper(poly[0].outer, temp_contour, false);
+						continue;
+					}
+				}
+
+				// Take these two overlapping contours and try to merge them. If they
+				// overlap (which should not happen, but in fact happens-in-the-real-
+				// world [tm] ), resume using a single contour and a single bounding box.
+				MergeWindowContours(temp_contour, other, poly);
+
+				if (poly.size() > 1) {
+					return TryAddOpenings_Poly2Tri(openings, nors, curmesh);
+				}
+				else if (poly.size() == 0) {
+					IFCImporter::LogWarn("ignoring duplicate opening");
+					temp_contour.clear();
+					break;
+				}
+				else {
+					IFCImporter::LogDebug("merging overlapping openings");
+					ExtractVerticesFromClipper(poly[0].outer, temp_contour, false);
+
+					// Generate the union of the bounding boxes
+					bb.first = std::min(bb.first, ibb.first);
+					bb.second = std::max(bb.second, ibb.second);
+
+					// Update contour-to-opening tables accordingly
+					std::vector<TempOpening*>& t = contours_to_openings[std::distance(contours.begin(), it)];
+					joined_openings.insert(joined_openings.end(), t.begin(), t.end());
+
+					contours_to_openings.erase(contours_to_openings.begin() + std::distance(contours.begin(), it));
+
+
+					contours.erase(it);
+
+					// Restart from scratch because the newly formed BB might now
+					// overlap any other BB which its constituent BBs didn't
+					// previously overlap.
+					it = contours.begin();
+					continue;
+				}
+			}
+			++it;
+		}
+
+		if (!temp_contour.empty()) {
+				contours_to_openings.push_back(std::vector<TempOpening*>(
+					joined_openings.begin(),
+					joined_openings.end()));
+
+			contours.push_back(ProjectedWindowContour(temp_contour, bb, is_rectangle));
+		}
+	}//FOREACH opening
+
+	// Check if we still have any openings left - it may well be that this is
+	// not the cause, for example if all the opening candidates don't intersect
+	// this surface or point into a direction perpendicular to it.
+	if (dump);
+	std::cout << "contour empty? " << contours.size();
+	if (contours.empty()) {
+		return false;
+	}
+
+	curmesh.Clear();
+
+
+	if (dump)
+	{
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindow_final.obj";
+		std::ofstream outputStream(fileName.c_str());
+		aiMesh *mesh = curmesh.ToMesh();
+		for (int i = 0; i < mesh->mNumVertices; ++i)
+		{
+			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+		}
+
+		for (int i = 0; i < mesh->mNumFaces; ++i)
+		{
+			auto face = mesh->mFaces[i];
+			outputStream << "f";
+			for (int j = 0; j < face.mNumIndices; ++j)
+			{
+				outputStream << " " << face.mIndices[j] + 1;
+			}
+			outputStream << std::endl;
+		}
+	}
+
+	return true;
 }
 
 // ------------------------------------------------------------------------------------------------
