@@ -682,24 +682,13 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 
 
 				bool first = true;
+				bool firstPair = true;
+				IfcVector3 refPoint;
 				for (auto &point : opening.wallPoints)
 				{
 					IfcFloat best = static_cast<IfcFloat>(1e10);
 					IfcVector3 *bestv;
-					if (openingBBmin.x > point.x)
-						openingBBmin.x = point.x;
-					if (openingBBmin.y > point.y)
-						openingBBmin.y = point.y;
-					if (openingBBmin.z > point.z)
-						openingBBmin.z = point.z;
-
-					if (openingBBmax.x < point.x)
-						openingBBmax.x = point.x;
-					if (openingBBmax.y < point.y)
-						openingBBmax.y = point.y;
-					if (openingBBmax.z < point.z)
-						openingBBmax.z = point.z;
-
+					
 					for (auto &otherPoint : opening.wallPoints)
 					{
 						const IfcFloat sqdist = (point - otherPoint).SquareLength();
@@ -737,8 +726,46 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					if (addPoint)
 					{
 						//Found a new pair of points. Calculate it's vector and add to collection
-						IfcVector3 vec = point - *bestv;
-						vecMap[vec] = {point, *bestv};
+						IfcVector3 vec = point - *bestv;						
+						IfcVector3 comp = point;
+						if (firstPair)
+						{
+							firstPair = false;
+							refPoint = point;
+							vecMap[vec] = { point, *bestv };
+
+						}
+						else
+						{
+							//ensure the same "side" is aligned in the pair.
+							//calculate the distance of the 2 points to the reference point
+							//The point at the same plane should always be shorter.
+							auto can1dist = (refPoint - point).SquareLength();
+							auto can2dist = (refPoint - *bestv).SquareLength();
+							if (can1dist < can2dist)
+								vecMap[vec] = { point, *bestv };
+							else
+							{
+								vecMap[vec] = { *bestv, point };
+								comp = point;
+							}
+								
+						}
+
+						if (openingBBmin.x > comp.x)
+							openingBBmin.x = comp.x;
+						if (openingBBmin.y > comp.y)
+							openingBBmin.y = comp.y;
+						if (openingBBmin.z > comp.z)
+							openingBBmin.z = comp.z;
+
+						if (openingBBmax.x < comp.x)
+							openingBBmax.x = comp.x;
+						if (openingBBmax.y < comp.y)
+							openingBBmax.y = comp.y;
+						if (openingBBmax.z < comp.z)
+							openingBBmax.z = comp.z;
+
 					}
 
 				}//for (auto &point : opening.wallPoints)
@@ -773,7 +800,8 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 				std::cout << "Z Vector: " << zVec.x << "," << zVec.y << "," << zVec.z << std::endl;
  
 				//Now that we found the wall points and its pair, try to form faces with another related pair
-				for (auto wallPairIt = vecMap.begin(); wallPairIt == vecMap.begin(); ++wallPairIt)
+
+				for (auto wallPairIt = vecMap.begin(); wallPairIt != vecMap.end(); ++wallPairIt)
 				{
 					/*
 					* for each wall point pair, we need to connect it to its neighbour.
@@ -786,13 +814,13 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 
 					//Establish it's place in the boundary
 					//if more than 1 axis is at the boundary then it's at a corner. 
-					bool atXMin = (wallPairIt->second[0].x - openingBBmin.x) < 1.e-05 || (wallPairIt->second[1].x - openingBBmin.x)< 1.e-05;
-					bool atYMin = (wallPairIt->second[0].y - openingBBmin.y) < 1.e-05 || (wallPairIt->second[1].y - openingBBmin.y)< 1.e-05;
-					bool atZMin = (wallPairIt->second[0].z - openingBBmin.z) < 1.e-05 || (wallPairIt->second[1].z - openingBBmin.z)< 1.e-05;
+					bool atXMin = (wallPairIt->second[0].x - openingBBmin.x) < 1.e-05;
+					bool atYMin = (wallPairIt->second[0].y - openingBBmin.y) < 1.e-05;
+					bool atZMin = (wallPairIt->second[0].z - openingBBmin.z) < 1.e-05;
 
-					bool atXMax = (openingBBmax.x - wallPairIt->second[0].x) < 1.e-05 || (openingBBmax.x - wallPairIt->second[1].x)< 1.e-05;
-					bool atYMax = (openingBBmax.y - wallPairIt->second[0].y) < 1.e-05 || (openingBBmax.y - wallPairIt->second[1].y)< 1.e-05;
-					bool atZMax = (openingBBmax.z - wallPairIt->second[0].z) < 1.e-05 || (openingBBmax.z - wallPairIt->second[1].z)< 1.e-05;
+					bool atXMax = (openingBBmax.x - wallPairIt->second[0].x) < 1.e-05;
+					bool atYMax = (openingBBmax.y - wallPairIt->second[0].y) < 1.e-05;
+					bool atZMax = (openingBBmax.z - wallPairIt->second[0].z) < 1.e-05;
 
 					bool atXBoundary = atXMin || atXMax;
 					bool atYBoundary = atYMin || atYMax;
@@ -800,7 +828,6 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					
 					bool atCorner = atXBoundary && atYBoundary && atZBoundary;
 					std::cout << "Wall Point 1: " << wallPairIt->second[0].x << "," << wallPairIt->second[0].y << "," << wallPairIt->second[0].z << std::endl;
-					std::cout << "Wall Point 2: " << wallPairIt->second[1].x << "," << wallPairIt->second[1].y << "," << wallPairIt->second[1].z << std::endl;
 					std::cout << "At Corner: " << atCorner << "(" << atXBoundary << ", " << atYBoundary << ", " << atZBoundary << ")" << std::endl;
 		
 
@@ -819,18 +846,10 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 						for (auto otherPairIt = vecMap.begin(); otherPairIt != vecMap.end(); ++otherPairIt)
 						{
 							
-							const auto distv1 = wallPairIt->second[0] - otherPairIt->second[0];
-							const auto distv2 = wallPairIt->second[0] - otherPairIt->second[1];
-							const auto dist1 = distv1.SquareLength();
-							const auto dist2 = distv2.SquareLength();
-							auto dist = dist1;
-							auto distv = distv1;
-							if (dist1 > dist2)
-							{
-								dist = dist2;
-								distv = distv2;
-							}
-							distv.Normalize();
+							auto distv = wallPairIt->second[0] - otherPairIt->second[0];
+							const auto dist = distv.SquareLength();
+							
+							distv = distv.Normalize();
 
 							//ensure the connection is inline with boundary
 							if ((distv * xVec - xVec2) < 1e-5)
@@ -923,6 +942,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 						IfcFloat bestNeg = static_cast<IfcFloat>(-1e10);
 						std::map<IfcVector3, std::vector<IfcVector3 >>::iterator bestvpos = vecMap.end();
 						std::map<IfcVector3, std::vector<IfcVector3 >>::iterator bestvneg = vecMap.end();
+						std::vector<std::pair<std::map<IfcVector3, std::vector<IfcVector3 >>::iterator, std::pair<float, float>>> notAligned;
 						IfcVector3 direction;
 
 						/*bool atXBoundary = atXMin || atXMax;
@@ -949,31 +969,29 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 						
 						for (auto otherPairIt = vecMap.begin(); otherPairIt != vecMap.end(); ++otherPairIt)
 						{
-							const auto distv1 = wallPairIt->second[0] - otherPairIt->second[0];
-							const auto distv2 = wallPairIt->second[0] - otherPairIt->second[1];
-							const auto dist1 = distv1.SquareLength();
-							const auto dist2 = distv2.SquareLength();
-							const auto dist = dist1 < dist2 ? dist1 : dist2;
-							auto distv = dist1 < dist2 ? distv1 : distv2;
+							auto distv = wallPairIt->second[0] - otherPairIt->second[0];
+							const auto dist = distv.SquareLength();
+
 
 							distv = distv.Normalize();
-							std::cout << "points: " << otherPairIt->second[0].x << "," << otherPairIt->second[0].y << "," << otherPairIt->second[0].z <<",";
-							std::cout << otherPairIt->second[1].x << "," << otherPairIt->second[1].y << "," << otherPairIt->second[1].z << std::endl;
+							
 							//std::cout << "distv: " << distv.x << "," << distv.y << "," << distv.z << std::endl;
 							auto dotProd = distv*direction;
 							auto dirSqrd = direction*direction;
-							auto difference = dotProd - dirSqrd;
-							std::cout << "dot Prod = " << dotProd << " dirsqrd " << dirSqrd << "difference: " << difference << std::endl;
+							auto difference = fabsf(dotProd - dirSqrd);
 
-							if (fabsf(difference) < 1e-5)
+
+							if (difference < 1e-5)
 							{
 
 								if (dist < 1e-5) {
-									std::cout << "Same point" << std::endl;
+									std::cout << "---------" << std::endl;
+									std::cout << "same point" << std::endl;
 									continue;
 								}
-
-
+								std::cout << "---------" << std::endl;
+								std::cout << "points: " << otherPairIt->second[0].x << "," << otherPairIt->second[0].y << "," << otherPairIt->second[0].z << std::endl;
+								std::cout << "dot Prod = " << dotProd << " dirsqrd " << dirSqrd << "difference: " << difference << std::endl;
 								auto diff =  direction - distv;
 								std::cout << "diff: " << diff.x << "," << diff.y << "," << diff.z << std::endl;
 								const bool sameVec = fabsf(diff.x) < 1.e-5 && fabsf(diff.y) < 1.e-5 && fabsf(diff.z) < 1.e-5;
@@ -985,8 +1003,46 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 								bestv = otherPairIt;
 								best = dist;
 							}
+							else
+							{
+								std::cout << "---------" << std::endl;
+								std::cout << " not aligned" << std::endl;
+								notAligned.push_back({otherPairIt,{ dist, difference }});
+							}
 
 						}
+						
+						if (bestvneg == vecMap.end())
+						{
+							//use the one that's closest aligned
+							float bestProd = 1e10;
+							for (const auto &pair : notAligned)
+							{
+
+								std::cout << "Candidate: (" << pair.first->second[0].x << ", " << pair.first->second[0].y << ", " << pair.first->second[0].z << ")"									
+									 << pair.second.second << ", " << pair.second.first << std::endl;
+								//If the vector is close to the direction of travel and it is closest
+								if ((pair.second.second == pair.second.second) && (bestProd > pair.second.first))
+								{
+									std::cout << " Leader......" << std::endl;
+									bestProd = pair.second.first;
+									bestvneg = pair.first;
+								}
+
+								static int fileCount = 0;
+								std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMesh2_C" + std::to_string(fileCount++) + ".obj";
+								std::ofstream outputStream(fileName.c_str());
+								//found matching points, produce a face
+								outputStream << "v " << wallPairIt->second[0].x << " " << wallPairIt->second[0].y << " " << wallPairIt->second[0].z << std::endl;
+								outputStream << "v " << wallPairIt->second[1].x << " " << wallPairIt->second[1].y << " " << wallPairIt->second[1].z << std::endl;
+								outputStream << "v " << pair.first->second[1].x << " " << pair.first->second[1].y << " " << pair.first->second[1].z << std::endl;
+								outputStream << "v " << pair.first->second[0].x << " " << pair.first->second[0].y << " " << pair.first->second[0].z << std::endl;
+
+								outputStream << "f 1 2 3 4" << std::endl;
+								outputStream.close();
+							}
+						}
+
 						if (bestvneg != vecMap.end())
 						{
 							static int fileCount = 0;
@@ -995,12 +1051,29 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 							//found matching points, produce a face
 							outputStream << "v " << wallPairIt->second[0].x << " " << wallPairIt->second[0].y << " " << wallPairIt->second[0].z << std::endl;
 							outputStream << "v " << wallPairIt->second[1].x << " " << wallPairIt->second[1].y << " " << wallPairIt->second[1].z << std::endl;
-							outputStream << "v " << bestvneg->second[0].x << " " << bestvneg->second[0].y << " " << bestvneg->second[0].z << std::endl;
-							outputStream << "v " << bestvneg->second[1].x << " " << bestvneg->second[1].y << " " << bestvneg->second[1].z << std::endl;
+
+							if ((bestvneg->second[0] - wallPairIt->second[0]).SquareLength() > (bestvneg->second[1] - wallPairIt->second[0]).SquareLength())
+							{
+								outputStream << "v " << bestvneg->second[0].x << " " << bestvneg->second[0].y << " " << bestvneg->second[0].z << std::endl;
+								outputStream << "v " << bestvneg->second[1].x << " " << bestvneg->second[1].y << " " << bestvneg->second[1].z << std::endl;
+
+							}
+							else
+							{
+								outputStream << "v " << bestvneg->second[1].x << " " << bestvneg->second[1].y << " " << bestvneg->second[1].z << std::endl;
+								outputStream << "v " << bestvneg->second[0].x << " " << bestvneg->second[0].y << " " << bestvneg->second[0].z << std::endl;
+							}
+
+
+
 							outputStream << "f 1 2 3 4" << std::endl;
 							outputStream.close();
 
-						
+
+						}
+						else
+						{
+							std::cout << "Still failed to find a vneg..." << std::endl;
 						}
 
 						if (bestvpos != vecMap.end())
@@ -1011,13 +1084,39 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 							//found matching points, produce a face
 							outputStream << "v " << wallPairIt->second[0].x << " " << wallPairIt->second[0].y << " " << wallPairIt->second[0].z << std::endl;
 							outputStream << "v " << wallPairIt->second[1].x << " " << wallPairIt->second[1].y << " " << wallPairIt->second[1].z << std::endl;
-							outputStream << "v " << bestvpos->second[0].x << " " << bestvpos->second[0].y << " " << bestvpos->second[0].z << std::endl;
 							outputStream << "v " << bestvpos->second[1].x << " " << bestvpos->second[1].y << " " << bestvpos->second[1].z << std::endl;
+							outputStream << "v " << bestvpos->second[0].x << " " << bestvpos->second[0].y << " " << bestvpos->second[0].z << std::endl;
+
 							outputStream << "f 1 2 3 4" << std::endl;
 							outputStream.close();
 
 
 						}
+
+
+					}
+
+					if (true)
+					{
+						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\wallpointbbox.obj";
+						std::ofstream outputStream(fileName.c_str());
+						//found matching points, produce a face
+						outputStream << "v " << openingBBmin.x << " " << openingBBmin.y << " " << openingBBmin.z << std::endl; //min all 1 
+						outputStream << "v " << openingBBmax.x << " " << openingBBmin.y << " " << openingBBmin.z << std::endl; //mx 2
+						outputStream << "v " << openingBBmin.x << " " << openingBBmax.y << " " << openingBBmin.z << std::endl; //my 3
+						outputStream << "v " << openingBBmin.x << " " << openingBBmin.y << " " << openingBBmax.z << std::endl; //mz 4
+						outputStream << "v " << openingBBmax.x << " " << openingBBmin.y << " " << openingBBmax.z << std::endl; //mx mz 5
+						outputStream << "v " << openingBBmax.x << " " << openingBBmax.y << " " << openingBBmin.z << std::endl; //mx my 6
+						outputStream << "v " << openingBBmin.x << " " << openingBBmax.y << " " << openingBBmax.z << std::endl; //my mz 7
+						outputStream << "v " << openingBBmax.x << " " << openingBBmax.y << " " << openingBBmax.z << std::endl; //mall 8
+
+						outputStream << "f 1 2 3 6" << std::endl;
+						outputStream << "f 1 4 5 2" << std::endl;
+						outputStream << "f 1 3 7 4" << std::endl;
+						outputStream << "f 7 8 5 4" << std::endl;
+						outputStream << "f 2 5 8 6" << std::endl;
+						outputStream << "f 3 7 8 6" << std::endl;
+						outputStream.close();
 
 
 					}
