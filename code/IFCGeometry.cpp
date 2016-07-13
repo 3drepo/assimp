@@ -671,7 +671,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
     }
 
 	if( openings ) {
-
+		temp = result;
 		GenerateWindowFaces(*conv.apply_openings, nors, temp, dir);
 		result.Append(temp);
 		temp.Clear();

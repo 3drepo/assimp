@@ -1690,6 +1690,87 @@ bool GenerateWindowFaces(std::vector<TempOpening>& openings,
 
 	if (true)
 	{
+		IfcFloat dmin, dmax;
+		MinMaxChooser<IfcFloat>()(dmin, dmax);
+
+		std::vector<IfcVector2> temp_contour;
+		std::vector<IfcVector2> temp_contour2;
+
+		IfcVector2 vpmin, vpmax;
+		MinMaxChooser<IfcVector2>()(vpmin, vpmax);
+
+		IfcVector2 vpmin2, vpmax2;
+		MinMaxChooser<IfcVector2>()(vpmin2, vpmax2);
+		std::vector<IfcVector3> vertices[2];
+		std::vector<std::vector<int>> faceMap[2];
+		faceMap[0].push_back(std::vector<int>());
+		faceMap[1].push_back(std::vector<int>());
+
+
+		for (size_t f = 0, vi_total = 0, fend = curmesh.vertcnt.size(); f < fend; ++f) {
+
+			bool side_flag = true;
+			
+			for (unsigned int vi = 0, vend = curmesh.vertcnt[f]; vi < vend; ++vi, ++vi_total) {
+				const IfcVector3& x = curmesh.verts[vi_total];
+
+				const IfcVector3 v = m * x;
+				IfcVector2 vv(v.x, v.y);
+
+				//if(check_intersection) {
+				dmin = std::min(dmin, v.z);
+				dmax = std::max(dmax, v.z);
+				//}
+
+				// sanity rounding
+				vv = std::max(vv, IfcVector2());
+				vv = std::min(vv, one_vec);
+				if (side_flag) {
+					vpmin = std::min(vpmin, vv);
+					vpmax = std::max(vpmax, vv);
+				}
+				else {
+					vpmin2 = std::min(vpmin2, vv);
+					vpmax2 = std::max(vpmax2, vv);
+				}
+
+				std::vector<IfcVector2>& store = side_flag ? temp_contour : temp_contour2;
+
+				if (!IsDuplicateVertex(vv, store)) {
+					store.push_back(vv);
+				}
+
+				IfcVector3 point(vv.x, vv.y, 0);
+				vertices[(int)side_flag].push_back(point);
+				faceMap[(int)side_flag].back().push_back(f + vi + 1);
+
+			}
+			faceMap[(int)side_flag].push_back(std::vector<int>());
+		}
+
+		for (int i = 0; i < 2; ++i)
+		{
+			if (!faceMap[0].size()) continue;
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindowNew_contour_flat" + std::to_string(i) + ".obj";
+			std::ofstream outputStream(fileName.c_str());
+			for (const auto &point : vertices[i])
+			{
+				outputStream << "v " << point.x << " " << point.y << " " << point.z << std::endl;
+			}
+			for (const auto &face : faceMap[i])
+			{
+				outputStream << "f";
+				for (const auto pos : face)
+				{
+					outputStream << " " << pos;
+				}
+				outputStream << std::endl;
+
+			}
+		}
+
+		
+
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindowNew_contour_flat.obj";
 		std::ofstream outputStream(fileName.c_str());
 	
@@ -1721,14 +1802,6 @@ bool GenerateWindowFaces(std::vector<TempOpening>& openings,
 	wall_extrusion_axis_norm.Normalize();
 	bool dump = true;
 
-	if (dump)
-	{
-		std::cout << " Contour: size - " << contour_flat.size() << std::endl;
-		for (const auto &v : contour_flat)
-		{
-			std::cout << v.x << " " << v.y << std::endl;
-		}
-	}
 
 	BOOST_FOREACH(TempOpening& opening, openings) {
 
@@ -1821,28 +1894,15 @@ bool GenerateWindowFaces(std::vector<TempOpening>& openings,
 		faceMap[0].push_back(std::vector<int>());
 		faceMap[1].push_back(std::vector<int>());
 
-		std::cout << "profile vertice counts - " << profile_vertcnts.size() << std::endl;
 		
 
 		for (size_t f = 0, vi_total = 0, fend = profile_vertcnts.size(); f < fend; ++f) {
 
 			bool side_flag = true;
-			if (!is_2d_source) {
-				const IfcVector3 face_nor = ((profile_verts[vi_total + 2] - profile_verts[vi_total]) ^
-					(profile_verts[vi_total + 1] - profile_verts[vi_total])).Normalize();
 
-				const IfcFloat abs_dot_face_nor = std::abs(nor * face_nor);
-				if (abs_dot_face_nor < 0.9) {
-					vi_total += profile_vertcnts[f];
-					continue;
-				}
-
-				side_flag = nor * face_nor > 0;
-			}
 			for (unsigned int vi = 0, vend = profile_vertcnts[f]; vi < vend; ++vi, ++vi_total) {
 				const IfcVector3& x = profile_verts[vi_total];
-				std::cout << "profile vertice counts[" << f << "] - " << profile_vertcnts[f] << std::endl;
-
+				
 				const IfcVector3 v = m * x;
 				IfcVector2 vv(v.x, v.y);
 
@@ -1854,7 +1914,6 @@ bool GenerateWindowFaces(std::vector<TempOpening>& openings,
 				// sanity rounding
 				vv = std::max(vv, IfcVector2());
 				vv = std::min(vv, one_vec);
-
 				if (side_flag) {
 					vpmin = std::min(vpmin, vv);
 					vpmax = std::max(vpmax, vv);
@@ -1866,13 +1925,8 @@ bool GenerateWindowFaces(std::vector<TempOpening>& openings,
 
 				std::vector<IfcVector2>& store = side_flag ? temp_contour : temp_contour2;
 
-				if (!IsDuplicateVertex(vv, store)) {
 					store.push_back(vv);
-				}
-				else
-				{
-					std::cout << " duplicated vertex found." << std::endl;
-				}
+
 				IfcVector3 point(vv.x, vv.y, 0);
 				vertices[(int)side_flag].push_back(point);
 				faceMap[(int)side_flag].back().push_back(f + vi + 1);
@@ -2018,36 +2072,93 @@ bool GenerateWindowFaces(std::vector<TempOpening>& openings,
 	// Check if we still have any openings left - it may well be that this is
 	// not the cause, for example if all the opening candidates don't intersect
 	// this surface or point into a direction perpendicular to it.
-	if (dump);
-	std::cout << "contour empty? " << contours.size();
+	std::cout << "Contours: " << contours.size() << std::endl;
 	if (contours.empty()) {
 		return false;
+	}
+	for (int iC = 0; iC < contours.size(); ++iC)
+	{
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\FinalContours" + std::to_string(iC) + ".obj";
+		std::ofstream outputStream(fileName.c_str());
+		for (auto itc = contours[iC].contour.begin(); itc != contours[iC].contour.end(); ++itc)
+		{
+			outputStream << "v " << itc->x << " " << itc->y << " 0" << std::endl;
+		}
+
+		outputStream << "f ";
+		for (int i = 0; i < contours[iC].contour.size(); ++i)
+		{
+			outputStream << i << " ";
+		}
+		outputStream << std::endl;
+		
+	}
+
+
+	for (ContourVector::iterator it = contours.begin(), end = contours.end(); it != end; ++it) {
+
+		OpeningRefs& refs = contours_to_openings[std::distance(contours.begin(), it)];
+		//collect all wall points that constitute this contour
+		std::vector<IfcVector3*> wallpoints;
+		std::map<IfcVector2*, IfcVector3*> wallpointMapping;
+		std::vector<IfcVector2*> wallpoints2d;
+		BOOST_FOREACH(TempOpening* opening, refs) {			
+			for (IfcVector3 & wallPoint : opening->wallPoints)
+			{
+				//map the wallpoint to 2D space
+				const IfcVector3 v = m * wallPoint;
+				IfcVector2 *vv = new IfcVector2(v.x, v.y);
+				// sanity rounding
+				*vv = std::max(*vv, IfcVector2());
+				*vv = std::min(*vv, one_vec);
+				wallpoints2d.push_back(vv);
+				wallpointMapping[vv] = &wallPoint;
+			}
+
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPoints2d.obj";
+			std::ofstream outputStream(fileName.c_str());
+			std::cout << "#wallpoints: " << wallpoints2d.size() << std::endl;
+			for (auto itc = wallpoints2d.begin(); itc != wallpoints2d.end(); ++itc)
+			{
+				auto point = *itc;
+				outputStream << "v " << point->x << " " << point->y << " 0" << std::endl;
+			}
+
+			outputStream << "f ";
+			for (int i = 0; i < wallpoints2d.size(); ++i)
+			{
+				outputStream << i << " ";
+			}
+			outputStream << std::endl;
+
+			
+		}
 	}
 
 	curmesh.Clear();
 
 
-	if (dump)
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindow_final.obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = curmesh.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-		}
+	//if (dump)
+	//{
+	//	std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindow_final.obj";
+	//	std::ofstream outputStream(fileName.c_str());
+	//	aiMesh *mesh = curmesh.ToMesh();
+	//	for (int i = 0; i < mesh->mNumVertices; ++i)
+	//	{
+	//		outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+	//	}
 
-		for (int i = 0; i < mesh->mNumFaces; ++i)
-		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
-			}
-			outputStream << std::endl;
-		}
-	}
+	//	for (int i = 0; i < mesh->mNumFaces; ++i)
+	//	{
+	//		auto face = mesh->mFaces[i];
+	//		outputStream << "f";
+	//		for (int j = 0; j < face.mNumIndices; ++j)
+	//		{
+	//			outputStream << " " << face.mIndices[j] + 1;
+	//		}
+	//		outputStream << std::endl;
+	//	}
+	//}
 
 	return true;
 }
