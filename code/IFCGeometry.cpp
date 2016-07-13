@@ -54,7 +54,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/make_shared.hpp>
 
 #include <iterator>
-
+#include <iostream>
+#include <fstream>
 namespace Assimp {
     namespace IFC {
 
@@ -184,6 +185,7 @@ void ProcessPolygonBoundaries(TempMesh& result, const TempMesh& inmesh, size_t m
     std::copy(outer_vit, outer_vit+outer_polygon_size,
         std::back_inserter(temp.verts));
 
+	std::cout << " fake_openings ... " << std::endl;
     GenerateOpenings(fake_openings, normals, temp, false, false);
     result.Append(temp);
 }
@@ -564,7 +566,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
         std::reverse(in.begin(), in.end());
 
     std::vector<IfcVector3> nors;
-    const bool openings = !!conv.apply_openings && conv.apply_openings->size();
+	const bool openings = !!conv.apply_openings && conv.apply_openings->size();
 
     // Compute the normal vectors for all opening polygons as a prerequisite
     // to TryAddOpenings_Poly2Tri()
@@ -590,10 +592,10 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
         }
     }
 
-
     TempMesh temp;
     TempMesh& curmesh = openings ? temp : result;
     std::vector<IfcVector3>& out = curmesh.verts;
+
 
     size_t sides_with_openings = 0;
     for( size_t i = 0; i < in.size(); ++i ) {
@@ -607,21 +609,422 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
         out.push_back(in[i] + dir);
 
         if( openings ) {
-            if( (in[i] - in[next]).Length() > diag * 0.1 && GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir) ) {
+			static int cutCount = 0;
+			//Dump geometry before
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\pre\\Mesh" + std::string(cutCount++ < 10? "0" : "") + std::to_string(cutCount) + ".obj";
+			if (!fileName.empty())
+			{
+				std::ofstream outputStream(fileName.c_str());
+				std::cout << " ====================== Generate Opening (Normal - " << fileName << ") ========================" << std::endl;
+				aiMesh *mesh = temp.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+				outputStream.close();
+			}
+			
+			std::cout << " length: " << ((in[i] - in[next]).Length()) << " , diag : " << diag << std::endl;
+            if(/* (in[i] - in[next]).Length() > diag * 0.1 && */GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir) ) {
                 ++sides_with_openings;
+				
             }
 
+			std::cout << " =============================== END =============================" << std::endl;
+			//Dump geometry After
+			fileName = "C:\\Users\\Carmen\\Desktop\\test\\post\\Mesh" + std::string(cutCount < 10 ? "0" : "") + std::to_string(cutCount) + ".obj";
+			if (!fileName.empty())
+			{
+				std::ofstream outputStream(fileName.c_str());
+				aiMesh *mesh = temp.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+				outputStream.close();
+			}
             result.Append(temp);
             temp.Clear();
         }
     }
 
-    if( openings ) {
+	if( openings ) {
+
         BOOST_FOREACH(TempOpening& opening, *conv.apply_openings) {
+			
             if( !opening.wallPoints.empty() ) {
-                IFCImporter::LogError("failed to generate all window caps");
-            }
-            opening.wallPoints.clear();
+             /*   IFCImporter::LogError("failed to generate all window caps");*/
+				std::map<IfcVector3*, std::vector<IfcVector3*>> pointMap;
+				std::map<IfcVector3, std::vector<IfcVector3>> vecMap;
+				IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
+
+
+				bool first = true;
+				for (auto &point : opening.wallPoints)
+				{
+					IfcFloat best = static_cast<IfcFloat>(1e10);
+					IfcVector3 *bestv;
+					if (openingBBmin.x > point.x)
+						openingBBmin.x = point.x;
+					if (openingBBmin.y > point.y)
+						openingBBmin.y = point.y;
+					if (openingBBmin.z > point.z)
+						openingBBmin.z = point.z;
+
+					if (openingBBmax.x < point.x)
+						openingBBmax.x = point.x;
+					if (openingBBmax.y < point.y)
+						openingBBmax.y = point.y;
+					if (openingBBmax.z < point.z)
+						openingBBmax.z = point.z;
+
+					for (auto &otherPoint : opening.wallPoints)
+					{
+						const IfcFloat sqdist = (point - otherPoint).SquareLength();
+						if (sqdist < best) {
+							// avoid self-connections
+							if (sqdist < 1e-5) {
+								continue;
+							}
+
+							//find the vector 
+
+							auto vec = (point - otherPoint).Normalize();
+							//dot product with the extrusion vector
+							auto dotProd = vec * dir.Normalize();
+							auto selfSqred = vec*vec;
+						
+							if ((dotProd - selfSqred) < 1e-06)
+							{
+								bestv = &otherPoint;
+								best = sqdist;
+							}
+							
+						}
+					}
+
+					bool addPoint = true;
+					pointMap[&point] = std::vector < IfcVector3* >() ;
+					pointMap[&point].push_back(bestv);
+					if (pointMap.find(bestv) != pointMap.end())
+					{
+						//we already processed bestv, check if it is already linked
+						addPoint = std::find(pointMap[bestv].begin(), pointMap[bestv].end(), &point) == pointMap[bestv].end();
+					}
+
+					if (addPoint)
+					{
+						//Found a new pair of points. Calculate it's vector and add to collection
+						IfcVector3 vec = point - *bestv;
+						vecMap[vec] = {point, *bestv};
+					}
+
+				}//for (auto &point : opening.wallPoints)
+				std::cout << "found pairing wallpoints, construct faces(map size: " << vecMap.size()<< ")..." << std::endl;
+
+				IfcVector3 tmp1 = openingBBmin;
+				tmp1.x = openingBBmax.y;
+				tmp1.x = openingBBmax.z;
+
+				const IfcVector3 xVec = (tmp1 - openingBBmin).Normalize();
+				const auto xVec2 = xVec*xVec;
+
+				tmp1 = openingBBmin;
+				tmp1.y = openingBBmax.x;
+				tmp1.y = openingBBmax.z;
+
+				const IfcVector3 yVec = (tmp1 - openingBBmin).Normalize();
+				const auto yVec2 = yVec*yVec;
+
+				tmp1 = openingBBmin;
+				tmp1.z = openingBBmax.x;
+				tmp1.z = openingBBmax.y;
+
+				const IfcVector3 zVec = (tmp1 - openingBBmin).Normalize();
+				const auto zVec2 = zVec*zVec;
+
+
+				std::cout << "Bounding Box: (" << openingBBmin.x << "," << openingBBmin.y << "," << openingBBmin.z << ")("
+					<< openingBBmax.x << "," << openingBBmax.y << "," << openingBBmax.z << ")" << std::endl;
+				std::cout << "X Vector: " << xVec.x << "," << xVec.y << "," << xVec.z << std::endl;
+				std::cout << "Y Vector: " << yVec.x << "," << yVec.y << "," << yVec.z << std::endl;
+				std::cout << "Z Vector: " << zVec.x << "," << zVec.y << "," << zVec.z << std::endl;
+ 
+				//Now that we found the wall points and its pair, try to form faces with another related pair
+				for (auto wallPairIt = vecMap.begin(); wallPairIt == vecMap.begin(); ++wallPairIt)
+				{
+					/*
+					* for each wall point pair, we need to connect it to its neighbour.
+					* if we can determine where abouts does it lie on the boundary, we can connect it 
+					* to it's closest neighbour. 
+					* for e.g. a point touching more than one bounding would be a corner point, needing to 
+					* find the closest neighbour in 2 directions
+					* a point lying on a single boundary would need the closest neighbour +/- of that boundary.
+					*/
+
+					//Establish it's place in the boundary
+					//if more than 1 axis is at the boundary then it's at a corner. 
+					bool atXMin = (wallPairIt->second[0].x - openingBBmin.x) < 1.e-05 || (wallPairIt->second[1].x - openingBBmin.x)< 1.e-05;
+					bool atYMin = (wallPairIt->second[0].y - openingBBmin.y) < 1.e-05 || (wallPairIt->second[1].y - openingBBmin.y)< 1.e-05;
+					bool atZMin = (wallPairIt->second[0].z - openingBBmin.z) < 1.e-05 || (wallPairIt->second[1].z - openingBBmin.z)< 1.e-05;
+
+					bool atXMax = (openingBBmax.x - wallPairIt->second[0].x) < 1.e-05 || (openingBBmax.x - wallPairIt->second[1].x)< 1.e-05;
+					bool atYMax = (openingBBmax.y - wallPairIt->second[0].y) < 1.e-05 || (openingBBmax.y - wallPairIt->second[1].y)< 1.e-05;
+					bool atZMax = (openingBBmax.z - wallPairIt->second[0].z) < 1.e-05 || (openingBBmax.z - wallPairIt->second[1].z)< 1.e-05;
+
+					bool atXBoundary = atXMin || atXMax;
+					bool atYBoundary = atYMin || atYMax;
+					bool atZBoundary = atZMin || atZMax;
+					
+					bool atCorner = atXBoundary && atYBoundary && atZBoundary;
+					std::cout << "Wall Point 1: " << wallPairIt->second[0].x << "," << wallPairIt->second[0].y << "," << wallPairIt->second[0].z << std::endl;
+					std::cout << "Wall Point 2: " << wallPairIt->second[1].x << "," << wallPairIt->second[1].y << "," << wallPairIt->second[1].z << std::endl;
+					std::cout << "At Corner: " << atCorner << "(" << atXBoundary << ", " << atYBoundary << ", " << atZBoundary << ")" << std::endl;
+		
+
+					if (atCorner)
+					{
+						//corner point - need to find the 2 closet wall point pair that lies on 2 different boundaries
+						//deduce the vectors we need 
+						// corner points, find it's closest neighbour at multiple directions.
+						//Note: this is prepped with 3 but we should never be using all 3 (one of them is inline with extrusion dir).
+						IfcFloat bestx = static_cast<IfcFloat>(1e10);
+						IfcFloat besty = static_cast<IfcFloat>(1e10);
+						IfcFloat bestz = static_cast<IfcFloat>(1e10);
+						std::map<IfcVector3, std::vector<IfcVector3 >>::iterator bestvx = vecMap.end();
+						std::map<IfcVector3, std::vector<IfcVector3 >>::iterator bestvy = vecMap.end();
+						std::map<IfcVector3, std::vector<IfcVector3 >>::iterator bestvz = vecMap.end();
+						for (auto otherPairIt = vecMap.begin(); otherPairIt != vecMap.end(); ++otherPairIt)
+						{
+							
+							const auto distv1 = wallPairIt->second[0] - otherPairIt->second[0];
+							const auto distv2 = wallPairIt->second[0] - otherPairIt->second[1];
+							const auto dist1 = distv1.SquareLength();
+							const auto dist2 = distv2.SquareLength();
+							auto dist = dist1;
+							auto distv = distv1;
+							if (dist1 > dist2)
+							{
+								dist = dist2;
+								distv = distv2;
+							}
+							distv.Normalize();
+
+							//ensure the connection is inline with boundary
+							if ((distv * xVec - xVec2) < 1e-5)
+							{
+								if (dist < 1e-5) {
+									continue;
+								}
+
+								
+								bestvx = otherPairIt;
+								
+								bestx = dist;
+							}
+							else if ((distv * yVec - yVec2) < 1e-5)
+							{
+								if (dist < 1e-5) {
+									continue;
+								}
+
+
+								bestvy = otherPairIt;
+
+								besty = dist;
+							}
+							else if((distv * zVec - zVec2) < 1e-5)
+							{
+								if (dist < 1e-5) {
+									continue;
+								}
+
+
+								bestvz = otherPairIt;
+
+								bestz = dist;
+							}
+
+							
+
+						
+
+						}
+						if (bestvx != vecMap.end())
+						{
+							static int fileCount = 0;
+							std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMeshx_" + std::to_string(fileCount++) + ".obj";
+							std::ofstream outputStream(fileName.c_str());
+							//found matching points, produce a face
+							outputStream << "v " << wallPairIt->second[0].x << " " << wallPairIt->second[0].y << " " << wallPairIt->second[0].z << std::endl;
+							outputStream << "v " << wallPairIt->second[1].x << " " << wallPairIt->second[1].y << " " << wallPairIt->second[1].z << std::endl;
+							outputStream << "v " << bestvx->second[0].x << " " << bestvx->second[0].y << " " << bestvx->second[0].z << std::endl;
+							outputStream << "v " << bestvx->second[1].x << " " << bestvx->second[1].y << " " << bestvx->second[1].z << std::endl;
+							outputStream << "f 1 2 3 4" << std::endl;
+							outputStream.close();
+
+
+						}
+
+						if (bestvy != vecMap.end())
+						{
+							static int fileCount = 0;
+							std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMeshy_" + std::to_string(fileCount++) + ".obj";
+							std::ofstream outputStream(fileName.c_str());
+							//found matching points, produce a face
+							outputStream << "v " << wallPairIt->second[0].x << " " << wallPairIt->second[0].y << " " << wallPairIt->second[0].z << std::endl;
+							outputStream << "v " << wallPairIt->second[1].x << " " << wallPairIt->second[1].y << " " << wallPairIt->second[1].z << std::endl;
+							outputStream << "v " << bestvy->second[0].x << " " << bestvy->second[0].y << " " << bestvy->second[0].z << std::endl;
+							outputStream << "v " << bestvy->second[1].x << " " << bestvy->second[1].y << " " << bestvy->second[1].z << std::endl;
+							outputStream << "f 1 2 3 4" << std::endl;
+							outputStream.close();
+						}
+
+						if (bestvz != vecMap.end())
+						{
+							static int fileCount = 0;
+							std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMeshy_" + std::to_string(fileCount++) + ".obj";
+							std::ofstream outputStream(fileName.c_str());
+							//found matching points, produce a face
+							outputStream << "v " << wallPairIt->second[0].x << " " << wallPairIt->second[0].y << " " << wallPairIt->second[0].z << std::endl;
+							outputStream << "v " << wallPairIt->second[1].x << " " << wallPairIt->second[1].y << " " << wallPairIt->second[1].z << std::endl;
+							outputStream << "v " << bestvz->second[0].x << " " << bestvz->second[0].y << " " << bestvz->second[0].z << std::endl;
+							outputStream << "v " << bestvz->second[1].x << " " << bestvz->second[1].y << " " << bestvz->second[1].z << std::endl;
+							outputStream << "f 1 2 3 4" << std::endl;
+							outputStream.close();
+						}
+					}
+					else
+					{
+						// mid points, find it's closest neighbour left and right.
+						IfcFloat bestPos = static_cast<IfcFloat>(1e10);
+						IfcFloat bestNeg = static_cast<IfcFloat>(-1e10);
+						std::map<IfcVector3, std::vector<IfcVector3 >>::iterator bestvpos = vecMap.end();
+						std::map<IfcVector3, std::vector<IfcVector3 >>::iterator bestvneg = vecMap.end();
+						IfcVector3 direction;
+
+						/*bool atXBoundary = atXMin || atXMax;
+						bool atYBoundary = atYMin || atYMax;
+						bool atZBoundary = atZMin || atZMax;*/
+						IfcVector3 edgebboxmin, edgebboxmax;
+						edgebboxmin = openingBBmin;
+						edgebboxmax = openingBBmax;
+						if (!atXBoundary)
+						{
+
+							direction = xVec;
+							
+						}
+						else if (!atZBoundary)
+						{
+							direction = zVec;
+						}
+						else
+						{
+							direction = yVec;
+						}
+						std::cout << "direction: " << direction.x << "," << direction.y << "," << direction.z << std::endl;
+						
+						for (auto otherPairIt = vecMap.begin(); otherPairIt != vecMap.end(); ++otherPairIt)
+						{
+							const auto distv1 = wallPairIt->second[0] - otherPairIt->second[0];
+							const auto distv2 = wallPairIt->second[0] - otherPairIt->second[1];
+							const auto dist1 = distv1.SquareLength();
+							const auto dist2 = distv2.SquareLength();
+							const auto dist = dist1 < dist2 ? dist1 : dist2;
+							auto distv = dist1 < dist2 ? distv1 : distv2;
+
+							distv = distv.Normalize();
+							std::cout << "points: " << otherPairIt->second[0].x << "," << otherPairIt->second[0].y << "," << otherPairIt->second[0].z <<",";
+							std::cout << otherPairIt->second[1].x << "," << otherPairIt->second[1].y << "," << otherPairIt->second[1].z << std::endl;
+							//std::cout << "distv: " << distv.x << "," << distv.y << "," << distv.z << std::endl;
+							auto dotProd = distv*direction;
+							auto dirSqrd = direction*direction;
+							auto difference = dotProd - dirSqrd;
+							std::cout << "dot Prod = " << dotProd << " dirsqrd " << dirSqrd << "difference: " << difference << std::endl;
+
+							if (fabsf(difference) < 1e-5)
+							{
+
+								if (dist < 1e-5) {
+									std::cout << "Same point" << std::endl;
+									continue;
+								}
+
+
+								auto diff =  direction - distv;
+								std::cout << "diff: " << diff.x << "," << diff.y << "," << diff.z << std::endl;
+								const bool sameVec = fabsf(diff.x) < 1.e-5 && fabsf(diff.y) < 1.e-5 && fabsf(diff.z) < 1.e-5;
+
+								auto &bestv = sameVec ? bestvpos : bestvneg;
+								auto &best = sameVec ? bestPos : bestNeg;
+								std::cout << "point taken" << " direction: " << sameVec << std::endl;
+								
+								bestv = otherPairIt;
+								best = dist;
+							}
+
+						}
+						if (bestvneg != vecMap.end())
+						{
+							static int fileCount = 0;
+							std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMesh1_" + std::to_string(fileCount++) + ".obj";
+							std::ofstream outputStream(fileName.c_str());
+							//found matching points, produce a face
+							outputStream << "v " << wallPairIt->second[0].x << " " << wallPairIt->second[0].y << " " << wallPairIt->second[0].z << std::endl;
+							outputStream << "v " << wallPairIt->second[1].x << " " << wallPairIt->second[1].y << " " << wallPairIt->second[1].z << std::endl;
+							outputStream << "v " << bestvneg->second[0].x << " " << bestvneg->second[0].y << " " << bestvneg->second[0].z << std::endl;
+							outputStream << "v " << bestvneg->second[1].x << " " << bestvneg->second[1].y << " " << bestvneg->second[1].z << std::endl;
+							outputStream << "f 1 2 3 4" << std::endl;
+							outputStream.close();
+
+						
+						}
+
+						if (bestvpos != vecMap.end())
+						{
+							static int fileCount = 0;
+							std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMesh2_" + std::to_string(fileCount++) + ".obj";
+							std::ofstream outputStream(fileName.c_str());
+							//found matching points, produce a face
+							outputStream << "v " << wallPairIt->second[0].x << " " << wallPairIt->second[0].y << " " << wallPairIt->second[0].z << std::endl;
+							outputStream << "v " << wallPairIt->second[1].x << " " << wallPairIt->second[1].y << " " << wallPairIt->second[1].z << std::endl;
+							outputStream << "v " << bestvpos->second[0].x << " " << bestvpos->second[0].y << " " << bestvpos->second[0].z << std::endl;
+							outputStream << "v " << bestvpos->second[1].x << " " << bestvpos->second[1].y << " " << bestvpos->second[1].z << std::endl;
+							outputStream << "f 1 2 3 4" << std::endl;
+							outputStream.close();
+
+
+						}
+
+
+					}
+				}
+				opening.wallPoints.clear();
+            }// if( !opening.wallPoints.empty() ) 
+
         }
     }
 
@@ -639,11 +1042,13 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
             }
 
             curmesh.vertcnt.push_back(in.size());
+			
             if( openings && in.size() > 2 ) {
+				std::cout << " ====================== Generate Opening (Area) ========================" << std::endl;
                 if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir) ) {
                     ++sides_with_v_openings;
                 }
-
+				std::cout << " =============================== END =============================" << std::endl;
                 result.Append(temp);
                 temp.Clear();
             }
@@ -661,6 +1066,31 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
     if( collect_openings && !result.IsEmpty() ) {
         ai_assert(conv.collect_openings);
         boost::shared_ptr<TempMesh> profile = boost::shared_ptr<TempMesh>(new TempMesh());
+
+		static int fileCount = 0;
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\SpaceMesh" + std::to_string(fileCount++) + ".obj";
+		std::ofstream outputStream(fileName.c_str());
+		std::cout << " ====================== Space Mesh Form(" << fileName << ") ========================" << std::endl;
+		aiMesh *mesh = result.ToMesh();
+		for (int i = 0; i < mesh->mNumVertices; ++i)
+		{
+			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+		}
+
+		for (int i = 0; i < mesh->mNumFaces; ++i)
+		{
+			auto face = mesh->mFaces[i];
+			outputStream << "f";
+			for (int j = 0; j < face.mNumIndices; ++j)
+			{
+				outputStream << " " << face.mIndices[j] + 1;
+			}
+			outputStream << std::endl;
+		}
+		std::cout << " =============================== END =============================" << std::endl;
+		outputStream.close();
+		
+
         profile->Swap(result);
 
         boost::shared_ptr<TempMesh> profile2D = boost::shared_ptr<TempMesh>(new TempMesh());
@@ -670,6 +1100,33 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 
         ai_assert(result.IsEmpty());
     }
+	
+	static int fileCount = 0;
+	if (!result.IsEmpty())
+	{
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\FinalMesh" + std::to_string(++fileCount) + ".obj";
+		std::ofstream outputStream(fileName.c_str());
+		std::cout << " ====================== Final Mesh Form(" << fileName << ") ========================" << std::endl;
+		aiMesh *mesh = result.ToMesh();
+		for (int i = 0; i < mesh->mNumVertices; ++i)
+		{
+			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+		}
+
+		for (int i = 0; i < mesh->mNumFaces; ++i)
+		{
+			auto face = mesh->mFaces[i];
+			outputStream << "f";
+			for (int j = 0; j < face.mNumIndices; ++j)
+			{
+				outputStream << " " << face.mIndices[j] + 1;
+			}
+			outputStream << std::endl;
+		}
+		std::cout << " =============================== END =============================" << std::endl;
+		outputStream.close();
+	}
+	
 }
 
 // ------------------------------------------------------------------------------------------------
