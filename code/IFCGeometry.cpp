@@ -760,7 +760,6 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					}
 					wpCount++;
 				}//for (auto &point : opening.wallPoints)
-				std::cout << "found pairing wallpoints, construct faces(map size: " << vecMap.size() << ", original wallpoints: " << opening.wallPoints.size() << ")..." << std::endl;
 
 				//prune duplicates
 				std::vector<bool> toRemove(vecMap.size(), false);
@@ -779,31 +778,18 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 						float limit = 1e-5;
 						toRemove[j] = fabsf(sub1.x) < limit &&  fabsf(sub1.y) < limit &&  fabsf(sub1.z) < limit
 							&&  fabsf(sub2.x) < limit &&  fabsf(sub2.y) < limit &&  fabsf(sub2.z) < limit;
-
-						std::cout << " comparing: (" <<  vecMap[i][0].x << ", " <<  vecMap[i][0].y << ", " <<  vecMap[i][0].z << ")";
-						std::cout << "  (" << vecMap[i][1].x << ", " << vecMap[i][1].y << ", " << vecMap[i][1].z << ") with ";
-						std::cout << " (" << vecMap[j][0].x << ", " << vecMap[j][0].y << ", " << vecMap[j][0].z << ")";
-						std::cout << "  (" << vecMap[j][1].x << ", " << vecMap[j][1].y << ", " << vecMap[j][1].z << ")" << std::endl; 
-						std::cout << " diffs : (" << sub1.x << ", " << sub1.y << ", " << sub1.z << ")";
-						std::cout << "  (" << sub2.x << ", " << sub2.y << ", " << sub2.z << ")";
-						std::cout << " verdict: " << toRemove[j] << std::endl;
-
 					}
 				}
-				std::cout << "vecMap before: " << vecMap.size() << std::endl;
 
 				for (int i = toRemove.size() - 1; i > 0; --i)
 				{
+					//loop in reverse to avoid messing up the ordering.
 					if (toRemove[i])
 					{
-						std::cout << " removing " << i << std::endl;
-						//loop in reverse to avoid messing up the ordering.
 						vecMap.erase(vecMap.begin() + i);
 					}
 					
 				}
-
-				std::cout << "vecMap now: " << vecMap.size() << std::endl;
 
 				if (true)
 				{
