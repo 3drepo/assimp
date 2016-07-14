@@ -670,119 +670,156 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
         }
     }
 
-	//if( openings ) {
+	if (openings) {
 
-	BOOST_FOREACH(TempOpening& opening, *conv.apply_openings) {
+		BOOST_FOREACH(TempOpening& opening, *conv.apply_openings) {
 
-		if (!opening.wallPoints.empty()) {
-			/*   IFCImporter::LogError("failed to generate all window caps");*/
-			std::map<IfcVector3*, std::vector<IfcVector3*>> pointMap;
-			std::vector<std::vector<IfcVector3>> vecMap;
-			IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
+			if (!opening.wallPoints.empty()) {
+				/*   IFCImporter::LogError("failed to generate all window caps");*/
+				std::map<IfcVector3*, std::vector<IfcVector3*>> pointMap;
+				std::vector<std::vector<IfcVector3>> vecMap;
+				IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
 
 
-			bool first = true;
-			bool firstPair = true;
-			IfcVector3 refPoint;
-			int wpCount = 0;
-			for (auto &point : opening.wallPoints)
-			{
-
-				IfcFloat best = static_cast<IfcFloat>(1e10);
-				IfcVector3 *bestv;
-
-				for (auto &otherPoint : opening.wallPoints)
+				bool first = true;
+				bool firstPair = true;
+				IfcVector3 refPoint;
+				int wpCount = 0;
+				for (auto &point : opening.wallPoints)
 				{
-					const IfcFloat sqdist = (point - otherPoint).SquareLength();
-					if (sqdist < best) {
-						// avoid self-connections
-						if (sqdist < 1e-5) {
-							continue;
-						}
 
-						//find the vector 
+					IfcFloat best = static_cast<IfcFloat>(1e10);
+					IfcVector3 *bestv;
 
-						auto vec = (point - otherPoint).Normalize();
-						//dot product with the extrusion vector
-						auto dotProd = vec * dir.Normalize();
-						auto selfSqred = vec*vec;
-
-						if ((dotProd - selfSqred) < 1e-06)
-						{
-							bestv = &otherPoint;
-							best = sqdist;
-						}
-
-					}
-				}
-
-				bool addPoint = true;
-				pointMap[&point] = std::vector < IfcVector3* >();
-
-				if (pointMap.find(bestv) != pointMap.end())
-				{
-					//we already processed bestv, check if it is already linked
-					addPoint = std::find(pointMap[bestv].begin(), pointMap[bestv].end(), &point) == pointMap[bestv].end();
-				}
-
-				if (addPoint)
-				{
-					pointMap[&point].push_back(bestv);
-					//Found a new pair of points. Calculate it's vector and add to collection
-					IfcVector3 vec = point - *bestv;
-					IfcVector3 comp = point;
-					//By the nature of the algorithm one side is processed first before the other
-					//So it is save to assume the first half of the points are going to be on the same side
-					// Unless the wall is in a very odd shape. in which case, good luck!
-					if (wpCount < ((opening.wallPoints.size() + 1) / 2))
-						vecMap.push_back({ point, *bestv });
-					else
+					for (auto &otherPoint : opening.wallPoints)
 					{
-						vecMap.push_back({ *bestv, point });
-						comp = *bestv;
+						const IfcFloat sqdist = (point - otherPoint).SquareLength();
+						if (sqdist < best) {
+							// avoid self-connections
+							if (sqdist < 1e-5) {
+								continue;
+							}
+
+							//find the vector 
+
+							auto vec = (point - otherPoint).Normalize();
+							//dot product with the extrusion vector
+							auto dotProd = vec * dir.Normalize();
+							auto selfSqred = vec*vec;
+
+							if ((dotProd - selfSqred) < 1e-06)
+							{
+								bestv = &otherPoint;
+								best = sqdist;
+							}
+
+						}
 					}
-					std::cout << " Pair added: (" << vecMap.back()[0].x << ", " << vecMap.back()[0].y << ", " << vecMap.back()[0].z << ")";
-					std::cout << "  " << vecMap.back()[1].x << ", " << vecMap.back()[1].y << ", " << vecMap.back()[1].z << ")" << std::endl;
+
+					bool addPoint = true;
+					pointMap[&point] = std::vector < IfcVector3* >();
+
+					if (pointMap.find(bestv) != pointMap.end())
+					{
+						//we already processed bestv, check if it is already linked
+						addPoint = std::find(pointMap[bestv].begin(), pointMap[bestv].end(), &point) == pointMap[bestv].end();
+					}
+
+					if (addPoint)
+					{
+						pointMap[&point].push_back(bestv);
+						//Found a new pair of points. Calculate it's vector and add to collection
+						IfcVector3 vec = point - *bestv;
+						IfcVector3 comp = point;
+						//By the nature of the algorithm one side is processed first before the other
+						//So it is save to assume the first half of the points are going to be on the same side
+						// Unless the wall is in a very odd shape. in which case, good luck!
+						if (wpCount < ((opening.wallPoints.size() + 1) / 2))
+							vecMap.push_back({ point, *bestv });
+						else
+						{
+							vecMap.push_back({ *bestv, point });
+							comp = *bestv;
+						}			
 
 
+						if (openingBBmin.x > comp.x)
+							openingBBmin.x = comp.x;
+						if (openingBBmin.y > comp.y)
+							openingBBmin.y = comp.y;
+						if (openingBBmin.z > comp.z)
+							openingBBmin.z = comp.z;
 
-					if (openingBBmin.x > comp.x)
-						openingBBmin.x = comp.x;
-					if (openingBBmin.y > comp.y)
-						openingBBmin.y = comp.y;
-					if (openingBBmin.z > comp.z)
-						openingBBmin.z = comp.z;
+						if (openingBBmax.x < comp.x)
+							openingBBmax.x = comp.x;
+						if (openingBBmax.y < comp.y)
+							openingBBmax.y = comp.y;
+						if (openingBBmax.z < comp.z)
+							openingBBmax.z = comp.z;
 
-					if (openingBBmax.x < comp.x)
-						openingBBmax.x = comp.x;
-					if (openingBBmax.y < comp.y)
-						openingBBmax.y = comp.y;
-					if (openingBBmax.z < comp.z)
-						openingBBmax.z = comp.z;
+					}
+					wpCount++;
+				}//for (auto &point : opening.wallPoints)
+				std::cout << "found pairing wallpoints, construct faces(map size: " << vecMap.size() << ", original wallpoints: " << opening.wallPoints.size() << ")..." << std::endl;
 
-				}
-				else
+				//prune duplicates
+				std::vector<bool> toRemove(vecMap.size(), false);
+				
+
+				for (int i = 0; i < vecMap.size() -1; ++i)
 				{
-					std::cout << "Pair already added(" << point.x << ", " << point.y << ", " << point.z << ")";
-					std::cout << "  " << bestv->x << ", " << bestv->y << ", " << bestv->z << "). skipping...." << std::endl;
-				}
-				wpCount++;
-			}//for (auto &point : opening.wallPoints)
-			std::cout << "found pairing wallpoints, construct faces(map size: " << vecMap.size() << ", original wallpoints: " << opening.wallPoints.size() << ")..." << std::endl;
+					if (toRemove[i]) continue; //already identified as a duplicate, skip
 
-			if (true)
-			{
-				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane.obj";
-				std::ofstream outputStream(fileName.c_str());
-				for (const auto v : vecMap)
+					for (int j = i+1; j < vecMap.size(); ++j)
+					{
+						if (toRemove[j]) continue;
+						auto sub1 = vecMap[i][0] - vecMap[j][0];
+						auto sub2 = vecMap[i][1] - vecMap[j][1];
+
+						float limit = 1e-5;
+						toRemove[j] = fabsf(sub1.x) < limit &&  fabsf(sub1.y) < limit &&  fabsf(sub1.z) < limit
+							&&  fabsf(sub2.x) < limit &&  fabsf(sub2.y) < limit &&  fabsf(sub2.z) < limit;
+
+						std::cout << " comparing: (" <<  vecMap[i][0].x << ", " <<  vecMap[i][0].y << ", " <<  vecMap[i][0].z << ")";
+						std::cout << "  (" << vecMap[i][1].x << ", " << vecMap[i][1].y << ", " << vecMap[i][1].z << ") with ";
+						std::cout << " (" << vecMap[j][0].x << ", " << vecMap[j][0].y << ", " << vecMap[j][0].z << ")";
+						std::cout << "  (" << vecMap[j][1].x << ", " << vecMap[j][1].y << ", " << vecMap[j][1].z << ")" << std::endl; 
+						std::cout << " diffs : (" << sub1.x << ", " << sub1.y << ", " << sub1.z << ")";
+						std::cout << "  (" << sub2.x << ", " << sub2.y << ", " << sub2.z << ")";
+						std::cout << " verdict: " << toRemove[j] << std::endl;
+
+					}
+				}
+				std::cout << "vecMap before: " << vecMap.size() << std::endl;
+
+				for (int i = toRemove.size() - 1; i > 0; --i)
 				{
-					outputStream << "v " << v[0].x << " " << v[0].y << " " << v[0].z << std::endl;
-
+					if (toRemove[i])
+					{
+						std::cout << " removing " << i << std::endl;
+						//loop in reverse to avoid messing up the ordering.
+						vecMap.erase(vecMap.begin() + i);
+					}
+					
 				}
-				outputStream.close();
+
+				std::cout << "vecMap now: " << vecMap.size() << std::endl;
+
+				if (true)
+				{
+					std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane.obj";
+					std::ofstream outputStream(fileName.c_str());
+					for (const auto v : vecMap)
+					{
+						outputStream << "v " << v[0].x << " " << v[0].y << " " << v[0].z << std::endl;
+
+					}
+					outputStream.close();
+				}
 			}
-			//			
 		}
+
+		
 	}
 
 	//			IfcVector3 tmp1 = openingBBmin;
