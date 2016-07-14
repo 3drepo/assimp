@@ -802,6 +802,51 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					}
 					outputStream.close();
 				}
+
+				//Attempt an isometric projection of the wall points to make it 2D
+				std::vector<IfcVector2> wallpoints2d;
+
+
+				//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
+				//but for some reason projecting onto the extrusion direction gives wrong looking results.
+				IfcVector3 ndir(3, 4, 0);
+				ndir.z = (dir.x*ndir.x + dir.y*ndir.y) / -dir.z;
+				ndir.Normalize();
+
+				IfcVector3 xAxis;
+
+
+
+				if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
+				{
+					//can't use 1 0 0 as the x axis
+					xAxis.x = 0; xAxis.y = 1; xAxis.z = 0;
+				}
+				else
+				{
+					xAxis.x = 1; xAxis.y = 0; xAxis.z = 0;
+				}
+
+				//project this onto the plane
+
+				xAxis = (xAxis - (xAxis * ndir)*ndir);
+				xAxis.Normalize();
+
+				IfcVector3 yAxis = xAxis ^ ndir;
+
+
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane2d.obj";
+				std::ofstream outputStream(fileName.c_str());
+				for (const auto v : vecMap)
+				{
+					
+					auto pointOnPlane = (v[0] - (v[0] * ndir)*ndir);
+
+					IfcVector2 twodCoord(pointOnPlane*xAxis, pointOnPlane*yAxis);
+					outputStream << "v " << twodCoord.x << " " << twodCoord.y << " 0" << std::endl;
+
+				}
+				outputStream.close();
 			}
 		}
 
