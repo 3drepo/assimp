@@ -56,6 +56,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iterator>
 #include <iostream>
 #include <fstream>
+#include <ctgmath>
+#include <cmath>
 namespace Assimp {
     namespace IFC {
 
@@ -728,34 +730,22 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					if (addPoint)
 					{
 						pointMap[&point].push_back(bestv);
-						//Found a new pair of points. Calculate it's vector and add to collection
-						IfcVector3 vec = point - *bestv;
-						IfcVector3 comp = point;
+
 						//By the nature of the algorithm one side is processed first before the other
-						//So it is save to assume the first half of the points are going to be on the same side
-						// Unless the wall is in a very odd shape. in which case, good luck!
+						//So it is safe to assume the first half of the points are going to be on the same side
+						// Unless the wall is in a very odd shape in which case, good luck!
+
+						//FIXME: with the 2D Project, theoretically we should be able to pair up the points 
+						// as they would map on to the same 2D coordinates thus this function is over engineered
+
 						if (wpCount < ((opening.wallPoints.size() + 1) / 2))
 							vecMap.push_back({ point, *bestv });
 						else
 						{
 							vecMap.push_back({ *bestv, point });
-							comp = *bestv;
 						}			
 
 
-						if (openingBBmin.x > comp.x)
-							openingBBmin.x = comp.x;
-						if (openingBBmin.y > comp.y)
-							openingBBmin.y = comp.y;
-						if (openingBBmin.z > comp.z)
-							openingBBmin.z = comp.z;
-
-						if (openingBBmax.x < comp.x)
-							openingBBmax.x = comp.x;
-						if (openingBBmax.y < comp.y)
-							openingBBmax.y = comp.y;
-						if (openingBBmax.z < comp.z)
-							openingBBmax.z = comp.z;
 
 					}
 					wpCount++;
@@ -813,9 +803,9 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 				ndir.z = (dir.x*ndir.x + dir.y*ndir.y) / -dir.z;
 				ndir.Normalize();
 
+
+				//define my x and y axis.
 				IfcVector3 xAxis;
-
-
 
 				if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
 				{
@@ -827,387 +817,143 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					xAxis.x = 1; xAxis.y = 0; xAxis.z = 0;
 				}
 
-				//project this onto the plane
-
 				xAxis = (xAxis - (xAxis * ndir)*ndir);
 				xAxis.Normalize();
 
+
+				//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
 				IfcVector3 yAxis = xAxis ^ ndir;
 
 
 				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane2d.obj";
 				std::ofstream outputStream(fileName.c_str());
+				std::vector<std::pair<IfcVector2, std::pair<IfcVector3, IfcVector3>>> wallPoints2d;
+				IfcVector2 wpmax, wpmin;
 				for (const auto v : vecMap)
 				{
 					
 					auto pointOnPlane = (v[0] - (v[0] * ndir)*ndir);
+					auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
 
-					IfcVector2 twodCoord(pointOnPlane*xAxis, pointOnPlane*yAxis);
-					outputStream << "v " << twodCoord.x << " " << twodCoord.y << " 0" << std::endl;
+					wallPoints2d.push_back({ point2d, { v[0], v[1] } });
+					outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
+
+					wpmax.x = std::max(wpmax.x, point2d.x);
+					wpmax.y = std::max(wpmax.y, point2d.y);
+					wpmin.x = std::min(wpmin.x, point2d.x);
+					wpmin.y = std::min(wpmin.y, point2d.y);
 
 				}
 				outputStream.close();
+				int count = 0;
+				int currentIdx = 0;
+
+
+				const float PI = acos(-1);
+				while (count < wallPoints2d.size())
+				{
+					bool closerToXMin = wallPoints2d[currentIdx].first.x < ((wpmax.x - wpmin.x) / 2. + wpmin.x);
+					bool closerToYMin = wallPoints2d[currentIdx].first.y < ((wpmax.y - wpmin.y) / 2. + wpmin.y);
+					float bestDist = 1.e10;
+					float bestAng = 360.;
+					int bestPair = currentIdx;
+					for (int i = 0; i < wallPoints2d.size(); ++i)
+					{
+						if (i == currentIdx) continue;
+						auto diff = wallPoints2d[i].first - wallPoints2d[currentIdx].first;
+						auto d = diff.SquareLength();
+						auto tanAng = fabsf(diff.y) / fabsf(diff.x);
+						auto ang = atanf(tanAng);
+
+						bool positiveX = diff.x > 0.;
+						bool positiveY = diff.y > 0.;
+						bool zeroX = fabsf(diff.x) < 1e-5;
+						bool zeroY = fabsf(diff.y) < 1e-5;
+
+
+						if (closerToYMin)
+						{
+							//Calculate the distance between the points
+
+							if (positiveY && positiveX)	ang += PI;							
+							if (!positiveX && positiveY) ang += 2*PI;
+							if (!positiveX && !positiveY) ang += 3 * PI;
+							if (zeroX) ang = positiveY ?2 * PI : 4*PI;
+							if (zeroY) ang = positiveX ? PI : 3 * PI;
+							
+							 
+							if (ang < bestAng /*&& bestDist > d*/)
+							{
+
+								bestDist = d;
+								bestAng = ang;
+								bestPair = i;
+							}
+							else if (ang == bestAng && bestDist > d)
+							{
+								bestDist = d;
+								bestAng = ang;
+								bestPair = i;
+							}
+						}
+						else
+						{
+							if (!positiveX && positiveY) ang += PI;
+							if (!positiveX && !positiveY) ang += 2 * PI;
+							if (positiveX && !positiveY) ang += 3 * PI;
+							if (zeroX) ang = positiveY ? PI : 3 * PI;
+							if (zeroY) ang = positiveX ? 4* PI : 2 * PI;
+
+
+							if (ang < bestAng /*&& d  < bestDist*/)
+							{
+								bestDist = d;
+								bestAng = ang;
+								bestPair = i;
+							}
+							else if (ang == bestAng && bestDist > d)
+							{
+								bestDist = d;
+								bestAng = ang;
+								bestPair = i;
+							}
+						}
+
+						std::cout << " [" << i << "] (" << wallPoints2d[i].first.x << ","
+							<< wallPoints2d[i].first.y << ") diff: (" << diff.x << ","
+							<< diff.y << ") d: " << d << " ang: " << ang << " closer to X: " << closerToXMin << " Y" << closerToYMin << std::endl;
+						
+					}
+					if (bestPair != currentIdx)
+					{
+						std::cout << " Found best pair for " << currentIdx << ", pair is " << bestPair << std::endl;
+						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joint_" + std::to_string(currentIdx) + ".obj";
+						std::ofstream outputStream(fileName.c_str());
+						outputStream << "v " << wallPoints2d[currentIdx].second.first.x << " " 
+							<< wallPoints2d[currentIdx].second.first.y << " " << wallPoints2d[currentIdx].second.first.z << std::endl;
+						outputStream << "v " << wallPoints2d[currentIdx].second.second.x << " "
+							<< wallPoints2d[currentIdx].second.second.y << " " << wallPoints2d[currentIdx].second.second.z << std::endl;
+
+						outputStream << "v " << wallPoints2d[bestPair].second.first.x << " "
+							<< wallPoints2d[bestPair].second.first.y << " " << wallPoints2d[bestPair].second.first.z << std::endl;
+						outputStream << "v " << wallPoints2d[bestPair].second.second.x << " "
+							<< wallPoints2d[bestPair].second.second.y << " " << wallPoints2d[bestPair].second.second.z << std::endl;
+						outputStream << "f 1 3 4 2" << std::endl;
+						outputStream.close();
+						currentIdx = bestPair;
+						count++;
+					}
+					else
+					{
+						std::cout << "Could nto find a pair for " << currentIdx << std::endl; 
+					}
+				}
 			}
 		}
 
 		
 	}
 
-	//			IfcVector3 tmp1 = openingBBmin;
-	//			tmp1.x = openingBBmax.y;
-	//			tmp1.x = openingBBmax.z;
-
-	//			const IfcVector3 xVec = (tmp1 - openingBBmin).Normalize();
-	//			const auto xVec2 = xVec*xVec;
-
-	//			tmp1 = openingBBmin;
-	//			tmp1.y = openingBBmax.x;
-	//			tmp1.y = openingBBmax.z;
-
-	//			const IfcVector3 yVec = (tmp1 - openingBBmin).Normalize();
-	//			const auto yVec2 = yVec*yVec;
-
-	//			tmp1 = openingBBmin;
-	//			tmp1.z = openingBBmax.x;
-	//			tmp1.z = openingBBmax.y;
-
-	//			const IfcVector3 zVec = (tmp1 - openingBBmin).Normalize();
-	//			const auto zVec2 = zVec*zVec;
-
-
-	//			std::cout << "Bounding Box: (" << openingBBmin.x << "," << openingBBmin.y << "," << openingBBmin.z << ")("
-	//				<< openingBBmax.x << "," << openingBBmax.y << "," << openingBBmax.z << ")" << std::endl;
-	//			std::cout << "X Vector: " << xVec.x << "," << xVec.y << "," << xVec.z << std::endl;
-	//			std::cout << "Y Vector: " << yVec.x << "," << yVec.y << "," << yVec.z << std::endl;
-	//			std::cout << "Z Vector: " << zVec.x << "," << zVec.y << "," << zVec.z << std::endl;
- //
-	//			//Now that we found the wall points and its pair, try to form faces with another related pair
-
-	//			for (auto wallPairIt = vecMap.begin(); wallPairIt != vecMap.end(); ++wallPairIt)
-	//			{
-	//				/*
-	//				* for each wall point pair, we need to connect it to its neighbour.
-	//				* if we can determine where abouts does it lie on the boundary, we can connect it 
-	//				* to it's closest neighbour. 
-	//				* for e.g. a point touching more than one bounding would be a corner point, needing to 
-	//				* find the closest neighbour in 2 directions
-	//				* a point lying on a single boundary would need the closest neighbour +/- of that boundary.
-	//				*/
-
-	//				//Establish it's place in the boundary
-	//				//if more than 1 axis is at the boundary then it's at a corner. 
-	//				bool atXMin = (wallPairIt->at(0).x - openingBBmin.x) < 1.e-05;
-	//				bool atYMin = (wallPairIt->at(0).y - openingBBmin.y) < 1.e-05;
-	//				bool atZMin = (wallPairIt->at(0).z - openingBBmin.z) < 1.e-05;
-
-	//				bool atXMax = (openingBBmax.x - wallPairIt->at(0).x) < 1.e-05;
-	//				bool atYMax = (openingBBmax.y - wallPairIt->at(0).y) < 1.e-05;
-	//				bool atZMax = (openingBBmax.z - wallPairIt->at(0).z) < 1.e-05;
-
-	//				bool atXBoundary = atXMin || atXMax;
-	//				bool atYBoundary = atYMin || atYMax;
-	//				bool atZBoundary = atZMin || atZMax;
-	//				
-	//				bool atCorner = atXBoundary && atYBoundary && atZBoundary;
-	//				std::cout << "Wall Point 1: " << wallPairIt->at(0).x << "," << wallPairIt->at(0).y << "," << wallPairIt->at(0).z << std::endl;
-	//				std::cout << "At Corner: " << atCorner << "(" << atXBoundary << ", " << atYBoundary << ", " << atZBoundary << ")" << std::endl;
-	//	
-
-	//				if (atCorner)
-	//				{
-	//					//corner point - need to find the 2 closet wall point pair that lies on 2 different boundaries
-	//					//deduce the vectors we need 
-	//					// corner points, find it's closest neighbour at multiple directions.
-	//					//Note: this is prepped with 3 but we should never be using all 3 (one of them is inline with extrusion dir).
-	//					IfcFloat bestx = static_cast<IfcFloat>(1e10);
-	//					IfcFloat besty = static_cast<IfcFloat>(1e10);
-	//					IfcFloat bestz = static_cast<IfcFloat>(1e10);
-	//					std::vector<std::vector<IfcVector3 >>::iterator bestvx = vecMap.end();
-	//					std::vector<std::vector<IfcVector3 >>::iterator bestvy = vecMap.end();
-	//					std::vector<std::vector<IfcVector3 >>::iterator bestvz = vecMap.end();
-	//					for (auto otherPairIt = vecMap.begin(); otherPairIt != vecMap.end(); ++otherPairIt)
-	//					{
-	//						
-	//						auto distv = wallPairIt->at(0) - otherPairIt->at(0);
-	//						const auto dist = distv.SquareLength();
-	//						
-	//						distv = distv.Normalize();
-
-	//						//ensure the connection is inline with boundary
-	//						if ((distv * xVec - xVec2) < 1e-5)
-	//						{
-	//							if (dist < 1e-5) {
-	//								continue;
-	//							}
-
-	//							
-	//							bestvx = otherPairIt;
-	//							
-	//							bestx = dist;
-	//						}
-	//						else if ((distv * yVec - yVec2) < 1e-5)
-	//						{
-	//							if (dist < 1e-5) {
-	//								continue;
-	//							}
-
-
-	//							bestvy = otherPairIt;
-
-	//							besty = dist;
-	//						}
-	//						else if((distv * zVec - zVec2) < 1e-5)
-	//						{
-	//							if (dist < 1e-5) {
-	//								continue;
-	//							}
-
-
-	//							bestvz = otherPairIt;
-
-	//							bestz = dist;
-	//						}
-
-	//						
-
-	//					
-
-	//					}
-	//					if (bestvx != vecMap.end())
-	//					{
-	//						static int fileCount = 0;
-	//						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMeshx_" + std::to_string(fileCount++) + ".obj";
-	//						std::ofstream outputStream(fileName.c_str());
-	//						//found matching points, produce a face
-	//						outputStream << "v " << wallPairIt->at(0).x << " " << wallPairIt->at(0).y << " " << wallPairIt->at(0).z << std::endl;
-	//						outputStream << "v " << wallPairIt->at(1).x << " " << wallPairIt->at(1).y << " " << wallPairIt->at(1).z << std::endl;
-	//						outputStream << "v " << bestvx->at(0).x << " " << bestvx->at(0).y << " " << bestvx->at(0).z << std::endl;
-	//						outputStream << "v " << bestvx->at(1).x << " " << bestvx->at(1).y << " " << bestvx->at(1).z << std::endl;
-	//						outputStream << "f 1 2 3 4" << std::endl;
-	//						outputStream.close();
-
-
-	//					}
-
-	//					if (bestvy != vecMap.end())
-	//					{
-	//						static int fileCount = 0;
-	//						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMeshy_" + std::to_string(fileCount++) + ".obj";
-	//						std::ofstream outputStream(fileName.c_str());
-	//						//found matching points, produce a face
-	//						outputStream << "v " << wallPairIt->at(0).x << " " << wallPairIt->at(0).y << " " << wallPairIt->at(0).z << std::endl;
-	//						outputStream << "v " << wallPairIt->at(1).x << " " << wallPairIt->at(1).y << " " << wallPairIt->at(1).z << std::endl;
-	//						outputStream << "v " << bestvy->at(0).x << " " << bestvy->at(0).y << " " << bestvy->at(0).z << std::endl;
-	//						outputStream << "v " << bestvy->at(1).x << " " << bestvy->at(1).y << " " << bestvy->at(1).z << std::endl;
-	//						outputStream << "f 1 2 3 4" << std::endl;
-	//						outputStream.close();
-	//					}
-
-	//					if (bestvz != vecMap.end())
-	//					{
-	//						static int fileCount = 0;
-	//						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMeshy_" + std::to_string(fileCount++) + ".obj";
-	//						std::ofstream outputStream(fileName.c_str());
-	//						//found matching points, produce a face
-	//						outputStream << "v " << wallPairIt->at(0).x << " " << wallPairIt->at(0).y << " " << wallPairIt->at(0).z << std::endl;
-	//						outputStream << "v " << wallPairIt->at(1).x << " " << wallPairIt->at(1).y << " " << wallPairIt->at(1).z << std::endl;
-	//						outputStream << "v " << bestvz->at(0).x << " " << bestvz->at(0).y << " " << bestvz->at(0).z << std::endl;
-	//						outputStream << "v " << bestvz->at(1).x << " " << bestvz->at(1).y << " " << bestvz->at(1).z << std::endl;
-	//						outputStream << "f 1 2 3 4" << std::endl;
-	//						outputStream.close();
-	//					}
-	//				}
-	//				else
-	//				{
-	//					// mid points, find it's closest neighbour left and right.
-	//					IfcFloat bestPos = static_cast<IfcFloat>(1e10);
-	//					IfcFloat bestNeg = static_cast<IfcFloat>(-1e10);
-	//					std::vector<std::vector<IfcVector3 >>::iterator bestvpos = vecMap.end();
-	//					std::vector<std::vector<IfcVector3 >>::iterator bestvneg = vecMap.end();
-	//					std::vector<std::pair<std::vector<std::vector<IfcVector3 >>::iterator, std::pair<float, float>>> notAligned;
-	//					IfcVector3 direction;
-
-	//					/*bool atXBoundary = atXMin || atXMax;
-	//					bool atYBoundary = atYMin || atYMax;
-	//					bool atZBoundary = atZMin || atZMax;*/
-	//					IfcVector3 edgebboxmin, edgebboxmax;
-	//					edgebboxmin = openingBBmin;
-	//					edgebboxmax = openingBBmax;
-	//					if (!atXBoundary)
-	//					{
-
-	//						direction = xVec;
-	//						
-	//					}
-	//					else if (!atZBoundary)
-	//					{
-	//						direction = zVec;
-	//					}
-	//					else
-	//					{
-	//						direction = yVec;
-	//					}
-	//					std::cout << "direction: " << direction.x << "," << direction.y << "," << direction.z << std::endl;
-	//					
-	//					for (auto otherPairIt = vecMap.begin(); otherPairIt != vecMap.end(); ++otherPairIt)
-	//					{
-	//						auto distv = wallPairIt->at(0) - otherPairIt->at(0);
-	//						const auto dist = distv.SquareLength();
-
-
-	//						distv = distv.Normalize();
-	//						
-	//						//std::cout << "distv: " << distv.x << "," << distv.y << "," << distv.z << std::endl;
-	//						auto dotProd = distv*direction;
-	//						auto dirSqrd = direction*direction;
-	//						auto difference = fabsf(dotProd - dirSqrd);
-
-
-	//						if (difference < 1e-5)
-	//						{
-
-	//							if (dist < 1e-5) {
-	//								std::cout << "---------" << std::endl;
-	//								std::cout << "same point" << std::endl;
-	//								continue;
-	//							}
-	//							std::cout << "---------" << std::endl;
-	//							std::cout << "points: " << otherPairIt->at(0).x << "," << otherPairIt->at(0).y << "," << otherPairIt->at(0).z << std::endl;
-	//							std::cout << "dot Prod = " << dotProd << " dirsqrd " << dirSqrd << "difference: " << difference << std::endl;
-	//							auto diff =  direction - distv;
-	//							std::cout << "diff: " << diff.x << "," << diff.y << "," << diff.z << std::endl;
-	//							const bool sameVec = fabsf(diff.x) < 1.e-5 && fabsf(diff.y) < 1.e-5 && fabsf(diff.z) < 1.e-5;
-
-	//							auto &bestv = sameVec ? bestvpos : bestvneg;
-	//							auto &best = sameVec ? bestPos : bestNeg;
-	//							std::cout << "point taken" << " direction: " << sameVec << std::endl;
-	//							
-	//							bestv = otherPairIt;
-	//							best = dist;
-	//						}
-	//						else
-	//						{
-	//							std::cout << "---------" << std::endl;
-	//							std::cout << " not aligned" << std::endl;
-	//							notAligned.push_back({otherPairIt,{ dist, difference }});
-	//						}
-
-	//					}
-	//					
-	//					if (bestvneg == vecMap.end())
-	//					{
-	//						//use the one that's closest aligned
-	//						float bestProd = 1e10;
-	//						for (const auto &pair : notAligned)
-	//						{
-
-	//							std::cout << "Candidate: (" << pair.first->at(0).x << ", " << pair.first->at(0).y << ", " << pair.first->at(0).z << ")"									
-	//								 << pair.second.second << ", " << pair.second.first << std::endl;
-	//							//If the vector is close to the direction of travel and it is closest
-	//							if ((pair.second.second == pair.second.second) && (bestProd > pair.second.first))
-	//							{
-	//								std::cout << " Leader......" << std::endl;
-	//								bestProd = pair.second.first;
-	//								bestvneg = pair.first;
-	//							}
-
-	//							static int fileCount = 0;
-	//							std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMesh2_C" + std::to_string(fileCount++) + ".obj";
-	//							std::ofstream outputStream(fileName.c_str());
-	//							//found matching points, produce a face
-	//							outputStream << "v " << wallPairIt->at(0).x << " " << wallPairIt->at(0).y << " " << wallPairIt->at(0).z << std::endl;
-	//							outputStream << "v " << wallPairIt->at(1).x << " " << wallPairIt->at(1).y << " " << wallPairIt->at(1).z << std::endl;
-	//							outputStream << "v " << pair.first->at(1).x << " " << pair.first->at(1).y << " " << pair.first->at(1).z << std::endl;
-	//							outputStream << "v " << pair.first->at(0).x << " " << pair.first->at(0).y << " " << pair.first->at(0).z << std::endl;
-
-	//							outputStream << "f 1 2 3 4" << std::endl;
-	//							outputStream.close();
-	//						}
-	//					}
-
-	//					if (bestvneg != vecMap.end())
-	//					{
-	//						static int fileCount = 0;
-	//						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMesh1_" + std::to_string(fileCount++) + ".obj";
-	//						std::ofstream outputStream(fileName.c_str());
-	//						//found matching points, produce a face
-	//						outputStream << "v " << wallPairIt->at(0).x << " " << wallPairIt->at(0).y << " " << wallPairIt->at(0).z << std::endl;
-	//						outputStream << "v " << wallPairIt->at(1).x << " " << wallPairIt->at(1).y << " " << wallPairIt->at(1).z << std::endl;
-
-	//						if ((bestvneg->at(0) - wallPairIt->at(0)).SquareLength() > (bestvneg->at(1) - wallPairIt->at(0)).SquareLength())
-	//						{
-	//							outputStream << "v " << bestvneg->at(0).x << " " << bestvneg->at(0).y << " " << bestvneg->at(0).z << std::endl;
-	//							outputStream << "v " << bestvneg->at(1).x << " " << bestvneg->at(1).y << " " << bestvneg->at(1).z << std::endl;
-
-	//						}
-	//						else
-	//						{
-	//							outputStream << "v " << bestvneg->at(1).x << " " << bestvneg->at(1).y << " " << bestvneg->at(1).z << std::endl;
-	//							outputStream << "v " << bestvneg->at(0).x << " " << bestvneg->at(0).y << " " << bestvneg->at(0).z << std::endl;
-	//						}
-
-
-
-	//						outputStream << "f 1 2 3 4" << std::endl;
-	//						outputStream.close();
-
-
-	//					}
-	//					else
-	//					{
-	//						std::cout << "Still failed to find a vneg..." << std::endl;
-	//					}
-
-	//					if (bestvpos != vecMap.end())
-	//					{
-	//						static int fileCount = 0;
-	//						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joinMesh2_" + std::to_string(fileCount++) + ".obj";
-	//						std::ofstream outputStream(fileName.c_str());
-	//						//found matching points, produce a face
-	//						outputStream << "v " << wallPairIt->at(0).x << " " << wallPairIt->at(0).y << " " << wallPairIt->at(0).z << std::endl;
-	//						outputStream << "v " << wallPairIt->at(1).x << " " << wallPairIt->at(1).y << " " << wallPairIt->at(1).z << std::endl;
-	//						outputStream << "v " << bestvpos->at(1).x << " " << bestvpos->at(1).y << " " << bestvpos->at(1).z << std::endl;
-	//						outputStream << "v " << bestvpos->at(0).x << " " << bestvpos->at(0).y << " " << bestvpos->at(0).z << std::endl;
-
-	//						outputStream << "f 1 2 3 4" << std::endl;
-	//						outputStream.close();
-
-
-	//					}
-
-
-	//				}
-
-	//				if (true)
-	//				{
-	//					std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\wallpointbbox.obj";
-	//					std::ofstream outputStream(fileName.c_str());
-	//					//found matching points, produce a face
-	//					outputStream << "v " << openingBBmin.x << " " << openingBBmin.y << " " << openingBBmin.z << std::endl; //min all 1 
-	//					outputStream << "v " << openingBBmax.x << " " << openingBBmin.y << " " << openingBBmin.z << std::endl; //mx 2
-	//					outputStream << "v " << openingBBmin.x << " " << openingBBmax.y << " " << openingBBmin.z << std::endl; //my 3
-	//					outputStream << "v " << openingBBmin.x << " " << openingBBmin.y << " " << openingBBmax.z << std::endl; //mz 4
-	//					outputStream << "v " << openingBBmax.x << " " << openingBBmin.y << " " << openingBBmax.z << std::endl; //mx mz 5
-	//					outputStream << "v " << openingBBmax.x << " " << openingBBmax.y << " " << openingBBmin.z << std::endl; //mx my 6
-	//					outputStream << "v " << openingBBmin.x << " " << openingBBmax.y << " " << openingBBmax.z << std::endl; //my mz 7
-	//					outputStream << "v " << openingBBmax.x << " " << openingBBmax.y << " " << openingBBmax.z << std::endl; //mall 8
-
-	//					outputStream << "f 1 2 3 6" << std::endl;
-	//					outputStream << "f 1 4 5 2" << std::endl;
-	//					outputStream << "f 1 3 7 4" << std::endl;
-	//					outputStream << "f 7 8 5 4" << std::endl;
-	//					outputStream << "f 2 5 8 6" << std::endl;
-	//					outputStream << "f 3 7 8 6" << std::endl;
-	//					outputStream.close();
-
-
-	//				}
-	//			}
-	//			opening.wallPoints.clear();
- //           }// if( !opening.wallPoints.empty() ) 
-
- //       }
- //   }
 
     size_t sides_with_v_openings = 0;
     if( has_area ) {
