@@ -876,7 +876,7 @@ size_t CloseWindows(ContourVector& contours,
 		{
 			std::cout << "#openings: " << refs.size() << std::endl;
 		}
-        BOOST_FOREACH(const TempOpening* opening, refs) {
+        /*BOOST_FOREACH(const TempOpening* opening, refs) {
             if(!opening->wallPoints.empty()) {
 				if (dump)
 				{
@@ -885,125 +885,121 @@ size_t CloseWindows(ContourVector& contours,
                 has_other_side = true;
                 break;
             }
-        }
-		has_other_side = false;
-        if (has_other_side) {
-			std::cout << "Has other side" << std::endl;
+        }*/
+		
+   //     if (has_other_side) {
+			//std::cout << "Has other side" << std::endl;
 
-            ContourRefVector adjacent_contours;
+   //         ContourRefVector adjacent_contours;
 
-            // prepare a skiplist for this contour. The skiplist is used to
-            // eliminate unwanted contour lines for adjacent windows and
-            // those bordering the outer frame.
-            (*it).PrepareSkiplist();
+   //         // prepare a skiplist for this contour. The skiplist is used to
+   //         // eliminate unwanted contour lines for adjacent windows and
+   //         // those bordering the outer frame.
+   //         (*it).PrepareSkiplist();
 
-            FindAdjacentContours(it, contours);
-            FindBorderContours(it);
+   //         FindAdjacentContours(it, contours);
+   //         FindBorderContours(it);
 
-            // if the window is the result of a finite union or intersection of rectangles,
-            // there shouldn't be any crossing or diagonal lines in it. Such lines would
-            // be artifacts caused by numerical inaccuracies or other bugs in polyclipper
-            // and our own code. Since rectangular openings are by far the most frequent
-            // case, it is worth filtering for this corner case.
-            if((*it).is_rectangular) {
-                FindLikelyCrossingLines(it);
-            }
+   //         // if the window is the result of a finite union or intersection of rectangles,
+   //         // there shouldn't be any crossing or diagonal lines in it. Such lines would
+   //         // be artifacts caused by numerical inaccuracies or other bugs in polyclipper
+   //         // and our own code. Since rectangular openings are by far the most frequent
+   //         // case, it is worth filtering for this corner case.
+   //         if((*it).is_rectangular) {
+   //             FindLikelyCrossingLines(it);
+   //         }
 
-            ai_assert((*it).skiplist.size() == (*it).contour.size());
+   //         ai_assert((*it).skiplist.size() == (*it).contour.size());
 
-            SkipList::const_iterator skipbegin = (*it).skiplist.begin();
+   //         SkipList::const_iterator skipbegin = (*it).skiplist.begin();
 
-            curmesh.verts.reserve(curmesh.verts.size() + (*it).contour.size() * 4);
-            curmesh.vertcnt.reserve(curmesh.vertcnt.size() + (*it).contour.size());
+   //         curmesh.verts.reserve(curmesh.verts.size() + (*it).contour.size() * 4);
+   //         curmesh.vertcnt.reserve(curmesh.vertcnt.size() + (*it).contour.size());
 
-            // compare base poly normal and contour normal to detect if we need to reverse the face winding
-            IfcVector3 basePolyNormal = TempMesh::ComputePolygonNormal( curmesh.verts.data(), curmesh.vertcnt.front());
-            std::vector<IfcVector3> worldSpaceContourVtx( it->contour.size());
-            for( size_t a = 0; a < it->contour.size(); ++a )
-                worldSpaceContourVtx[a] = minv * IfcVector3( it->contour[a].x, it->contour[a].y, 0.0);
-            IfcVector3 contourNormal = TempMesh::ComputePolygonNormal( worldSpaceContourVtx.data(), worldSpaceContourVtx.size());
-            bool reverseCountourFaces = (contourNormal * basePolyNormal) > 0.0;
+   //         // compare base poly normal and contour normal to detect if we need to reverse the face winding
+   //         IfcVector3 basePolyNormal = TempMesh::ComputePolygonNormal( curmesh.verts.data(), curmesh.vertcnt.front());
+   //         std::vector<IfcVector3> worldSpaceContourVtx( it->contour.size());
+   //         for( size_t a = 0; a < it->contour.size(); ++a )
+   //             worldSpaceContourVtx[a] = minv * IfcVector3( it->contour[a].x, it->contour[a].y, 0.0);
+   //         IfcVector3 contourNormal = TempMesh::ComputePolygonNormal( worldSpaceContourVtx.data(), worldSpaceContourVtx.size());
+   //         bool reverseCountourFaces = (contourNormal * basePolyNormal) > 0.0;
 
-            // XXX this algorithm is really a bit inefficient - both in terms
-            // of constant factor and of asymptotic runtime.
-            std::vector<bool>::const_iterator skipit = skipbegin;
+   //         // XXX this algorithm is really a bit inefficient - both in terms
+   //         // of constant factor and of asymptotic runtime.
+   //         std::vector<bool>::const_iterator skipit = skipbegin;
 
-            IfcVector3 start0;
-            IfcVector3 start1;
+   //         IfcVector3 start0;
+   //         IfcVector3 start1;
 
-            const Contour::const_iterator cbegin = (*it).contour.begin(), cend = (*it).contour.end();
+   //         const Contour::const_iterator cbegin = (*it).contour.begin(), cend = (*it).contour.end();
 
-            bool drop_this_edge = false;
-            for (Contour::const_iterator cit = cbegin; cit != cend; ++cit, drop_this_edge = *skipit++) {
-                const IfcVector2& proj_point = *cit;
+   //         bool drop_this_edge = false;
+   //         for (Contour::const_iterator cit = cbegin; cit != cend; ++cit, drop_this_edge = *skipit++) {
+   //             const IfcVector2& proj_point = *cit;
 
-                // Locate the closest opposite point. This should be a good heuristic to
-                // connect only the points that are really intended to be connected.
-                IfcFloat best = static_cast<IfcFloat>(1e10);
-                IfcVector3 bestv;
+   //             // Locate the closest opposite point. This should be a good heuristic to
+   //             // connect only the points that are really intended to be connected.
+   //             IfcFloat best = static_cast<IfcFloat>(1e10);
+   //             IfcVector3 bestv;
 
-                const IfcVector3 world_point = minv * IfcVector3(proj_point.x,proj_point.y,0.0f);
-				std::cout << "world_point ( " << world_point.x << "," << world_point.y << " ," << world_point.z << " )" << std::endl;
-                BOOST_FOREACH(const TempOpening* opening, refs) {
-                    BOOST_FOREACH(const IfcVector3& other, opening->wallPoints) {
-                        const IfcFloat sqdist = (world_point - other).SquareLength();
-						std::cout << "Other wall point ( " << other.x << "," << other.y << " ," << other.z << " )" << std::endl;
-                        if (sqdist < best) {
-                            // avoid self-connections
-                            if(sqdist < 1e-5) {
-                                continue;
-                            }
+   //             const IfcVector3 world_point = minv * IfcVector3(proj_point.x,proj_point.y,0.0f);
+			//	std::cout << "world_point ( " << world_point.x << "," << world_point.y << " ," << world_point.z << " )" << std::endl;
+   //             BOOST_FOREACH(const TempOpening* opening, refs) {
+   //                 BOOST_FOREACH(const IfcVector3& other, opening->wallPoints) {
+   //                     const IfcFloat sqdist = (world_point - other).SquareLength();
+			//			std::cout << "Other wall point ( " << other.x << "," << other.y << " ," << other.z << " )" << std::endl;
+   //                     if (sqdist < best) {
+   //                         // avoid self-connections
+   //                         if(sqdist < 1e-5) {
+   //                             continue;
+   //                         }
 
-                            bestv = other;
-                            best = sqdist;
-                        }
-                    }
-                }
-				std::cout << "Best wall point ( " << bestv.x << "," << bestv.y << " ," << bestv.z << " )" << std::endl;
-                if (drop_this_edge) {
-                    curmesh.verts.pop_back();
-                    curmesh.verts.pop_back();
-                }
-                else {
-                    curmesh.verts.push_back(((cit == cbegin) != reverseCountourFaces) ? world_point : bestv);
-                    curmesh.verts.push_back(((cit == cbegin) != reverseCountourFaces) ? bestv : world_point);
+   //                         bestv = other;
+   //                         best = sqdist;
+   //                     }
+   //                 }
+   //             }
+			//	std::cout << "Best wall point ( " << bestv.x << "," << bestv.y << " ," << bestv.z << " )" << std::endl;
+   //             if (drop_this_edge) {
+   //                 curmesh.verts.pop_back();
+   //                 curmesh.verts.pop_back();
+   //             }
+   //             else {
+   //                 curmesh.verts.push_back(((cit == cbegin) != reverseCountourFaces) ? world_point : bestv);
+   //                 curmesh.verts.push_back(((cit == cbegin) != reverseCountourFaces) ? bestv : world_point);
 
-                    curmesh.vertcnt.push_back(4);
-                    ++closed;
-                }
+   //                 curmesh.vertcnt.push_back(4);
+   //                 ++closed;
+   //             }
 
-                if (cit == cbegin) {
-                    start0 = world_point;
-                    start1 = bestv;
-                    continue;
-                }
+   //             if (cit == cbegin) {
+   //                 start0 = world_point;
+   //                 start1 = bestv;
+   //                 continue;
+   //             }
 
-                curmesh.verts.push_back(reverseCountourFaces ? bestv : world_point);
-                curmesh.verts.push_back(reverseCountourFaces ? world_point : bestv);
+   //             curmesh.verts.push_back(reverseCountourFaces ? bestv : world_point);
+   //             curmesh.verts.push_back(reverseCountourFaces ? world_point : bestv);
 
-                if (cit == cend - 1) {
-                    drop_this_edge = *skipit;
+   //             if (cit == cend - 1) {
+   //                 drop_this_edge = *skipit;
 
-                    // Check if the final connection (last to first element) is itself
-                    // a border edge that needs to be dropped.
-                    if (drop_this_edge) {
-                        --closed;
-                        curmesh.vertcnt.pop_back();
-                        curmesh.verts.pop_back();
-                        curmesh.verts.pop_back();
-                    }
-                    else {
-                        curmesh.verts.push_back(reverseCountourFaces ? start0 : start1);
-                        curmesh.verts.push_back(reverseCountourFaces ? start1 : start0);
-                    }
-                }
-            }
-        }
-        else {
-			if (dump)
-			{
-				std::cout << "No other side" << std::endl;
-			}
+   //                 // Check if the final connection (last to first element) is itself
+   //                 // a border edge that needs to be dropped.
+   //                 if (drop_this_edge) {
+   //                     --closed;
+   //                     curmesh.vertcnt.pop_back();
+   //                     curmesh.verts.pop_back();
+   //                     curmesh.verts.pop_back();
+   //                 }
+   //                 else {
+   //                     curmesh.verts.push_back(reverseCountourFaces ? start0 : start1);
+   //                     curmesh.verts.push_back(reverseCountourFaces ? start1 : start0);
+   //                 }
+   //             }
+   //         }
+   //     }
+   //     else {			
             const Contour::const_iterator cbegin = (*it).contour.begin(), cend = (*it).contour.end();
             BOOST_FOREACH(TempOpening* opening, refs) {
                 ai_assert(opening->wallPoints.empty());
@@ -1014,9 +1010,319 @@ size_t CloseWindows(ContourVector& contours,
                     opening->wallPoints.push_back(minv * IfcVector3(proj_point.x,proj_point.y,0.0f));
                 }
             }
-        }
+        //}
     }
     return closed;
+}
+
+void CloseAllWindows(
+	std::vector<TempOpening> &openings,
+	TempMesh& curmesh,
+	IfcVector3 &ext_dir)
+{
+	BOOST_FOREACH(TempOpening& opening, openings) {
+
+		if (!opening.wallPoints.empty()) {
+			std::vector<std::vector<IfcVector3>> vecMap;
+			IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
+
+
+			bool first = true;
+			bool firstPair = true;
+			IfcVector3 refPoint;
+			std::cout << "Wall point size: " << opening.wallPoints.size() << std::endl;
+
+			std::vector<bool> toRemovePts(opening.wallPoints.size(), false);
+			for (int i = 0; i < opening.wallPoints.size(); ++i)
+			{
+				if (toRemovePts[i]) continue;
+				for (int j = i+1; j < opening.wallPoints.size(); ++j)
+				{
+					auto diff = opening.wallPoints[i] - opening.wallPoints[j];
+					toRemovePts[j] = toRemovePts[j] || (fabsf(diff.x) < 1e-5  && fabsf(diff.y) < 1e-5  && fabsf(diff.z) < 1e-5);
+				}
+
+			}
+
+			for (int i = opening.wallPoints.size()-1; i >=0; --i)
+			{
+				if (toRemovePts[i])
+					opening.wallPoints.erase(opening.wallPoints.begin()+i);
+			}
+
+			std::cout << "Wall point size after pruning: " << opening.wallPoints.size() << std::endl;
+
+			for (int i = 0; i < opening.wallPoints.size()/2; ++i)
+			{
+				auto &point = opening.wallPoints[i];
+				IfcFloat best = static_cast<IfcFloat>(1e10);
+				IfcVector3 *bestv;
+
+				for (int j = opening.wallPoints.size() / 2; j < opening.wallPoints.size(); ++j)
+				{
+					auto &otherPoint = opening.wallPoints[j];
+					const IfcFloat sqdist = (point - otherPoint).SquareLength();
+					if (sqdist < best) {
+						// avoid self-connections
+						if (sqdist < 1e-5) {
+							continue;
+						}
+
+						//find the vector 
+
+						auto vec = (point - otherPoint).Normalize();
+						//dot product with the extrusion vector
+						auto dotProd = vec * ext_dir.Normalize();
+						auto selfSqred = vec*vec;
+
+						if ((dotProd - selfSqred) < 1e-06)
+						{
+							bestv = &otherPoint;
+							best = sqdist;
+						}
+
+					}
+				}
+
+				
+				//By the nature of the algorithm one side is processed first before the other
+				//So it is safe to assume the first half of the points are going to be on the same side
+				// Unless the wall is in a very odd shape in which case, good luck!
+
+				//FIXME: with the 2D Project, theoretically we should be able to pair up the points 
+				// as they would map on to the same 2D coordinates thus this function is over engineered
+
+				vecMap.push_back({ point, *bestv });
+
+			}//for (auto &point : opening.wallPoints)
+
+			//std::cout << " vecMap.size() :" << vecMap.size();
+			////prune duplicates
+			//std::vector<bool> toRemove(vecMap.size(), false);
+
+
+			//for (int i = 0; i < vecMap.size() - 1; ++i)
+			//{
+			//	if (toRemove[i]) continue; //already identified as a duplicate, skip
+
+			//	for (int j = i + 1; j < vecMap.size(); ++j)
+			//	{
+			//		if (toRemove[j]) continue;
+			//		auto sub1 = vecMap[i][0] - vecMap[j][0];
+			//		auto sub2 = vecMap[i][1] - vecMap[j][1];
+
+			//		float limit = 1e-5;
+			//		toRemove[j] = fabsf(sub1.x) < limit &&  fabsf(sub1.y) < limit &&  fabsf(sub1.z) < limit
+			//			&&  fabsf(sub2.x) < limit &&  fabsf(sub2.y) < limit &&  fabsf(sub2.z) < limit;
+			//	}
+			//}
+
+			//for (int i = toRemove.size() - 1; i > 0; --i)
+			//{
+			//	//loop in reverse to avoid messing up the ordering.
+			//	if (toRemove[i])
+			//	{
+			//		vecMap.erase(vecMap.begin() + i);
+			//	}
+
+			//}
+
+			//std::cout << " pruned vecMap.size() :" << vecMap.size();
+			if (true)
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane.obj";
+				std::ofstream outputStream(fileName.c_str());
+				for (const auto v : vecMap)
+				{
+					outputStream << "v " << v[0].x << " " << v[0].y << " " << v[0].z << std::endl;
+
+				}
+				outputStream.close();
+			}
+
+			if (true)
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPoint3d.obj";
+				std::ofstream outputStream(fileName.c_str());
+				for (const auto v : opening.wallPoints)
+				{
+					outputStream << "v " << v.x << " " << v.y << " " << v.z << std::endl;
+
+				}
+				outputStream.close();
+			}
+
+			//Attempt an isometric projection of the wall points to make it 2D
+			std::vector<IfcVector2> wallpoints2d;
+
+
+			//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
+			//but for some reason projecting onto the extrusion direction gives wrong looking results.
+			IfcVector3 ndir(3, 4, 0);
+			ndir.z = (ext_dir.x*ndir.x + ext_dir.y*ndir.y) / -ext_dir.z;
+			ndir.Normalize();
+
+
+			//define my x and y axis.
+			IfcVector3 xAxis;
+
+			if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
+			{
+				//can't use 1 0 0 as the x axis
+				xAxis.x = 0; xAxis.y = 1; xAxis.z = 0;
+			}
+			else
+			{
+				xAxis.x = 1; xAxis.y = 0; xAxis.z = 0;
+			}
+
+			xAxis = (xAxis - (xAxis * ndir)*ndir);
+			xAxis.Normalize();
+
+
+			//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
+			IfcVector3 yAxis = xAxis ^ ndir;
+
+
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane2d.obj";
+			std::ofstream outputStream(fileName.c_str());
+			std::vector<std::pair<IfcVector2, std::pair<IfcVector3, IfcVector3>>> wallPoints2d;
+			IfcVector2 wpmax, wpmin;
+			for (const auto v : vecMap)
+			{
+
+				auto pointOnPlane = (v[0] - (v[0] * ndir)*ndir);
+				auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
+
+				wallPoints2d.push_back({ point2d, { v[0], v[1] } });
+				outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
+
+				wpmax.x = std::max(wpmax.x, point2d.x);
+				wpmax.y = std::max(wpmax.y, point2d.y);
+				wpmin.x = std::min(wpmin.x, point2d.x);
+				wpmin.y = std::min(wpmin.y, point2d.y);
+
+			}
+			outputStream.close();
+			int count = 0;
+			int currentIdx = 0;
+
+
+			const float PI = acos(-1);
+			while (count < wallPoints2d.size())
+			{
+				bool closerToXMin = wallPoints2d[currentIdx].first.x < ((wpmax.x - wpmin.x) / 2. + wpmin.x);
+				bool closerToYMin = wallPoints2d[currentIdx].first.y < ((wpmax.y - wpmin.y) / 2. + wpmin.y);
+				float bestDist = 1.e10;
+				float bestAng = 360.;
+				int bestPair = currentIdx;
+				for (int i = 0; i < wallPoints2d.size(); ++i)
+				{
+					if (i == currentIdx) continue;
+					auto diff = wallPoints2d[i].first - wallPoints2d[currentIdx].first;
+					auto d = diff.SquareLength();
+					auto tanAng = fabsf(diff.y) / fabsf(diff.x);
+					auto ang = atanf(tanAng);
+
+					bool positiveX = diff.x > 0.;
+					bool positiveY = diff.y > 0.;
+					bool zeroX = fabsf(diff.x) < 1e-5;
+					bool zeroY = fabsf(diff.y) < 1e-5;
+
+
+					if (closerToYMin)
+					{
+						//Calculate the distance between the points
+						if (zeroX) ang = positiveY ? 2 * PI : 4 * PI;
+						else if (zeroY) ang = positiveX ? PI : 3 * PI;
+						else if (positiveY && positiveX)	ang += PI;
+						else if (!positiveX && positiveY) ang += 2 * PI;
+						else if (!positiveX && !positiveY) ang += 3 * PI;
+
+
+						if (ang < bestAng)
+						{
+
+							bestDist = d;
+							bestAng = ang;
+							bestPair = i;
+						}
+						else if (ang == bestAng && bestDist > d)
+						{
+							bestDist = d;
+							bestAng = ang;
+							bestPair = i;
+						}
+					}
+					else
+					{
+						if (zeroX) ang = positiveY ? PI : 3 * PI;
+						else if (zeroY) ang = positiveX ? 4 * PI : 2 * PI;
+						else if (!positiveX && positiveY) ang += PI;
+						else if (!positiveX && !positiveY) ang += 2 * PI;
+						else if (positiveX && !positiveY) ang += 3 * PI;
+
+
+
+						if (ang < bestAng)
+						{
+							bestDist = d;
+							bestAng = ang;
+							bestPair = i;
+						}
+						else if (ang == bestAng && bestDist > d)
+						{
+							bestDist = d;
+							bestAng = ang;
+							bestPair = i;
+						}
+					}
+
+					std::cout << " [" << i << "] (" << wallPoints2d[i].first.x << ","
+						<< wallPoints2d[i].first.y << ") diff: (" << diff.x << ","
+						<< diff.y << ") d: " << d << " ang: " << ang << " closer to X: " << closerToXMin << " Y" << closerToYMin << std::endl;
+
+				}
+				if (bestPair != currentIdx)
+				{
+					std::cout << " Found best pair for " << currentIdx << ", pair is " << bestPair << std::endl;
+					std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joint_" + std::to_string(currentIdx) + ".obj";
+					std::ofstream outputStream(fileName.c_str());
+					outputStream << "v " << wallPoints2d[currentIdx].second.first.x << " "
+						<< wallPoints2d[currentIdx].second.first.y << " " << wallPoints2d[currentIdx].second.first.z << std::endl;
+					outputStream << "v " << wallPoints2d[currentIdx].second.second.x << " "
+						<< wallPoints2d[currentIdx].second.second.y << " " << wallPoints2d[currentIdx].second.second.z << std::endl;
+
+					outputStream << "v " << wallPoints2d[bestPair].second.first.x << " "
+						<< wallPoints2d[bestPair].second.first.y << " " << wallPoints2d[bestPair].second.first.z << std::endl;
+					outputStream << "v " << wallPoints2d[bestPair].second.second.x << " "
+						<< wallPoints2d[bestPair].second.second.y << " " << wallPoints2d[bestPair].second.second.z << std::endl;
+					outputStream << "f 1 3 4 2" << std::endl;
+					outputStream.close();
+
+					count++;
+
+
+					curmesh.verts.push_back(wallPoints2d[currentIdx].second.first);
+					curmesh.verts.push_back(wallPoints2d[bestPair].second.first);
+					curmesh.verts.push_back(wallPoints2d[bestPair].second.second);
+					curmesh.verts.push_back(wallPoints2d[currentIdx].second.second);
+					curmesh.vertcnt.push_back(4);
+
+
+					currentIdx = bestPair;
+
+				}
+				else
+				{
+					std::cout << "Could nto find a pair for " << currentIdx << std::endl;
+				}
+			}
+		}
+
+		opening.wallPoints.clear();
+	}//BOOST_FOREACH(TempOpening& opening, openings)
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1626,6 +1932,8 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 
     // Generate window caps to connect the symmetric openings on both sides
     // of the wall.
+	//This function will only generate wall points, the wall points needs to be 
+	//joined up later when they are all found.
     if (generate_connection_geometry) {
         CloseWindows(contours, minv, contours_to_openings, curmesh, dump);
     }

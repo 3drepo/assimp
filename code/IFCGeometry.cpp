@@ -671,328 +671,39 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
             temp.Clear();
         }
     }
-	TempMesh tmpM;
+	
 	if (openings) {
-
-		BOOST_FOREACH(TempOpening& opening, *conv.apply_openings) {
-
-			if (!opening.wallPoints.empty()) {
-				/*   IFCImporter::LogError("failed to generate all window caps");*/
-				std::map<IfcVector3*, std::vector<IfcVector3*>> pointMap;
-				std::vector<std::vector<IfcVector3>> vecMap;
-				IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
-
-
-				bool first = true;
-				bool firstPair = true;
-				IfcVector3 refPoint;
-				int wpCount = 0;
-				for (auto &point : opening.wallPoints)
-				{
-
-					IfcFloat best = static_cast<IfcFloat>(1e10);
-					IfcVector3 *bestv;
-
-					for (auto &otherPoint : opening.wallPoints)
-					{
-						const IfcFloat sqdist = (point - otherPoint).SquareLength();
-						if (sqdist < best) {
-							// avoid self-connections
-							if (sqdist < 1e-5) {
-								continue;
-							}
-
-							//find the vector 
-
-							auto vec = (point - otherPoint).Normalize();
-							//dot product with the extrusion vector
-							auto dotProd = vec * dir.Normalize();
-							auto selfSqred = vec*vec;
-
-							if ((dotProd - selfSqred) < 1e-06)
-							{
-								bestv = &otherPoint;
-								best = sqdist;
-							}
-
-						}
-					}
-
-					bool addPoint = true;
-					pointMap[&point] = std::vector < IfcVector3* >();
-
-					if (pointMap.find(bestv) != pointMap.end())
-					{
-						//we already processed bestv, check if it is already linked
-						addPoint = std::find(pointMap[bestv].begin(), pointMap[bestv].end(), &point) == pointMap[bestv].end();
-					}
-
-					if (addPoint)
-					{
-						pointMap[&point].push_back(bestv);
-
-						//By the nature of the algorithm one side is processed first before the other
-						//So it is safe to assume the first half of the points are going to be on the same side
-						// Unless the wall is in a very odd shape in which case, good luck!
-
-						//FIXME: with the 2D Project, theoretically we should be able to pair up the points 
-						// as they would map on to the same 2D coordinates thus this function is over engineered
-
-						if (wpCount < ((opening.wallPoints.size() + 1) / 2))
-							vecMap.push_back({ point, *bestv });
-						else
-						{
-							vecMap.push_back({ *bestv, point });
-						}			
-
-
-
-					}
-					wpCount++;
-				}//for (auto &point : opening.wallPoints)
-
-				//prune duplicates
-				std::vector<bool> toRemove(vecMap.size(), false);
-				
-
-				for (int i = 0; i < vecMap.size() -1; ++i)
-				{
-					if (toRemove[i]) continue; //already identified as a duplicate, skip
-
-					for (int j = i+1; j < vecMap.size(); ++j)
-					{
-						if (toRemove[j]) continue;
-						auto sub1 = vecMap[i][0] - vecMap[j][0];
-						auto sub2 = vecMap[i][1] - vecMap[j][1];
-
-						float limit = 1e-5;
-						toRemove[j] = fabsf(sub1.x) < limit &&  fabsf(sub1.y) < limit &&  fabsf(sub1.z) < limit
-							&&  fabsf(sub2.x) < limit &&  fabsf(sub2.y) < limit &&  fabsf(sub2.z) < limit;
-					}
-				}
-
-				for (int i = toRemove.size() - 1; i > 0; --i)
-				{
-					//loop in reverse to avoid messing up the ordering.
-					if (toRemove[i])
-					{
-						vecMap.erase(vecMap.begin() + i);
-					}
-					
-				}
-
-				if (true)
-				{
-					std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane.obj";
-					std::ofstream outputStream(fileName.c_str());
-					for (const auto v : vecMap)
-					{
-						outputStream << "v " << v[0].x << " " << v[0].y << " " << v[0].z << std::endl;
-
-					}
-					outputStream.close();
-				}
-
-				//Attempt an isometric projection of the wall points to make it 2D
-				std::vector<IfcVector2> wallpoints2d;
-
-
-				//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
-				//but for some reason projecting onto the extrusion direction gives wrong looking results.
-				IfcVector3 ndir(3, 4, 0);
-				ndir.z = (dir.x*ndir.x + dir.y*ndir.y) / -dir.z;
-				ndir.Normalize();
-
-
-				//define my x and y axis.
-				IfcVector3 xAxis;
-
-				if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
-				{
-					//can't use 1 0 0 as the x axis
-					xAxis.x = 0; xAxis.y = 1; xAxis.z = 0;
-				}
-				else
-				{
-					xAxis.x = 1; xAxis.y = 0; xAxis.z = 0;
-				}
-
-				xAxis = (xAxis - (xAxis * ndir)*ndir);
-				xAxis.Normalize();
-
-
-				//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
-				IfcVector3 yAxis = xAxis ^ ndir;
-
-
-				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane2d.obj";
-				std::ofstream outputStream(fileName.c_str());
-				std::vector<std::pair<IfcVector2, std::pair<IfcVector3, IfcVector3>>> wallPoints2d;
-				IfcVector2 wpmax, wpmin;
-				for (const auto v : vecMap)
-				{
-					
-					auto pointOnPlane = (v[0] - (v[0] * ndir)*ndir);
-					auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
-
-					wallPoints2d.push_back({ point2d, { v[0], v[1] } });
-					outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
-
-					wpmax.x = std::max(wpmax.x, point2d.x);
-					wpmax.y = std::max(wpmax.y, point2d.y);
-					wpmin.x = std::min(wpmin.x, point2d.x);
-					wpmin.y = std::min(wpmin.y, point2d.y);
-
-				}
-				outputStream.close();
-				int count = 0;
-				int currentIdx = 0;
-
-
-				const float PI = acos(-1);
-				while (count < wallPoints2d.size())
-				{
-					bool closerToXMin = wallPoints2d[currentIdx].first.x < ((wpmax.x - wpmin.x) / 2. + wpmin.x);
-					bool closerToYMin = wallPoints2d[currentIdx].first.y < ((wpmax.y - wpmin.y) / 2. + wpmin.y);
-					float bestDist = 1.e10;
-					float bestAng = 360.;
-					int bestPair = currentIdx;
-					for (int i = 0; i < wallPoints2d.size(); ++i)
-					{
-						if (i == currentIdx) continue;
-						auto diff = wallPoints2d[i].first - wallPoints2d[currentIdx].first;
-						auto d = diff.SquareLength();
-						auto tanAng = fabsf(diff.y) / fabsf(diff.x);
-						auto ang = atanf(tanAng);
-
-						bool positiveX = diff.x > 0.;
-						bool positiveY = diff.y > 0.;
-						bool zeroX = fabsf(diff.x) < 1e-5;
-						bool zeroY = fabsf(diff.y) < 1e-5;
-
-
-						if (closerToYMin)
-						{
-							//Calculate the distance between the points
-							if (zeroX) ang = positiveY ? 2 * PI : 4 * PI;
-							else if (zeroY) ang = positiveX ? PI : 3 * PI;
-							else if (positiveY && positiveX)	ang += PI;							
-							else if (!positiveX && positiveY) ang += 2*PI;
-							else if (!positiveX && !positiveY) ang += 3 * PI;
-							
-							 
-							if (ang < bestAng )
-							{
-
-								bestDist = d;
-								bestAng = ang;
-								bestPair = i;
-							}
-							else if (ang == bestAng && bestDist > d)
-							{
-								bestDist = d;
-								bestAng = ang;
-								bestPair = i;
-							}
-						}
-						else
-						{
-							if (zeroX) ang = positiveY ? PI : 3 * PI;
-							else if (zeroY) ang = positiveX ? 4 * PI : 2 * PI;
-							else if (!positiveX && positiveY) ang += PI;
-							else if (!positiveX && !positiveY) ang += 2 * PI;
-							else if (positiveX && !positiveY) ang += 3 * PI;
-
-
-
-							if (ang < bestAng)
-							{
-								bestDist = d;
-								bestAng = ang;
-								bestPair = i;
-							}
-							else if (ang == bestAng && bestDist > d)
-							{
-								bestDist = d;
-								bestAng = ang;
-								bestPair = i;
-							}
-						}
-
-						std::cout << " [" << i << "] (" << wallPoints2d[i].first.x << ","
-							<< wallPoints2d[i].first.y << ") diff: (" << diff.x << ","
-							<< diff.y << ") d: " << d << " ang: " << ang << " closer to X: " << closerToXMin << " Y" << closerToYMin << std::endl;
-						
-					}
-					if (bestPair != currentIdx)
-					{
-						std::cout << " Found best pair for " << currentIdx << ", pair is " << bestPair << std::endl;
-						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joint_" + std::to_string(currentIdx) + ".obj";
-						std::ofstream outputStream(fileName.c_str());
-						outputStream << "v " << wallPoints2d[currentIdx].second.first.x << " " 
-							<< wallPoints2d[currentIdx].second.first.y << " " << wallPoints2d[currentIdx].second.first.z << std::endl;
-						outputStream << "v " << wallPoints2d[currentIdx].second.second.x << " "
-							<< wallPoints2d[currentIdx].second.second.y << " " << wallPoints2d[currentIdx].second.second.z << std::endl;
-
-						outputStream << "v " << wallPoints2d[bestPair].second.first.x << " "
-							<< wallPoints2d[bestPair].second.first.y << " " << wallPoints2d[bestPair].second.first.z << std::endl;
-						outputStream << "v " << wallPoints2d[bestPair].second.second.x << " "
-							<< wallPoints2d[bestPair].second.second.y << " " << wallPoints2d[bestPair].second.second.z << std::endl;
-						outputStream << "f 1 3 4 2" << std::endl;
-						outputStream.close();
-
-						count++;
-
-						
-						tmpM.verts.push_back(wallPoints2d[currentIdx].second.first);
-						tmpM.verts.push_back(wallPoints2d[bestPair].second.first);
-						tmpM.verts.push_back(wallPoints2d[bestPair].second.second);
-						tmpM.verts.push_back(wallPoints2d[currentIdx].second.second);
-						tmpM.vertcnt.push_back(4);
-
-						
-						currentIdx = bestPair;
-						
-
-
-					}
-					else
-					{
-						std::cout << "Could nto find a pair for " << currentIdx << std::endl; 
-					}
-				}
-			}
-		}
-
-		
-	}
-
-	if (!tmpM.IsEmpty())
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\frameMesh.obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = tmpM.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
+		TempMesh tmpM;
+		CloseAllWindows(*conv.apply_openings, tmpM, dir);
+		if (!tmpM.IsEmpty())
 		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-		}
-
-		for (int i = 0; i < mesh->mNumFaces; ++i)
-		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\frameMesh.obj";
+			std::ofstream outputStream(fileName.c_str());
+			aiMesh *mesh = tmpM.ToMesh();
+			for (int i = 0; i < mesh->mNumVertices; ++i)
 			{
-				outputStream << " " << face.mIndices[j] + 1;
+				outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
 			}
-			outputStream << std::endl;
-		}
-		std::cout << " =============================== END =============================" << std::endl;
-		outputStream.close();
 
-		result.Append(tmpM);
-		
+			for (int i = 0; i < mesh->mNumFaces; ++i)
+			{
+				auto face = mesh->mFaces[i];
+				outputStream << "f";
+				for (int j = 0; j < face.mNumIndices; ++j)
+				{
+					outputStream << " " << face.mIndices[j] + 1;
+				}
+				outputStream << std::endl;
+			}
+			std::cout << " =============================== END =============================" << std::endl;
+			outputStream.close();
+
+			result.Append(tmpM);
+
+		}
 	}
+
+	
 
 
 
