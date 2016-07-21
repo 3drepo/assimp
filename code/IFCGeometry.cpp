@@ -646,7 +646,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 			std::cout << " =============================== END =============================" << std::endl;
 			//Dump geometry After
 			fileName = "C:\\Users\\Carmen\\Desktop\\test\\post\\Mesh" + std::string(cutCount < 10 ? "0" : "") + std::to_string(cutCount) + ".obj";
-			if (!fileName.empty())
+			if (!temp.IsEmpty())
 			{
 				std::ofstream outputStream(fileName.c_str());
 				aiMesh *mesh = temp.ToMesh();
