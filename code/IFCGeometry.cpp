@@ -779,9 +779,9 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					outputStream.close();
 				}
 
-                /*if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, true) ) {
+                if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, true) ) {
                     ++sides_with_v_openings;
-                }*/
+                }
 
 				
 				if (!temp.IsEmpty() && /*dump*/ false)

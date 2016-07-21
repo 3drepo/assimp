@@ -1015,6 +1015,47 @@ size_t CloseWindows(ContourVector& contours,
     return closed;
 }
 
+bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox &overlapRegion)
+{
+	bool overlapX = bbox1.first.x <= bbox2.first.x && bbox2.first.x < bbox1.second.x
+					|| bbox1.first.x >= bbox2.first.x && bbox1.first.x < bbox2.second.x;
+	bool overlapY = bbox1.first.y <= bbox2.first.y && bbox2.first.y < bbox1.second.y
+					|| bbox1.first.y >= bbox2.first.y && bbox1.first.y < bbox2.second.y;
+	
+	//boxes are also considered overlapped if their edges touches each other (corner does not count)
+	bool touchingX = fabsf(bbox1.first.x - bbox2.first.x) < 1e-5 || fabsf(bbox1.first.x - bbox2.second.x) < 1e-5
+		|| fabsf(bbox1.second.x - bbox2.second.x) < 1e-5 || fabsf(bbox1.second.x - bbox2.first.x) < 1e-5;
+	
+	bool touchingY = fabsf(bbox1.first.y - bbox2.first.y) < 1e-5 || fabsf(bbox1.first.y - bbox2.second.y) < 1e-5
+		|| fabsf(bbox1.second.y - bbox2.second.y) < 1e-5 || fabsf(bbox1.second.y - bbox2.first.y) < 1e-5;
+
+	bool overlap = overlapX && overlapY || touchingX && overlapY || touchingY && overlapX;
+
+	std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ") " ;
+	std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ") " ;
+	std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " ) Touching ( "<<touchingX << " , "<< touchingY<<")" << std::endl;
+	if (overlap)
+	{
+		overlapRegion.first.x = bbox1.first.x >  bbox2.first.x ?  bbox1.first.x : bbox2.first.x;
+		overlapRegion.second.x = bbox2.second.x > bbox1.second.x ? bbox1.second.x : bbox2.second.x;
+		
+		
+		overlapRegion.first.y = bbox1.first.y>  bbox2.first.y? bbox1.first.y: bbox2.first.y;
+		overlapRegion.second.y = bbox2.second.y > bbox1.second.y ? bbox1.second.y : bbox2.second.y;
+		
+
+		auto diff = overlapRegion.second - overlapRegion.first;
+		//std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ")" << std::endl;
+		//std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ")" << std::endl;
+		//std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " )" << std::endl;
+		std::cout << " overlapRegion: (" << overlapRegion.first.x << "," << overlapRegion.first.y << ") - (" << overlapRegion.second.x << "," << overlapRegion.second.y << ")" << std::endl;
+		std::cout << " diff: (" << diff.x << "," << diff.y << std::endl;
+	}
+	
+
+	return overlap;
+}
+
 void CloseAllWindows(
 	std::vector<TempOpening> &openings,
 	TempMesh& curmesh,
@@ -1023,8 +1064,14 @@ void CloseAllWindows(
 {
 	IfcVector3 ext_dir = dir;
 	static int opening_count = 0;
+	std::vector<std::pair<BoundingBox, std::vector<std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>>>>> openingJoints;
+	openingJoints.reserve(openings.size());
+	
 	BOOST_FOREACH(TempOpening& opening, openings) {
-		bool dumpConsole = dump && opening_count == 5;
+		/*
+		* Pair up the wall points
+		*/
+		bool dumpConsole = false;//dump && opening_count == 5;
 		if (!opening.wallPoints.empty()) {
 			std::vector<std::vector<IfcVector3>> vecMap;
 			IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
@@ -1252,11 +1299,18 @@ void CloseAllWindows(
 
 			const float PI = acos(-1);
 			auto halfWay = (wpmax - wpmin) * 0.5 + wpmin;
-			if (dumpConsole)
+			if (dump)
 			{
 				std::cout << " bbox: (" << wpmin.x << "," << wpmin.y << ")(" << wpmax.x << "," << wpmax.y << ")" << std::endl;
 				std::cout << " midway: (" << halfWay.x << "," << halfWay.y << ")" << std::endl; 
 			}
+			openingJoints.resize(openingJoints.size()+1);
+			openingJoints.back().first.first = wpmin;
+			openingJoints.back().first.second = wpmax;
+			openingJoints.back().second.clear();
+			/*
+			* Using only one side of the wall points, join up the contour
+			*/
 			while (count < wallPoints2d.size())
 			{
 				bool closerToXMin = wallPoints2d[currentIdx].first.x < halfWay.x;
@@ -1361,11 +1415,23 @@ void CloseAllWindows(
 					count++;
 
 
-					curmesh.verts.push_back(wallPoints2d[currentIdx].second.first);
-					curmesh.verts.push_back(wallPoints2d[bestPair].second.first);
-					curmesh.verts.push_back(wallPoints2d[bestPair].second.second);
-					curmesh.verts.push_back(wallPoints2d[currentIdx].second.second);
-					curmesh.vertcnt.push_back(4);
+					//curmesh.verts.push_back(wallPoints2d[currentIdx].second.first);
+					//curmesh.verts.push_back(wallPoints2d[bestPair].second.first);
+					//curmesh.verts.push_back(wallPoints2d[bestPair].second.second);
+					//curmesh.verts.push_back(wallPoints2d[currentIdx].second.second);
+					//curmesh.vertcnt.push_back(4);
+
+					std::vector< IfcVector2> vertices2d;
+					std::vector< IfcVector3> vertices3d;
+					vertices3d.push_back(wallPoints2d[currentIdx].second.first);
+					vertices3d.push_back(wallPoints2d[bestPair].second.first);
+					vertices3d.push_back(wallPoints2d[bestPair].second.second);
+					vertices3d.push_back(wallPoints2d[currentIdx].second.second);
+
+					vertices2d.push_back(wallPoints2d[currentIdx].first);
+					vertices2d.push_back(wallPoints2d[bestPair].first);
+					
+					openingJoints.back().second.push_back({ vertices2d, vertices3d });
 
 
 					currentIdx = bestPair;
@@ -1382,6 +1448,65 @@ void CloseAllWindows(
 		opening.wallPoints.clear();
 		++opening_count;
 	}//BOOST_FOREACH(TempOpening& opening, openings)
+
+	/*
+	* Now we've found all the joints, check if there are any overlaps  between openings and remove any of those joints
+	*/
+
+	for (int i = 0; i < openingJoints.size() ; ++i)
+	{
+		std::vector<bool> toIgnore(openingJoints[i].second.size(), false);
+		for (int j = 0; j < openingJoints.size(); ++j)
+		{
+			if (i == j) continue;
+
+			//Check if there's overlapping/touching boundaries
+			auto bbox1 = openingJoints[i].first;
+			auto bbox2 = openingJoints[j].first;
+
+			BoundingBox overlapRegion, dummy;
+			//determine the overlapping region
+				
+
+			if (isIntersect(bbox1, bbox2, overlapRegion))
+			{
+				std::cout << "WallPoint check["<<i<<"]["<<j<<"]" << std::endl;
+				//overlapped, identify any joints that lies on the overlapping region and remove them
+				//FIXME: We probably have to patch up the sides within this region.....
+				for (int k = 0; k < openingJoints[i].second.size(); ++k)
+				{
+					std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>> wallPointGroup = openingJoints[i].second[k];
+					
+					BoundingBox wallPbbox;
+					wallPbbox.first.x = wallPointGroup.first[0].x < wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
+					wallPbbox.first.y = wallPointGroup.first[0].y < wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
+					wallPbbox.second.x = wallPointGroup.first[0].x > wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
+					wallPbbox.second.y = wallPointGroup.first[0].y > wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
+					toIgnore[k] = toIgnore[k] || isIntersect(overlapRegion, wallPbbox, dummy);
+				}	
+				std::cout << "WallPoint end" << std::endl;
+			}
+		}
+		
+		for (int j = 0; j < toIgnore.size(); ++j)
+		{
+			if (!toIgnore[j])
+			{
+				auto wallPointGroup = openingJoints[i].second[j];
+
+				for (auto &point : wallPointGroup.second)
+				{
+					curmesh.verts.push_back(point);
+				}
+				curmesh.vertcnt.push_back(wallPointGroup.second.size());
+			}
+			else
+			{
+				std::cout << "["<< i << "]["<< j << "] is ignored..." << std::endl;
+			}
+		}
+		
+	}
 
 }
 
