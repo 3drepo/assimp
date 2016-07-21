@@ -320,7 +320,8 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 
 void CloseAllWindows(std::vector<TempOpening> &openings,
 					TempMesh& curmesh,
-					const IfcVector3 &ext_dir);
+					const IfcVector3 &ext_dir,
+					const bool dump = false);
 
 
 // IFCCurve.cpp

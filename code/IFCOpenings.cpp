@@ -1018,11 +1018,13 @@ size_t CloseWindows(ContourVector& contours,
 void CloseAllWindows(
 	std::vector<TempOpening> &openings,
 	TempMesh& curmesh,
-	const IfcVector3 &dir)
+	const IfcVector3 &dir, 
+	const bool dump)
 {
 	IfcVector3 ext_dir = dir;
+	static int opening_count = 0;
 	BOOST_FOREACH(TempOpening& opening, openings) {
-
+		bool dumpConsole = dump && opening_count == 5;
 		if (!opening.wallPoints.empty()) {
 			std::vector<std::vector<IfcVector3>> vecMap;
 			IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
@@ -1031,7 +1033,8 @@ void CloseAllWindows(
 			bool first = true;
 			bool firstPair = true;
 			IfcVector3 refPoint;
-			std::cout << "Wall point size: " << opening.wallPoints.size() << std::endl;
+			if (dumpConsole)
+				std::cout << "Wall point size: " << opening.wallPoints.size() << std::endl;
 
 			std::vector<bool> toRemovePts(opening.wallPoints.size(), false);
 			for (int i = 0; i < opening.wallPoints.size(); ++i)
@@ -1051,7 +1054,8 @@ void CloseAllWindows(
 					opening.wallPoints.erase(opening.wallPoints.begin()+i);
 			}
 
-			std::cout << "Wall point size after pruning: " << opening.wallPoints.size() << std::endl;
+			if (dumpConsole)
+				std::cout << "Wall point size after pruning: " << opening.wallPoints.size() << std::endl;
 
 			for (int i = 0; i < opening.wallPoints.size()/2; ++i)
 			{
@@ -1097,57 +1101,62 @@ void CloseAllWindows(
 
 			}//for (auto &point : opening.wallPoints)
 
-			//std::cout << " vecMap.size() :" << vecMap.size();
-			////prune duplicates
-			//std::vector<bool> toRemove(vecMap.size(), false);
-
-
-			//for (int i = 0; i < vecMap.size() - 1; ++i)
-			//{
-			//	if (toRemove[i]) continue; //already identified as a duplicate, skip
-
-			//	for (int j = i + 1; j < vecMap.size(); ++j)
-			//	{
-			//		if (toRemove[j]) continue;
-			//		auto sub1 = vecMap[i][0] - vecMap[j][0];
-			//		auto sub2 = vecMap[i][1] - vecMap[j][1];
-
-			//		float limit = 1e-5;
-			//		toRemove[j] = fabsf(sub1.x) < limit &&  fabsf(sub1.y) < limit &&  fabsf(sub1.z) < limit
-			//			&&  fabsf(sub2.x) < limit &&  fabsf(sub2.y) < limit &&  fabsf(sub2.z) < limit;
-			//	}
-			//}
-
-			//for (int i = toRemove.size() - 1; i > 0; --i)
-			//{
-			//	//loop in reverse to avoid messing up the ordering.
-			//	if (toRemove[i])
-			//	{
-			//		vecMap.erase(vecMap.begin() + i);
-			//	}
-
-			//}
-
-			//std::cout << " pruned vecMap.size() :" << vecMap.size();
-			if (true)
+			if (dump)
 			{
-				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane.obj";
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane"+std::to_string(opening_count)+".obj";
 				std::ofstream outputStream(fileName.c_str());
 				for (const auto v : vecMap)
 				{
 					outputStream << "v " << v[0].x << " " << v[0].y << " " << v[0].z << std::endl;
 
 				}
+				for (int i = 0; i < vecMap.size(); i += 4)
+				{
+					outputStream << "f ";
+					if (i + 4 >= vecMap.size())
+					{
+						
+						for (int j = i + 1; j <= vecMap.size(); ++j)
+							outputStream << j << " ";
+						
+					}
+					else
+					{
+						for (int j = i + 1; j <= i+4; ++j)
+							outputStream << j << " ";
+					}
+					outputStream << std::endl;
+				
+				}
 				outputStream.close();
 			}
 
-			if (true)
+			if (dump)
 			{
-				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPoint3d.obj";
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPoint3d"+std::to_string(opening_count)+".obj";
 				std::ofstream outputStream(fileName.c_str());
 				for (const auto v : opening.wallPoints)
 				{
 					outputStream << "v " << v.x << " " << v.y << " " << v.z << std::endl;
+
+				}
+
+				for (int i = 0; i < opening.wallPoints.size(); i += 4)
+				{
+					outputStream << "f ";
+					if (i + 4 >= opening.wallPoints.size())
+					{
+
+						for (int j = i + 1; j <= opening.wallPoints.size(); ++j)
+							outputStream << j << " ";
+
+					}
+					else
+					{
+						for (int j = i + 1; j <= i + 4; ++j)
+							outputStream << j << " ";
+					}
+					outputStream << std::endl;
 
 				}
 				outputStream.close();
@@ -1184,11 +1193,10 @@ void CloseAllWindows(
 			//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
 			IfcVector3 yAxis = xAxis ^ ndir;
 
-
-			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane2d.obj";
-			std::ofstream outputStream(fileName.c_str());
+			
+			
 			std::vector<std::pair<IfcVector2, std::pair<IfcVector3, IfcVector3>>> wallPoints2d;
-			IfcVector2 wpmax, wpmin;
+			IfcVector2 wpmax(-1e10, -1e10), wpmin(1e10, 1e10);
 			for (const auto v : vecMap)
 			{
 
@@ -1196,7 +1204,7 @@ void CloseAllWindows(
 				auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
 
 				wallPoints2d.push_back({ point2d, { v[0], v[1] } });
-				outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
+
 
 				wpmax.x = std::max(wpmax.x, point2d.x);
 				wpmax.y = std::max(wpmax.y, point2d.y);
@@ -1204,16 +1212,55 @@ void CloseAllWindows(
 				wpmin.y = std::min(wpmin.y, point2d.y);
 
 			}
-			outputStream.close();
+
+			if (dump)
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane2d"+std::to_string(opening_count)+".obj";
+				std::ofstream outputStream(fileName.c_str());
+				for (const auto v : wallPoints2d)
+				{
+
+					outputStream << "v " << v.first.x << " " << v.first.y << " 0" << std::endl;
+
+				}
+
+				for (int i = 0; i < wallPoints2d.size(); i += 4)
+				{
+					outputStream << "f ";
+					if (i + 4 >= wallPoints2d.size())
+					{
+
+						for (int j = i + 1; j <= wallPoints2d.size(); ++j)
+							outputStream << j << " ";
+
+					}
+					else
+					{
+						for (int j = i + 1; j <= i + 4; ++j)
+							outputStream << j << " ";
+					}
+					outputStream << std::endl;
+
+				}
+
+				outputStream.close();
+			}
+			
 			int count = 0;
 			int currentIdx = 0;
 
 
 			const float PI = acos(-1);
+			auto halfWay = (wpmax - wpmin) * 0.5 + wpmin;
+			if (dumpConsole)
+			{
+				std::cout << " bbox: (" << wpmin.x << "," << wpmin.y << ")(" << wpmax.x << "," << wpmax.y << ")" << std::endl;
+				std::cout << " midway: (" << halfWay.x << "," << halfWay.y << ")" << std::endl; 
+			}
 			while (count < wallPoints2d.size())
 			{
-				bool closerToXMin = wallPoints2d[currentIdx].first.x < ((wpmax.x - wpmin.x) / 2. + wpmin.x);
-				bool closerToYMin = wallPoints2d[currentIdx].first.y < ((wpmax.y - wpmin.y) / 2. + wpmin.y);
+				bool closerToXMin = wallPoints2d[currentIdx].first.x < halfWay.x;
+				bool closerToYMin = wallPoints2d[currentIdx].first.y < halfWay.y;
 				float bestDist = 1.e10;
 				float bestAng = 360.;
 				int bestPair = currentIdx;
@@ -1279,27 +1326,37 @@ void CloseAllWindows(
 						}
 					}
 
-					std::cout << " [" << i << "] (" << wallPoints2d[i].first.x << ","
-						<< wallPoints2d[i].first.y << ") diff: (" << diff.x << ","
-						<< diff.y << ") d: " << d << " ang: " << ang << " closer to X: " << closerToXMin << " Y" << closerToYMin << std::endl;
+					if (dumpConsole)
+					{
+						std::cout << " [" << i << "] (" << wallPoints2d[i].first.x << ","
+							<< wallPoints2d[i].first.y << ") diff: (" << diff.x << ","
+							<< diff.y << ") d: " << d << " ang: " << ang << " closer to X: " << closerToXMin << " Y " << closerToYMin 
+							<< "( " << (zeroX ? "zeroX" : (positiveX ? "posX" : "negX")) << "," << (zeroY ? "zeroY" : (positiveY ? "posY" : "negY")) << ") " << std::endl;
+					}
+					
 
 				}
 				if (bestPair != currentIdx)
 				{
-					std::cout << " Found best pair for " << currentIdx << ", pair is " << bestPair << std::endl;
-					std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joint_" + std::to_string(currentIdx) + ".obj";
-					std::ofstream outputStream(fileName.c_str());
-					outputStream << "v " << wallPoints2d[currentIdx].second.first.x << " "
-						<< wallPoints2d[currentIdx].second.first.y << " " << wallPoints2d[currentIdx].second.first.z << std::endl;
-					outputStream << "v " << wallPoints2d[currentIdx].second.second.x << " "
-						<< wallPoints2d[currentIdx].second.second.y << " " << wallPoints2d[currentIdx].second.second.z << std::endl;
+					if(dumpConsole)
+						std::cout << " Found best pair for " << currentIdx << ", pair is " << bestPair << std::endl;
+					if (dump)
+					{
+						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joint_"+std::to_string(opening_count)+"_" + std::to_string(currentIdx) + ".obj";
+						std::ofstream outputStream(fileName.c_str());
+						outputStream << "v " << wallPoints2d[currentIdx].second.first.x << " "
+							<< wallPoints2d[currentIdx].second.first.y << " " << wallPoints2d[currentIdx].second.first.z << std::endl;
+						outputStream << "v " << wallPoints2d[currentIdx].second.second.x << " "
+							<< wallPoints2d[currentIdx].second.second.y << " " << wallPoints2d[currentIdx].second.second.z << std::endl;
 
-					outputStream << "v " << wallPoints2d[bestPair].second.first.x << " "
-						<< wallPoints2d[bestPair].second.first.y << " " << wallPoints2d[bestPair].second.first.z << std::endl;
-					outputStream << "v " << wallPoints2d[bestPair].second.second.x << " "
-						<< wallPoints2d[bestPair].second.second.y << " " << wallPoints2d[bestPair].second.second.z << std::endl;
-					outputStream << "f 1 3 4 2" << std::endl;
-					outputStream.close();
+						outputStream << "v " << wallPoints2d[bestPair].second.first.x << " "
+							<< wallPoints2d[bestPair].second.first.y << " " << wallPoints2d[bestPair].second.first.z << std::endl;
+						outputStream << "v " << wallPoints2d[bestPair].second.second.x << " "
+							<< wallPoints2d[bestPair].second.second.y << " " << wallPoints2d[bestPair].second.second.z << std::endl;
+						outputStream << "f 1 3 4 2" << std::endl;
+						outputStream.close();
+					}
+					
 
 					count++;
 
@@ -1316,12 +1373,14 @@ void CloseAllWindows(
 				}
 				else
 				{
-					std::cout << "Could nto find a pair for " << currentIdx << std::endl;
+					if (dumpConsole)
+						std::cout << "Could nto find a pair for " << currentIdx << std::endl;
 				}
 			}
 		}
 
 		opening.wallPoints.clear();
+		++opening_count;
 	}//BOOST_FOREACH(TempOpening& opening, openings)
 
 }
@@ -1803,7 +1862,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
     // of window bounding boxes.
     Quadrify(contours,curmesh);
 
-	if (dump)
+	if (dump && !curmesh.IsEmpty())
 	{
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\quadrified" + std::to_string(count) + ".obj";
 		std::ofstream outputStream(fileName.c_str());
@@ -1829,7 +1888,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
     // Run a sanity cleanup pass on the window contours to avoid generating
     // artifacts during the contour generation phase later on.
     CleanupWindowContours(contours);
-	if (dump)
+	if (dump && !curmesh.IsEmpty())
 	{
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WindowContours" + std::to_string(count) + ".obj";
 		std::ofstream outputStream(fileName.c_str());
@@ -1855,7 +1914,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
     // space, now it is time to fill the gaps between the BBs and the real
     // window openings.
     InsertWindowContours(contours,openings, curmesh);
-	if (dump)
+	if (dump && !curmesh.IsEmpty())
 	{
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\InsertWindowContours" + std::to_string(count) + ".obj";
 		std::ofstream outputStream(fileName.c_str());
@@ -1882,7 +1941,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
     // of the Quadrify() algorithm is always a square area spanning
     // over [0,1]^2 (i.e. entire projection space).
     CleanupOuterContour(contour_flat, curmesh);
-	if (dump)
+	if (dump && !curmesh.IsEmpty())
 	{
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\cleanupOuter" + std::to_string(count) + ".obj";
 		std::ofstream outputStream(fileName.c_str());
@@ -1909,7 +1968,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
         v3 = minv * v3;
     }
 
-	if (dump)
+	if (dump && !curmesh.IsEmpty())
 	{
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\precloseWindow" + std::to_string(count) + ".obj";
 		std::ofstream outputStream(fileName.c_str());
@@ -1939,7 +1998,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
         CloseWindows(contours, minv, contours_to_openings, curmesh, dump);
     }
 
-	if (dump)
+	if (dump && !curmesh.IsEmpty())
 	{
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindow" + std::to_string(count) + ".obj";
 		std::ofstream outputStream(fileName.c_str());
