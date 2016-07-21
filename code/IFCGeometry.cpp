@@ -674,7 +674,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 	
 	if (openings) {
 		TempMesh tmpM;
-		CloseAllWindows(*conv.apply_openings, tmpM, dir);
+		CloseAllWindows(*conv.apply_openings, tmpM, extrusionDir);
 		if (!tmpM.IsEmpty())
 		{
 			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\frameMesh.obj";
