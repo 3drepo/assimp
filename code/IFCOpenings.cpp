@@ -1018,8 +1018,9 @@ size_t CloseWindows(ContourVector& contours,
 void CloseAllWindows(
 	std::vector<TempOpening> &openings,
 	TempMesh& curmesh,
-	IfcVector3 &ext_dir)
+	const IfcVector3 &dir)
 {
+	IfcVector3 ext_dir = dir;
 	BOOST_FOREACH(TempOpening& opening, openings) {
 
 		if (!opening.wallPoints.empty()) {
@@ -1455,7 +1456,8 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
     TempMesh& curmesh,
     bool check_intersection,
     bool generate_connection_geometry,
-    const IfcVector3& wall_extrusion_axis)
+    const IfcVector3& wall_extrusion_axis,
+	const bool dump)
 {
     OpeningRefVector contours_to_openings;
 
@@ -1489,8 +1491,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
     wall_extrusion_axis_norm.Normalize();
 	std::cout << "#openings : " << openings.size() << std::endl; 
 	static int count = -1;	
-	++count;
-	bool dump = count == 16;
+	if(dump) ++count;
 
 	if (dump)
 	{

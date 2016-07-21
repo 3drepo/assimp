@@ -315,11 +315,12 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
                       TempMesh& curmesh,
                       bool check_intersection,
                       bool generate_connection_geometry,
-                      const IfcVector3& wall_extrusion_axis = IfcVector3(0,1,0));
+                      const IfcVector3& wall_extrusion_axis = IfcVector3(0,1,0),
+					  const bool dump = false);
 
 void CloseAllWindows(std::vector<TempOpening> &openings,
 					TempMesh& curmesh,
-					IfcVector3 &ext_dir);
+					const IfcVector3 &ext_dir);
 
 
 // IFCCurve.cpp

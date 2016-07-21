@@ -597,7 +597,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
     TempMesh temp;
     TempMesh& curmesh = openings ? temp : result;
     std::vector<IfcVector3>& out = curmesh.verts;
-
+	std::cout << "dir: " << dir.x << " " << dir.y << " " << dir.z << std::endl;
 
     size_t sides_with_openings = 0;
     for( size_t i = 0; i < in.size(); ++i ) {
@@ -609,35 +609,34 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
         out.push_back(in[next]);
         out.push_back(in[next] + dir);
         out.push_back(in[i] + dir);
-
+		std::cout << "dir loop: " << dir.x << " " << dir.y << " " << dir.z << std::endl;
         if( openings ) {
-			static int cutCount = 0;
-			//Dump geometry before
-			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\pre\\Mesh" + std::string(cutCount++ < 10? "0" : "") + std::to_string(cutCount) + ".obj";
-			if (!fileName.empty())
-			{
-				std::ofstream outputStream(fileName.c_str());
-				std::cout << " ====================== Generate Opening (Normal - " << fileName << ") ========================" << std::endl;
-				aiMesh *mesh = temp.ToMesh();
-				for (int i = 0; i < mesh->mNumVertices; ++i)
-				{
-					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-				}
+			//static int cutCount = 0;
+			////Dump geometry before
+			//std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\pre\\Mesh" + std::string(cutCount++ < 10? "0" : "") + std::to_string(cutCount) + ".obj";
+			//if (!fileName.empty())
+			//{
+			//	std::ofstream outputStream(fileName.c_str());
+			//	std::cout << " ====================== Generate Opening (Normal - " << fileName << ") ========================" << std::endl;
+			//	aiMesh *mesh = temp.ToMesh();
+			//	for (int i = 0; i < mesh->mNumVertices; ++i)
+			//	{
+			//		outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+			//	}
 
-				for (int i = 0; i < mesh->mNumFaces; ++i)
-				{
-					auto face = mesh->mFaces[i];
-					outputStream << "f";
-					for (int j = 0; j < face.mNumIndices; ++j)
-					{
-						outputStream << " " << face.mIndices[j] + 1;
-					}
-					outputStream << std::endl;
-				}
-				outputStream.close();
-			}
+			//	for (int i = 0; i < mesh->mNumFaces; ++i)
+			//	{
+			//		auto face = mesh->mFaces[i];
+			//		outputStream << "f";
+			//		for (int j = 0; j < face.mNumIndices; ++j)
+			//		{
+			//			outputStream << " " << face.mIndices[j] + 1;
+			//		}
+			//		outputStream << std::endl;
+			//	}
+			//	outputStream.close();
+			//}
 			
-			std::cout << " length: " << ((in[i] - in[next]).Length()) << " , diag : " << diag << std::endl;
             if(/* (in[i] - in[next]).Length() > diag * 0.1 && */GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir) ) {
                 ++sides_with_openings;
 				
@@ -645,7 +644,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 
 			std::cout << " =============================== END =============================" << std::endl;
 			//Dump geometry After
-			fileName = "C:\\Users\\Carmen\\Desktop\\test\\post\\Mesh" + std::string(cutCount < 10 ? "0" : "") + std::to_string(cutCount) + ".obj";
+			/*fileName = "C:\\Users\\Carmen\\Desktop\\test\\post\\Mesh" + std::string(cutCount < 10 ? "0" : "") + std::to_string(cutCount) + ".obj";
 			if (!temp.IsEmpty())
 			{
 				std::ofstream outputStream(fileName.c_str());
@@ -666,11 +665,12 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					outputStream << std::endl;
 				}
 				outputStream.close();
-			}
+			}*/
             result.Append(temp);
             temp.Clear();
         }
     }
+	std::cout << "dir a: " << dir.x << " " << dir.y << " " << dir.z << std::endl;
 	
 	if (openings) {
 		TempMesh tmpM;
@@ -701,6 +701,34 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 			result.Append(tmpM);
 
 		}
+		std::cout << "dir b: " << dir.x << " " << dir.y << " " << dir.z << std::endl;
+
+		if (!result.IsEmpty())
+		{
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\before2DOpening.obj";
+			std::ofstream outputStream(fileName.c_str());
+			aiMesh *mesh = result.ToMesh();
+			for (int i = 0; i < mesh->mNumVertices; ++i)
+			{
+				outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+			}
+
+			for (int i = 0; i < mesh->mNumFaces; ++i)
+			{
+				auto face = mesh->mFaces[i];
+				outputStream << "f";
+				for (int j = 0; j < face.mNumIndices; ++j)
+				{
+					outputStream << " " << face.mIndices[j] + 1;
+				}
+				outputStream << std::endl;
+			}
+			std::cout << " =============================== END =============================" << std::endl;
+			outputStream.close();
+
+			result.Append(tmpM);
+
+		}
 	}
 
 	
@@ -708,6 +736,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 
 
     size_t sides_with_v_openings = 0;
+	std::cout << "dir last: " << dir.x << " " << dir.y << " "<< dir.z << std::endl;
     if( has_area ) {
 
         for( size_t n = 0; n < 2; ++n ) {
@@ -722,11 +751,60 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 
             curmesh.vertcnt.push_back(in.size());
 			
-            if( openings && in.size() > 2 ) {
-				std::cout << " ====================== Generate Opening (Area) ========================" << std::endl;
-                if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir) ) {
+            if( openings && in.size() > 2 ) {				
+				static int cutCount = 0;
+				//Dump geometry before
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\pre\\Mesh" + std::string(cutCount++ < 10 ? "0" : "") + std::to_string(cutCount) + ".obj";
+				if (!fileName.empty())
+				{
+					std::ofstream outputStream(fileName.c_str());
+					std::cout << " ====================== Generate Opening (Area - " << fileName << ") ========================" << std::endl;
+					aiMesh *mesh = temp.ToMesh();
+					for (int i = 0; i < mesh->mNumVertices; ++i)
+					{
+						outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+					}
+
+					for (int i = 0; i < mesh->mNumFaces; ++i)
+					{
+						auto face = mesh->mFaces[i];
+						outputStream << "f";
+						for (int j = 0; j < face.mNumIndices; ++j)
+						{
+							outputStream << " " << face.mIndices[j] + 1;
+						}
+						outputStream << std::endl;
+					}
+					outputStream.close();
+				}
+
+                /*if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, true) ) {
                     ++sides_with_v_openings;
-                }
+                }*/
+
+				fileName = "C:\\Users\\Carmen\\Desktop\\test\\post\\Mesh" + std::string(cutCount < 10 ? "0" : "") + std::to_string(cutCount) + ".obj";
+				if (!temp.IsEmpty())
+				{
+					std::ofstream outputStream(fileName.c_str());
+					aiMesh *mesh = temp.ToMesh();
+					for (int i = 0; i < mesh->mNumVertices; ++i)
+					{
+						outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+					}
+
+					for (int i = 0; i < mesh->mNumFaces; ++i)
+					{
+						auto face = mesh->mFaces[i];
+						outputStream << "f";
+						for (int j = 0; j < face.mNumIndices; ++j)
+						{
+							outputStream << " " << face.mIndices[j] + 1;
+						}
+						outputStream << std::endl;
+					}
+					outputStream.close();
+				}
+
 				std::cout << " =============================== END =============================" << std::endl;
                 result.Append(temp);
                 temp.Clear();
