@@ -671,7 +671,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
             temp.Clear();
         }
     }
-
+	TempMesh tmpM;
 	if (openings) {
 
 		BOOST_FOREACH(TempOpening& opening, *conv.apply_openings) {
@@ -874,15 +874,14 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 						if (closerToYMin)
 						{
 							//Calculate the distance between the points
-
-							if (positiveY && positiveX)	ang += PI;							
-							if (!positiveX && positiveY) ang += 2*PI;
-							if (!positiveX && !positiveY) ang += 3 * PI;
-							if (zeroX) ang = positiveY ?2 * PI : 4*PI;
-							if (zeroY) ang = positiveX ? PI : 3 * PI;
+							if (zeroX) ang = positiveY ? 2 * PI : 4 * PI;
+							else if (zeroY) ang = positiveX ? PI : 3 * PI;
+							else if (positiveY && positiveX)	ang += PI;							
+							else if (!positiveX && positiveY) ang += 2*PI;
+							else if (!positiveX && !positiveY) ang += 3 * PI;
 							
 							 
-							if (ang < bestAng /*&& bestDist > d*/)
+							if (ang < bestAng )
 							{
 
 								bestDist = d;
@@ -898,14 +897,15 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 						}
 						else
 						{
-							if (!positiveX && positiveY) ang += PI;
-							if (!positiveX && !positiveY) ang += 2 * PI;
-							if (positiveX && !positiveY) ang += 3 * PI;
 							if (zeroX) ang = positiveY ? PI : 3 * PI;
-							if (zeroY) ang = positiveX ? 4* PI : 2 * PI;
+							else if (zeroY) ang = positiveX ? 4 * PI : 2 * PI;
+							else if (!positiveX && positiveY) ang += PI;
+							else if (!positiveX && !positiveY) ang += 2 * PI;
+							else if (positiveX && !positiveY) ang += 3 * PI;
 
 
-							if (ang < bestAng /*&& d  < bestDist*/)
+
+							if (ang < bestAng)
 							{
 								bestDist = d;
 								bestAng = ang;
@@ -940,8 +940,21 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 							<< wallPoints2d[bestPair].second.second.y << " " << wallPoints2d[bestPair].second.second.z << std::endl;
 						outputStream << "f 1 3 4 2" << std::endl;
 						outputStream.close();
-						currentIdx = bestPair;
+
 						count++;
+
+						
+						tmpM.verts.push_back(wallPoints2d[currentIdx].second.first);
+						tmpM.verts.push_back(wallPoints2d[bestPair].second.first);
+						tmpM.verts.push_back(wallPoints2d[bestPair].second.second);
+						tmpM.verts.push_back(wallPoints2d[currentIdx].second.second);
+						tmpM.vertcnt.push_back(4);
+
+						
+						currentIdx = bestPair;
+						
+
+
 					}
 					else
 					{
@@ -953,6 +966,34 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 
 		
 	}
+
+	if (!tmpM.IsEmpty())
+	{
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\frameMesh.obj";
+		std::ofstream outputStream(fileName.c_str());
+		aiMesh *mesh = tmpM.ToMesh();
+		for (int i = 0; i < mesh->mNumVertices; ++i)
+		{
+			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+		}
+
+		for (int i = 0; i < mesh->mNumFaces; ++i)
+		{
+			auto face = mesh->mFaces[i];
+			outputStream << "f";
+			for (int j = 0; j < face.mNumIndices; ++j)
+			{
+				outputStream << " " << face.mIndices[j] + 1;
+			}
+			outputStream << std::endl;
+		}
+		std::cout << " =============================== END =============================" << std::endl;
+		outputStream.close();
+
+		result.Append(tmpM);
+		
+	}
+
 
 
     size_t sides_with_v_openings = 0;
