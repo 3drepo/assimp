@@ -77,6 +77,8 @@ namespace Assimp {
 typedef std::pair< IfcVector2, IfcVector2 > BoundingBox;
 typedef std::map<IfcVector2,size_t,XYSorter> XYSortedField;
 
+static const float PI = acos(-1);
+
 
 // ------------------------------------------------------------------------------------------------
 void QuadrifyPart(const IfcVector2& pmin, const IfcVector2& pmax, XYSortedField& field,
@@ -1065,17 +1067,149 @@ bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox
 	return overlap;
 }
 
+std::vector<std::pair<IfcVector2, IfcVector2>> Get2DContour(
+	const TempMesh& curve,
+	const IfcVector3 &dir,
+	const IfcVector3 &xAxis,
+	const IfcVector3 &yAxis,
+	const IfcVector3 &length
+	)
+{
+	std::vector<IfcVector2> res;
+	std::vector<std::pair<IfcVector2, IfcVector2>> pairs;
+	IfcVector2 max(-1e10, -1e10), min(1e10, 1e10);
+	res.reserve(curve.verts.size());
+	for (int i = 0; i < curve.verts.size(); ++i)
+	{
+		auto pointOnPlane = (curve.verts[i] - (curve.verts[i] * dir)*dir);
+		auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
+
+		auto vertDown = (curve.verts[i] + length);
+		auto pointOnPlane2 = (vertDown - (vertDown * dir)*dir);
+		auto point2d2 = IfcVector2(pointOnPlane2*xAxis, pointOnPlane2*yAxis);
+
+		if (!IsDuplicateVertex(point2d, res)) {
+			res.push_back(point2d);
+			min = std::min(point2d, min);
+			max = std::max(point2d, max);
+		}
+
+		if (!IsDuplicateVertex(point2d2, res)) {
+			res.push_back(point2d2);
+			min = std::min(point2d2, min);
+			max = std::max(point2d2, max);
+		}
+	}
+
+	//figure out conjoining points
+	auto halfWay = (max - min) * 0.5 + min;
+	int count = 0;
+	int currentIdx = 0;
+
+	while (count < res.size())
+	{
+		bool closerToXMin = res[currentIdx].x < halfWay.x;
+		bool closerToYMin = res[currentIdx].y < halfWay.y;
+		float bestDist = 1.e10;
+		float bestAng = 360.;
+		int bestPair = currentIdx;
+		for (int i = 0; i < res.size(); ++i)
+		{
+			if (i == currentIdx) continue;
+			auto diff = res[i] - res[currentIdx];
+			auto d = diff.SquareLength();
+			auto tanAng = fabsf(diff.y) / fabsf(diff.x);
+			auto ang = atanf(tanAng);
+
+			bool positiveX = diff.x > 0.;
+			bool positiveY = diff.y > 0.;
+			bool zeroX = fabsf(diff.x) < 1e-5;
+			bool zeroY = fabsf(diff.y) < 1e-5;
+
+
+			if (closerToYMin)
+			{
+				//Calculate the distance between the points
+				if (zeroX) ang = positiveY ? 2 * PI : 4 * PI;
+				else if (zeroY) ang = positiveX ? PI : 3 * PI;
+				else if (positiveY && positiveX)	ang += PI;
+				else if (!positiveX && positiveY) ang += 2 * PI;
+				else if (!positiveX && !positiveY) ang += 3 * PI;
+
+			}
+			else
+			{
+				if (zeroX) ang = positiveY ? PI : 3 * PI;
+				else if (zeroY) ang = positiveX ? 4 * PI : 2 * PI;
+				else if (!positiveX && positiveY) ang += PI;
+				else if (!positiveX && !positiveY) ang += 2 * PI;
+				else if (positiveX && !positiveY) ang += 3 * PI;
+
+			}
+
+
+			if (ang < bestAng || (ang == bestAng && bestDist > d))
+			{
+
+				bestDist = d;
+				bestAng = ang;
+				bestPair = i;
+			}			
+		}
+
+		if (bestPair != currentIdx)
+		{
+			std::pair<IfcVector2, IfcVector2> joint = { res[currentIdx], res[bestPair] };
+			pairs.push_back(joint);
+			currentIdx = bestPair;
+		}
+		++count;
+	}
+	return pairs;
+}
+
 void CloseAllWindows(
 	std::vector<TempOpening> &openings,
 	TempMesh& curmesh,
-	const IfcVector3 &dir, 
+	const IfcVector3 &ext_dir,
+	const TempMesh& curve,
+	const IfcVector3 &dir,
 	const bool dump)
 {
-	IfcVector3 ext_dir = dir;
 	static int opening_count = 0;
 	std::vector<std::pair<BoundingBox, std::vector<std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>>>>> openingJoints;
 	openingJoints.reserve(openings.size());
 	
+	//Prepare for a plane to project onto 2D
+
+
+	//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
+	//but for some reason projecting onto the extrusion direction gives wrong looking results.
+	IfcVector3 ndir(3, 4, 0);
+	ndir.z = (ext_dir.x*ndir.x + ext_dir.y*ndir.y) / -ext_dir.z;
+	ndir.Normalize();
+
+
+	//define my x and y axis.
+	IfcVector3 xAxis;
+
+	if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
+	{
+		//can't use 1 0 0 as the x axis
+		xAxis.x = 0; xAxis.y = 1; xAxis.z = 0;
+	}
+	else
+	{
+		xAxis.x = 1; xAxis.y = 0; xAxis.z = 0;
+	}
+
+	xAxis = (xAxis - (xAxis * ndir)*ndir);
+	xAxis.Normalize();
+
+
+	//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
+	IfcVector3 yAxis = xAxis ^ ndir;
+
 	BOOST_FOREACH(TempOpening& opening, openings) {
 		/*
 		* Pair up the wall points
@@ -1133,7 +1267,8 @@ void CloseAllWindows(
 
 						auto vec = (point - otherPoint).Normalize();
 						//dot product with the extrusion vector
-						auto dotProd = vec * ext_dir.Normalize();
+						IfcVector3 normalizedDir = ext_dir;
+						auto dotProd = vec * normalizedDir.Normalize();
 						auto selfSqred = vec*vec;
 
 						if ((dotProd - selfSqred) < 1e-06)
@@ -1219,37 +1354,7 @@ void CloseAllWindows(
 			}
 
 			//Attempt an isometric projection of the wall points to make it 2D
-			std::vector<IfcVector2> wallpoints2d;
-
-
-			//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
-			//but for some reason projecting onto the extrusion direction gives wrong looking results.
-			IfcVector3 ndir(3, 4, 0);
-			ndir.z = (ext_dir.x*ndir.x + ext_dir.y*ndir.y) / -ext_dir.z;
-			ndir.Normalize();
-
-
-			//define my x and y axis.
-			IfcVector3 xAxis;
-
-			if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
-			{
-				//can't use 1 0 0 as the x axis
-				xAxis.x = 0; xAxis.y = 1; xAxis.z = 0;
-			}
-			else
-			{
-				xAxis.x = 1; xAxis.y = 0; xAxis.z = 0;
-			}
-
-			xAxis = (xAxis - (xAxis * ndir)*ndir);
-			xAxis.Normalize();
-
-
-			//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
-			IfcVector3 yAxis = xAxis ^ ndir;
-
-			
+			std::vector<IfcVector2> wallpoints2d;		
 			
 			std::vector<std::pair<IfcVector2, std::pair<IfcVector3, IfcVector3>>> wallPoints2d;
 			IfcVector2 wpmax(-1e10, -1e10), wpmin(1e10, 1e10);
@@ -1306,7 +1411,7 @@ void CloseAllWindows(
 			int currentIdx = 0;
 
 
-			const float PI = acos(-1);
+
 			auto halfWay = (wpmax - wpmin) * 0.5 + wpmin;
 			if (dump)
 			{
@@ -1349,21 +1454,7 @@ void CloseAllWindows(
 						else if (positiveY && positiveX)	ang += PI;
 						else if (!positiveX && positiveY) ang += 2 * PI;
 						else if (!positiveX && !positiveY) ang += 3 * PI;
-
-
-						if (ang < bestAng)
-						{
-
-							bestDist = d;
-							bestAng = ang;
-							bestPair = i;
-						}
-						else if (ang == bestAng && bestDist > d)
-						{
-							bestDist = d;
-							bestAng = ang;
-							bestPair = i;
-						}
+					
 					}
 					else
 					{
@@ -1373,20 +1464,15 @@ void CloseAllWindows(
 						else if (!positiveX && !positiveY) ang += 2 * PI;
 						else if (positiveX && !positiveY) ang += 3 * PI;
 
+					}
 
 
-						if (ang < bestAng)
-						{
-							bestDist = d;
-							bestAng = ang;
-							bestPair = i;
-						}
-						else if (ang == bestAng && bestDist > d)
-						{
-							bestDist = d;
-							bestAng = ang;
-							bestPair = i;
-						}
+					if (ang < bestAng || (ang == bestAng && bestDist > d))
+					{
+
+						bestDist = d;
+						bestAng = ang;
+						bestPair = i;
 					}
 
 					if (dumpConsole)
@@ -1397,7 +1483,6 @@ void CloseAllWindows(
 							<< "( " << (zeroX ? "zeroX" : (positiveX ? "posX" : "negX")) << "," << (zeroY ? "zeroY" : (positiveY ? "posY" : "negY")) << ") " << std::endl;
 					}
 					
-
 				}
 				if (bestPair != currentIdx)
 				{
@@ -1424,12 +1509,6 @@ void CloseAllWindows(
 					count++;
 
 
-					//curmesh.verts.push_back(wallPoints2d[currentIdx].second.first);
-					//curmesh.verts.push_back(wallPoints2d[bestPair].second.first);
-					//curmesh.verts.push_back(wallPoints2d[bestPair].second.second);
-					//curmesh.verts.push_back(wallPoints2d[currentIdx].second.second);
-					//curmesh.vertcnt.push_back(4);
-
 					std::vector< IfcVector2> vertices2d;
 					std::vector< IfcVector3> vertices3d;
 					vertices3d.push_back(wallPoints2d[currentIdx].second.first);
@@ -1449,7 +1528,7 @@ void CloseAllWindows(
 				else
 				{
 					if (dumpConsole)
-						std::cout << "Could nto find a pair for " << currentIdx << std::endl;
+						std::cout << "Could not find a pair for " << currentIdx << std::endl;
 				}
 			}
 		}
@@ -1458,12 +1537,75 @@ void CloseAllWindows(
 		++opening_count;
 	}//BOOST_FOREACH(TempOpening& opening, openings)
 
+
+	//Get contour of mesh
+	auto meshContour = Get2DContour(curve, ndir, xAxis, yAxis, dir);
+
+	if (dump)
+	{
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\MeshContour.obj";
+		std::ofstream outputStream(fileName.c_str());
+		int vCount = 0;
+		for (const auto v : meshContour)
+		{
+			outputStream << "v " << v.first.x << " " << v.first.y << " 0" << std::endl;
+			outputStream << "v " << v.second.x << " " << v.second.y << " 0" << std::endl;
+			vCount += 2;
+
+		}
+		for (int i = 0; i < vCount; i += 4)
+		{
+			outputStream << "f ";
+			if (i + 2 >= vCount)
+			{
+
+				for (int j = i + 1; j <= vCount; ++j)
+					outputStream << j << " ";
+
+			}
+			else
+			{
+				for (int j = i + 1; j <= i + 4; ++j)
+					outputStream << j << " ";
+			}
+			outputStream << std::endl;
+
+		}
+		outputStream.close();
+	}
+
+	if (dump)
+	{
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\Mesh.obj";
+		std::ofstream outputStream(fileName.c_str());
+		TempMesh tmp = curve;
+		aiMesh *mesh = tmp.ToMesh();
+		for (int i = 0; i < mesh->mNumVertices; ++i)
+		{
+			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+		}
+
+		for (int i = 0; i < mesh->mNumFaces; ++i)
+		{
+			auto face = mesh->mFaces[i];
+			outputStream << "f";
+			for (int j = 0; j < face.mNumIndices; ++j)
+			{
+				outputStream << " " << face.mIndices[j] + 1;
+			}
+			outputStream << std::endl;
+		}
+		outputStream.close();
+	}
+
+
 	/*
 	* Now we've found all the joints, check if there are any overlaps  between openings and remove any of those joints
 	*/
 
 	for (int i = 0; i < openingJoints.size() ; ++i)
 	{
+
 		std::vector<bool> toIgnore(openingJoints[i].second.size(), false);
 		for (int j = 0; j < openingJoints.size(); ++j)
 		{
@@ -1495,6 +1637,28 @@ void CloseAllWindows(
 				}	
 				std::cout << "WallPoint end" << std::endl;
 			}
+		}
+
+		//Check with mesh contour
+		for(int j = 0; j < meshContour.size(); ++j)
+		{
+			for (int k = 0; k < openingJoints[i].second.size(); ++k)
+			{
+				std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>> wallPointGroup = openingJoints[i].second[k];
+
+				BoundingBox wallPbbox, meshContourbbox, region;
+				wallPbbox.first.x = wallPointGroup.first[0].x < wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
+				wallPbbox.first.y = wallPointGroup.first[0].y < wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
+				wallPbbox.second.x = wallPointGroup.first[0].x > wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
+				wallPbbox.second.y = wallPointGroup.first[0].y > wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
+
+				meshContourbbox.first.x = meshContour[j].first.x <  meshContour[j].second.x ? meshContour[j].first.x : meshContour[j].second.x;
+				meshContourbbox.first.y = meshContour[j].first.y <  meshContour[j].second.y ? meshContour[j].first.y : meshContour[j].second.y;
+				meshContourbbox.second.x = meshContour[j].first.x >  meshContour[j].second.x ? meshContour[j].first.x : meshContour[j].second.x;
+				meshContourbbox.second.y = meshContour[j].first.y >  meshContour[j].second.y ? meshContour[j].first.y : meshContour[j].second.y;
+				toIgnore[k] = toIgnore[k] || isIntersect(meshContourbbox, wallPbbox, region);
+			}
+			
 		}
 		
 		for (int j = 0; j < toIgnore.size(); ++j)
