@@ -1686,19 +1686,10 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 	static int count = -1;	
 	if(dump) ++count;
 
-	if (dump)
-	{
-		std::cout << " Contour: size - " << contour_flat.size() << std::endl;
-		for (const auto &v : contour_flat)
-		{
-			std::cout << v.x << " " << v.y << std::endl;
-		}
-	}
+	int openingsCount = -1;
 
     BOOST_FOREACH(TempOpening& opening,openings) {
-	/*for (int i = 0; i < 1; ++i){
-		TempOpening &opening = openings[i];*/
-
+		++openingsCount;
         // extrusionDir may be 0,0,0 on case where the opening mesh is not an
         // IfcExtrudedAreaSolid but something else (i.e. a brep)
         IfcVector3 norm_extrusion_dir = opening.extrusionDir;
@@ -1733,7 +1724,8 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
         }
 		if (dump)
 		{
-			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile" + std::to_string(count) + ".obj";
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile" 
+				+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
 			std::ofstream outputStream(fileName.c_str());
 			aiMesh *mesh = profile_data->ToMesh();
 			for (int i = 0; i < mesh->mNumVertices; ++i)
@@ -1846,7 +1838,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 			for (int i = 0; i < 2; ++i)
 			{
 				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile" 
-					+ std::to_string(count) + "_" + std::to_string(i)+".obj";
+					+ std::to_string(openingsCount) + "_" + std::to_string(count) + "_" + std::to_string(i) + ".obj";
 				std::ofstream outputStream(fileName.c_str());
 				for (const auto &point : vertices[i])
 				{
@@ -1883,9 +1875,10 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
         }
 
         // TODO: This epsilon may be too large
-        const IfcFloat epsilon = std::fabs(dmax-dmin) * 0.0001;
+        const IfcFloat epsilon = std::fabs(dmax-dmin) * 0.1;
+		std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
         if (!is_2d_source && check_intersection && (0 < dmin-epsilon || 0 > dmax+epsilon)) {
-            continue;
+			continue;
         }
 
         BoundingBox bb = BoundingBox(vpmin,vpmax);

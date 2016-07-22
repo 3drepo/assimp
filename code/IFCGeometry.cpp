@@ -640,7 +640,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 				outputStream.close();
 			}
 			
-            if(/* (in[i] - in[next]).Length() > diag * 0.1 && */GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, false) ) {
+			if (/* (in[i] - in[next]).Length() > diag * 0.1 && */GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, dump && cutCount == 11)) {
                 ++sides_with_openings;
 				
             }
@@ -779,7 +779,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					outputStream.close();
 				}
 
-                if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, true) ) {
+                if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir) ) {
                     ++sides_with_v_openings;
                 }
 
