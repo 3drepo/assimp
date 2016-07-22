@@ -1017,10 +1017,19 @@ size_t CloseWindows(ContourVector& contours,
 
 bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox &overlapRegion)
 {
-	bool overlapX = bbox1.first.x <= bbox2.first.x && bbox2.first.x < bbox1.second.x
-					|| bbox1.first.x >= bbox2.first.x && bbox1.first.x < bbox2.second.x;
-	bool overlapY = bbox1.first.y <= bbox2.first.y && bbox2.first.y < bbox1.second.y
-					|| bbox1.first.y >= bbox2.first.y && bbox1.first.y < bbox2.second.y;
+	auto bbox1lengthx = bbox1.second.x - bbox1.first.x;
+	auto bbox1lengthy = bbox1.second.y - bbox1.first.y;
+	auto bbox2lengthx = bbox2.second.x - bbox2.first.x;
+	auto bbox2lengthy = bbox2.second.y - bbox2.first.y;
+
+	//if either boxes has no length along the axis it can only be touching at best.
+
+	bool overlapX = (bbox1lengthx > 1e-5 && bbox2lengthx > 1e-5) 
+					&& (bbox1.first.x <= bbox2.first.x && bbox2.first.x < bbox1.second.x
+					|| bbox1.first.x >= bbox2.first.x && bbox1.first.x < bbox2.second.x);
+	bool overlapY = (bbox1lengthy > 1e-5 && bbox2lengthy > 1e-5)
+					&& (bbox1.first.y <= bbox2.first.y && bbox2.first.y < bbox1.second.y
+					|| bbox1.first.y >= bbox2.first.y && bbox1.first.y < bbox2.second.y);
 	
 	//boxes are also considered overlapped if their edges touches each other (corner does not count)
 	bool touchingX = fabsf(bbox1.first.x - bbox2.first.x) < 1e-5 || fabsf(bbox1.first.x - bbox2.second.x) < 1e-5
