@@ -865,8 +865,13 @@ size_t CloseWindows(ContourVector& contours,
     // on both sides of the wall. If it doesn't (which would be a bug anyway)
     // wrong geometry may be generated.
     for (ContourVector::iterator it = contours.begin(), end = contours.end(); it != end; ++it) {
-		std::cout << " Contour bb: (" << it->bb.first.x << "," << it->bb.first.y 
-			<< ")(" << it->bb.second.x << "," << it->bb.second.y << ")" << std::endl;
+		if (dump)
+		{
+			std::cout << " Contour bb: (" << it->bb.first.x << "," << it->bb.first.y
+				<< ")(" << it->bb.second.x << "," << it->bb.second.y << ")" << std::endl;
+		}
+
+
         if ((*it).IsInvalid()) {
             continue;
         }
@@ -1042,9 +1047,9 @@ bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox
 
 	bool overlap = overlapX && overlapY || touchingX && overlapY || touchingY && overlapX;
 
-	std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ") " ;
+	/*std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ") " ;
 	std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ") " ;
-	std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " ) Touching ( "<<touchingX << " , "<< touchingY<<")" << std::endl;
+	std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " ) Touching ( "<<touchingX << " , "<< touchingY<<")" << std::endl;*/
 	if (overlap)
 	{
 		overlapRegion.first.x = bbox1.first.x >  bbox2.first.x ?  bbox1.first.x : bbox2.first.x;
@@ -1059,8 +1064,8 @@ bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox
 		//std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ")" << std::endl;
 		//std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ")" << std::endl;
 		//std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " )" << std::endl;
-		std::cout << " overlapRegion: (" << overlapRegion.first.x << "," << overlapRegion.first.y << ") - (" << overlapRegion.second.x << "," << overlapRegion.second.y << ")" << std::endl;
-		std::cout << " diff: (" << diff.x << "," << diff.y << std::endl;
+		/*std::cout << " overlapRegion: (" << overlapRegion.first.x << "," << overlapRegion.first.y << ") - (" << overlapRegion.second.x << "," << overlapRegion.second.y << ")" << std::endl;
+		std::cout << " diff: (" << diff.x << "," << diff.y << std::endl;*/
 	}
 	
 
@@ -1511,10 +1516,15 @@ void CloseAllWindows(
 
 					std::vector< IfcVector2> vertices2d;
 					std::vector< IfcVector3> vertices3d;
-					vertices3d.push_back(wallPoints2d[currentIdx].second.first);
+
+					//FIXME: normals are pretty non deterministic here.
 					vertices3d.push_back(wallPoints2d[bestPair].second.first);
-					vertices3d.push_back(wallPoints2d[bestPair].second.second);
+					vertices3d.push_back(wallPoints2d[currentIdx].second.first);
 					vertices3d.push_back(wallPoints2d[currentIdx].second.second);
+					vertices3d.push_back(wallPoints2d[bestPair].second.second);
+					
+
+					
 
 					vertices2d.push_back(wallPoints2d[currentIdx].first);
 					vertices2d.push_back(wallPoints2d[bestPair].first);
@@ -1846,11 +1856,34 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 
     IfcVector3 wall_extrusion_axis_norm = wall_extrusion_axis;
     wall_extrusion_axis_norm.Normalize();
-	std::cout << "#openings : " << openings.size() << std::endl; 
+	if (dump)
+		std::cout << "#openings : " << openings.size() << std::endl; 
 	static int count = -1;	
 	if(dump) ++count;
 
 	int openingsCount = -1;
+	if (dump)
+	{
+		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingMesh"
+			+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
+		std::ofstream outputStream(fileName.c_str());
+		aiMesh *mesh = curmesh.ToMesh();
+		for (int i = 0; i < mesh->mNumVertices; ++i)
+		{
+			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+		}
+
+		for (int i = 0; i < mesh->mNumFaces; ++i)
+		{
+			auto face = mesh->mFaces[i];
+			outputStream << "f";
+			for (int j = 0; j < face.mNumIndices; ++j)
+			{
+				outputStream << " " << face.mIndices[j] + 1;
+			}
+			outputStream << std::endl;
+		}
+	}
 
     BOOST_FOREACH(TempOpening& opening,openings) {
 		++openingsCount;
@@ -1867,25 +1900,29 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
         TempMesh* profile_data =  opening.profileMesh.get();
         bool is_2d_source = false;
 
-        if (opening.profileMesh2D && norm_extrusion_dir.SquareLength() > 0) {
-
-            if(std::fabs(norm_extrusion_dir * wall_extrusion_axis_norm) < 0.1) {
-                // horizontal extrusion
-                if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
-                    profile_data = opening.profileMesh2D.get();
-                    is_2d_source = true;
-					std::cout << "2D Source - Horizontal Extrusion" << std::endl;
-                }
-            }
-            else {
-                // vertical extrusion
-                if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
-                    profile_data = opening.profileMesh2D.get();
-                    is_2d_source = true;
-					std::cout << "2D Source - Vertical Extrusion" << std::endl;
-                }
-            }
-        }
+		/*
+		* Using the 2D Profile does not work as  it neglects where abouts is the geometry on the 3rd dimension
+		* Some geometry are being extruded when they, in fact, does not intersect in 3D Space!
+		*/
+        //if (opening.profileMesh2D && norm_extrusion_dir.SquareLength() > 0) {
+		
+     //       if(std::fabs(norm_extrusion_dir * wall_extrusion_axis_norm) < 0.1) {
+     //           // horizontal extrusion
+     //           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
+     //               profile_data = opening.profileMesh2D.get();
+     //               is_2d_source = true;
+					//std::cout << "2D Source - Horizontal Extrusion" << std::endl;
+     //           }
+     //       }
+     //       else {
+     //           // vertical extrusion
+     //           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
+     //               profile_data = opening.profileMesh2D.get();
+     //               is_2d_source = true;
+					//std::cout << "2D Source - Vertical Extrusion" << std::endl;
+     //           }
+     //       }
+        //}
 		if (dump)
 		{
 			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile" 
@@ -2040,7 +2077,8 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 
         // TODO: This epsilon may be too large
         const IfcFloat epsilon = std::fabs(dmax-dmin) * 0.1;
-		std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
+		if (dump)
+			std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
         if (!is_2d_source && check_intersection && (0 < dmin-epsilon || 0 > dmax+epsilon)) {
 			continue;
         }
@@ -2142,7 +2180,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
     // not the cause, for example if all the opening candidates don't intersect
     // this surface or point into a direction perpendicular to it.
 	if (dump);
-	std::cout << "contour empty? " << contours.size();
+		std::cout << "contour size:" << contours.size();
     if (contours.empty()) {
         return false;
     }
