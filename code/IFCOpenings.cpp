@@ -1022,7 +1022,7 @@ size_t CloseWindows(ContourVector& contours,
     return closed;
 }
 
-bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox &overlapRegion)
+bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox &overlapRegion, const bool dump = false)
 {
 	auto bbox1lengthx = bbox1.second.x - bbox1.first.x;
 	auto bbox1lengthy = bbox1.second.y - bbox1.first.y;
@@ -1037,19 +1037,28 @@ bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox
 	bool overlapY = (bbox1lengthy > 1e-5 && bbox2lengthy > 1e-5)
 					&& (bbox1.first.y <= bbox2.first.y && bbox2.first.y < bbox1.second.y
 					|| bbox1.first.y >= bbox2.first.y && bbox1.first.y < bbox2.second.y);
+
 	
 	//boxes are also considered overlapped if their edges touches each other (corner does not count)
 	bool touchingX = fabsf(bbox1.first.x - bbox2.first.x) < 1e-5 || fabsf(bbox1.first.x - bbox2.second.x) < 1e-5
-		|| fabsf(bbox1.second.x - bbox2.second.x) < 1e-5 || fabsf(bbox1.second.x - bbox2.first.x) < 1e-5;
+		|| fabsf(bbox1.second.x - bbox2.second.x) < 1e-5 || fabsf(bbox1.second.x - bbox2.first.x) < 1e-5
+		|| (bbox1.first.x < bbox2.first.x && bbox1.second.x > bbox2.second.x) ||
+		(bbox2.first.x < bbox1.first.x && bbox2.second.x > bbox1.second.x);
 	
 	bool touchingY = fabsf(bbox1.first.y - bbox2.first.y) < 1e-5 || fabsf(bbox1.first.y - bbox2.second.y) < 1e-5
-		|| fabsf(bbox1.second.y - bbox2.second.y) < 1e-5 || fabsf(bbox1.second.y - bbox2.first.y) < 1e-5;
+		|| fabsf(bbox1.second.y - bbox2.second.y) < 1e-5 || fabsf(bbox1.second.y - bbox2.first.y) < 1e-5
+		|| (bbox1.first.y < bbox2.first.y && bbox1.second.y > bbox2.second.y) ||
+		(bbox2.first.y < bbox1.first.y && bbox2.second.y > bbox1.second.y);
 
 	bool overlap = overlapX && overlapY || touchingX && overlapY || touchingY && overlapX;
 
-	/*std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ") " ;
-	std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ") " ;
-	std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " ) Touching ( "<<touchingX << " , "<< touchingY<<")" << std::endl;*/
+	if (dump)
+	{
+		std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ") " ;
+		std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ") " ;
+		std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " ) Touching ( "<<touchingX << " , "<< touchingY<<")" << std::endl;
+	}
+	
 	if (overlap)
 	{
 		overlapRegion.first.x = bbox1.first.x >  bbox2.first.x ?  bbox1.first.x : bbox2.first.x;
@@ -1173,31 +1182,21 @@ std::vector<std::pair<IfcVector2, IfcVector2>> Get2DContour(
 	return pairs;
 }
 
-void CloseAllWindows(
-	std::vector<TempOpening> &openings,
-	TempMesh& curmesh,
+
+void getProjectionVectors(
 	const IfcVector3 &ext_dir,
-	const TempMesh& curve,
-	const IfcVector3 &dir,
-	const bool dump)
+	IfcVector3 &ndir,
+	IfcVector3 &xAxis,
+	IfcVector3 &yAxis)
 {
-	static int opening_count = 0;
-	std::vector<std::pair<BoundingBox, std::vector<std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>>>>> openingJoints;
-	openingJoints.reserve(openings.size());
-	
-	//Prepare for a plane to project onto 2D
-
-
 	//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
 	//but for some reason projecting onto the extrusion direction gives wrong looking results.
-	IfcVector3 ndir(3, 4, 0);
+	ndir = IfcVector3(3, 4, 0);
 	ndir.z = (ext_dir.x*ndir.x + ext_dir.y*ndir.y) / -ext_dir.z;
 	ndir.Normalize();
 
 
 	//define my x and y axis.
-	IfcVector3 xAxis;
-
 	if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
 	{
 		//can't use 1 0 0 as the x axis
@@ -1213,7 +1212,27 @@ void CloseAllWindows(
 
 
 	//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
-	IfcVector3 yAxis = xAxis ^ ndir;
+	yAxis = xAxis ^ ndir;
+}
+
+
+void CloseAllWindows(
+	std::vector<TempOpening> &openings,
+	TempMesh& curmesh,
+	const IfcVector3 &ext_dir,
+	const TempMesh& curve,
+	const IfcVector3 &dir,
+	const bool dump)
+{
+	static int opening_count = 0;
+	std::vector<std::pair<BoundingBox, std::vector<std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>>>>> openingJoints;
+	openingJoints.reserve(openings.size());
+	
+	IfcVector3 ndir, xAxis, yAxis;
+	//Prepare for a plane to project onto 2D
+	getProjectionVectors(ext_dir, ndir, xAxis, yAxis);
+
+	
 
 	BOOST_FOREACH(TempOpening& opening, openings) {
 		/*
@@ -1643,13 +1662,14 @@ void CloseAllWindows(
 					wallPbbox.first.y = wallPointGroup.first[0].y < wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
 					wallPbbox.second.x = wallPointGroup.first[0].x > wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
 					wallPbbox.second.y = wallPointGroup.first[0].y > wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
-					toIgnore[k] = toIgnore[k] || isIntersect(overlapRegion, wallPbbox, dummy);
+					toIgnore[k] = toIgnore[k] || isIntersect(overlapRegion, wallPbbox, dummy, dump);
 				}	
 				std::cout << "WallPoint end" << std::endl;
 			}
 		}
 
 		//Check with mesh contour
+		std::cout << "[" << i << "]" << " Contour check..." << std::endl;
 		for(int j = 0; j < meshContour.size(); ++j)
 		{
 			for (int k = 0; k < openingJoints[i].second.size(); ++k)
@@ -1666,10 +1686,11 @@ void CloseAllWindows(
 				meshContourbbox.first.y = meshContour[j].first.y <  meshContour[j].second.y ? meshContour[j].first.y : meshContour[j].second.y;
 				meshContourbbox.second.x = meshContour[j].first.x >  meshContour[j].second.x ? meshContour[j].first.x : meshContour[j].second.x;
 				meshContourbbox.second.y = meshContour[j].first.y >  meshContour[j].second.y ? meshContour[j].first.y : meshContour[j].second.y;
-				toIgnore[k] = toIgnore[k] || isIntersect(meshContourbbox, wallPbbox, region);
+				toIgnore[k] = toIgnore[k] || isIntersect(meshContourbbox, wallPbbox, region, dump);
 			}
 			
 		}
+		std::cout << "[" << i << "]" << " Contour end" << std::endl;
 		
 		for (int j = 0; j < toIgnore.size(); ++j)
 		{
@@ -1817,6 +1838,29 @@ IfcMatrix4 ProjectOntoPlane(std::vector<IfcVector2>& out_contour, const TempMesh
     return m;
 }
 
+BoundingBox GetProjectedBoundingBox(
+	const TempMesh& curmesh, 
+	const IfcVector3 &ndir,
+	const IfcVector3 &xaxis,
+	const IfcVector3 &yaxis )
+{
+	BoundingBox res;
+	res.first.x = 1e10;
+	res.first.y = 1e10;
+	res.second.x = -1e10;
+	res.second.x = -1e10;
+	for (int i = 0; i < curmesh.verts.size(); ++i)
+	{
+		auto pointOnPlane = (curmesh.verts[i] - (curmesh.verts[i] * ndir)*ndir);
+		auto point2d = IfcVector2(pointOnPlane*xaxis, pointOnPlane*yaxis);
+
+		res.first = std::min(res.first, point2d);
+		res.second = std::max(res.second, point2d);
+
+	}
+	return res;
+}
+
 // ------------------------------------------------------------------------------------------------
 bool GenerateOpenings(std::vector<TempOpening>& openings,
     const std::vector<IfcVector3>& nors,
@@ -1843,6 +1887,11 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
         return false;
     }
 
+	IfcVector3 ndir, xAxis, yAxis;
+	//Prepare for a plane to project onto 2D
+	getProjectionVectors(wall_extrusion_axis, ndir, xAxis, yAxis);
+
+	const BoundingBox orgMesh2D = GetProjectedBoundingBox(curmesh, ndir, xAxis, yAxis);
 	
 
     // Obtain inverse transform for getting back to world space later on
@@ -1883,49 +1932,84 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 			}
 			outputStream << std::endl;
 		}
+
+		outputStream.close();
+
+		 fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingMesh2d"
+			+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
+		 outputStream = std::ofstream(fileName.c_str());
+		
+		for (int i = 0; i < curmesh.verts.size(); ++i)
+		{
+			
+			auto pointOnPlane = (curmesh.verts[i] - (curmesh.verts[i] * ndir)*ndir);
+			auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
+
+			outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
+		}
+
+		for (int i = 0; i < curmesh.verts.size(); i+=4)
+		{
+
+			outputStream << "f";
+			if (i + 4 <= curmesh.verts.size())
+			{
+				outputStream << " " << i << " " << i+1 << " " << i+2 << " " << i+3;
+			}
+			else
+			{
+				for (int j = i; j < curmesh.verts.size(); ++j)
+					outputStream << " " << i;
+			}
+			outputStream << std::endl;
+		}
 	}
 
-    BOOST_FOREACH(TempOpening& opening,openings) {
+	BOOST_FOREACH(TempOpening& opening, openings) {
 		++openingsCount;
-        // extrusionDir may be 0,0,0 on case where the opening mesh is not an
-        // IfcExtrudedAreaSolid but something else (i.e. a brep)
-        IfcVector3 norm_extrusion_dir = opening.extrusionDir;
-        if (norm_extrusion_dir.SquareLength() > 1e-10) {
-            norm_extrusion_dir.Normalize();
-        }
-        else {
-            norm_extrusion_dir = IfcVector3();
-        }
-		
-        TempMesh* profile_data =  opening.profileMesh.get();
-        bool is_2d_source = false;
+		// extrusionDir may be 0,0,0 on case where the opening mesh is not an
+		// IfcExtrudedAreaSolid but something else (i.e. a brep)
+		IfcVector3 norm_extrusion_dir = opening.extrusionDir;
+		if (norm_extrusion_dir.SquareLength() > 1e-10) {
+			norm_extrusion_dir.Normalize();
+		}
+		else {
+			norm_extrusion_dir = IfcVector3();
+		}
+
+		TempMesh* profile_data = opening.profileMesh.get();
+
+		const BoundingBox openingBbox = GetProjectedBoundingBox(*profile_data, ndir, xAxis, yAxis);
+
+
+		bool is_2d_source = false;
 
 		/*
 		* Using the 2D Profile does not work as  it neglects where abouts is the geometry on the 3rd dimension
 		* Some geometry are being extruded when they, in fact, does not intersect in 3D Space!
 		*/
-        //if (opening.profileMesh2D && norm_extrusion_dir.SquareLength() > 0) {
-		
-     //       if(std::fabs(norm_extrusion_dir * wall_extrusion_axis_norm) < 0.1) {
-     //           // horizontal extrusion
-     //           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
-     //               profile_data = opening.profileMesh2D.get();
-     //               is_2d_source = true;
-					//std::cout << "2D Source - Horizontal Extrusion" << std::endl;
-     //           }
-     //       }
-     //       else {
-     //           // vertical extrusion
-     //           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
-     //               profile_data = opening.profileMesh2D.get();
-     //               is_2d_source = true;
-					//std::cout << "2D Source - Vertical Extrusion" << std::endl;
-     //           }
-     //       }
-        //}
+		//if (opening.profileMesh2D && norm_extrusion_dir.SquareLength() > 0) {
+
+		//       if(std::fabs(norm_extrusion_dir * wall_extrusion_axis_norm) < 0.1) {
+		//           // horizontal extrusion
+		//           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
+		//               profile_data = opening.profileMesh2D.get();
+		//               is_2d_source = true;
+		//std::cout << "2D Source - Horizontal Extrusion" << std::endl;
+		//           }
+		//       }
+		//       else {
+		//           // vertical extrusion
+		//           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
+		//               profile_data = opening.profileMesh2D.get();
+		//               is_2d_source = true;
+		//std::cout << "2D Source - Vertical Extrusion" << std::endl;
+		//           }
+		//       }
+		//}
 		if (dump)
 		{
-			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile" 
+			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile"
 				+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
 			std::ofstream outputStream(fileName.c_str());
 			aiMesh *mesh = profile_data->ToMesh();
@@ -1944,7 +2028,41 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 				}
 				outputStream << std::endl;
 			}
+
+
+			fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile2d"
+				+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
+			outputStream = std::ofstream(fileName.c_str());
+
+			for (int i = 0; i < profile_data->verts.size(); ++i)
+			{
+
+				auto pointOnPlane = (profile_data->verts[i] - (profile_data->verts[i] * ndir)*ndir);
+				auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
+
+				outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
+			}
+
+			for (int i = 0; i < profile_data->verts.size(); i += 4)
+			{
+
+				outputStream << "f";
+				if (i + 4 <= profile_data->verts.size())
+				{
+					outputStream << " " << i << " " << i + 1 << " " << i + 2 << " " << i + 3;
+				}
+				else
+				{
+					for (int j = i; j < profile_data->verts.size(); ++j)
+						outputStream << " " << i;
+				}
+				outputStream << std::endl;
+			}
 		}
+		BoundingBox dummy;		
+		if (!isIntersect(orgMesh2D, openingBbox, dummy)) continue;
+		
+
         std::vector<IfcVector3> profile_verts = profile_data->verts;
         std::vector<unsigned int> profile_vertcnts = profile_data->vertcnt;
         if(profile_verts.size() <= 2) {
@@ -2075,13 +2193,13 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
             continue;
         }
 
-        // TODO: This epsilon may be too large
-        const IfcFloat epsilon = std::fabs(dmax-dmin) * 0.0001;
-		if (dump)
-			std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
-        if (!is_2d_source && check_intersection && (0 < dmin-epsilon || 0 > dmax+epsilon)) {
-			continue;
-        }
+  //      // TODO: This epsilon may be too large
+  //      const IfcFloat epsilon = std::fabs(dmax-dmin) * 0.0001;
+		//if (dump)
+		//	std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
+  //      if (!is_2d_source && check_intersection && (0 < dmin-epsilon || 0 > dmax+epsilon)) {
+		//	continue;
+  //      }
 
         BoundingBox bb = BoundingBox(vpmin,vpmax);
 

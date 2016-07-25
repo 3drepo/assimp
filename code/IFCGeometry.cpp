@@ -540,10 +540,10 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
         }
         return;
     }
-
+	
 	static int fileCount = 0;
 
-	bool dump = !collect_openings;
+	bool dump = false;// !collect_openings && fileCount == 0;
 
     result.verts.reserve(curve.verts.size()*(has_area ? 4 : 2));
     result.vertcnt.reserve(curve.verts.size() + 2);
@@ -677,7 +677,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 	
 	if (openings) {
 		TempMesh tmpM;
-		CloseAllWindows(*conv.apply_openings, tmpM, extrusionDir, curve, dir, false);
+		CloseAllWindows(*conv.apply_openings, tmpM, extrusionDir, curve, dir, dump);
 		if (!tmpM.IsEmpty())
 		{
 			if (dump)
@@ -869,7 +869,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
     }
 	
 
-	if (!result.IsEmpty() )
+	if (!result.IsEmpty() &&false)
 	{
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\FinalMesh" + std::to_string(++fileCount) + ".obj";
 		std::ofstream outputStream(fileName.c_str());
