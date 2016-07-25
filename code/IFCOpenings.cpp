@@ -2076,7 +2076,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
         }
 
         // TODO: This epsilon may be too large
-        const IfcFloat epsilon = std::fabs(dmax-dmin) * 0.1;
+        const IfcFloat epsilon = std::fabs(dmax-dmin) * 0.0001;
 		if (dump)
 			std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
         if (!is_2d_source && check_intersection && (0 < dmin-epsilon || 0 > dmax+epsilon)) {
