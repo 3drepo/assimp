@@ -1187,26 +1187,13 @@ void getProjectionVectors(
 	const IfcVector3 &ext_dir,
 	IfcVector3 &ndir,
 	IfcVector3 &xAxis,
-	IfcVector3 &yAxis,
-	const bool skip = false)
+	IfcVector3 &yAxis)
 {
 	//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
 	//but for some reason projecting onto the extrusion direction gives wrong looking results.
-	if (skip)
-	{
-		ndir = ext_dir;
-		
-
-	}
-	else
-	{
-		ndir = IfcVector3(3, 4, 0);
-		ndir.z = ext_dir.z == 0 ? 0 : (ext_dir.x*ndir.x + ext_dir.y*ndir.y) / -ext_dir.z;
-	}
-	
+	ndir = IfcVector3(3, 4, 0);
+	ndir.z = (ext_dir.x*ndir.x + ext_dir.y*ndir.y) / -ext_dir.z;
 	ndir.Normalize();
-
-	
 
 
 	//define my x and y axis.
@@ -1902,7 +1889,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 
 	IfcVector3 ndir, xAxis, yAxis;
 	//Prepare for a plane to project onto 2D
-	getProjectionVectors(wall_extrusion_axis, ndir, xAxis, yAxis, true);
+	getProjectionVectors(wall_extrusion_axis, ndir, xAxis, yAxis);
 
 	const BoundingBox orgMesh2D = GetProjectedBoundingBox(curmesh, ndir, xAxis, yAxis);
 	
@@ -2072,7 +2059,8 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 				outputStream << std::endl;
 			}
 		}
-
+		BoundingBox dummy;		
+		if (!isIntersect(orgMesh2D, openingBbox, dummy)) continue;
 		
 
         std::vector<IfcVector3> profile_verts = profile_data->verts;
@@ -2205,20 +2193,14 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
             continue;
         }
 
-		static int intersectionCount = 0;
-		++intersectionCount;
-		BoundingBox dummy;		
-		if (!is_2d_source && check_intersection &&!isIntersect(orgMesh2D, openingBbox, dummy))
-		{
-			//If episilon test is satisified, let it carry on.
+  //      // TODO: This epsilon may be too large
+  //      const IfcFloat epsilon = std::fabs(dmax-dmin) * 0.0001;
+		//if (dump)
+		//	std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
+  //      if (!is_2d_source && check_intersection && (0 < dmin-epsilon || 0 > dmax+epsilon)) {
+		//	continue;
+  //      }
 
-			// TODO: This epsilon may be too large
-			const IfcFloat epsilon = std::fabs(dmax - dmin) * 0.0001;
-			if (dump)
-				std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
-			if (!is_2d_source && check_intersection && (0 < dmin - epsilon || 0 > dmax + epsilon)) continue;			
-			
-		}
         BoundingBox bb = BoundingBox(vpmin,vpmax);
 
         // Skip over very small openings - these are likely projection errors
@@ -2315,7 +2297,8 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
     // Check if we still have any openings left - it may well be that this is
     // not the cause, for example if all the opening candidates don't intersect
     // this surface or point into a direction perpendicular to it.
-
+	if (dump);
+		std::cout << "contour size:" << contours.size();
     if (contours.empty()) {
         return false;
     }

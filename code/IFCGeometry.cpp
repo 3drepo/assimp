@@ -645,7 +645,6 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 				
             }
 
-			if (dump)
 			std::cout << " =============================== END =============================" << std::endl;
 			//Dump geometry After
 			
