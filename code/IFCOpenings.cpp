@@ -2208,17 +2208,27 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
 		static int intersectionCount = 0;
 		++intersectionCount;
 		BoundingBox dummy;		
+
+		const IfcFloat epsilon = std::fabs(dmax - dmin) * 0.0001;
+
+
+
 		if (!is_2d_source && check_intersection &&!isIntersect(orgMesh2D, openingBbox, dummy))
 		{
 			//If episilon test is satisified, let it carry on.
 
 			// TODO: This epsilon may be too large
 			const IfcFloat epsilon = std::fabs(dmax - dmin) * 0.0001;
-			if (dump)
-				std::cout << "epi is " << epsilon << "d: (" << dmin << "," << dmax << ")" << std::endl;
-			if (!is_2d_source && check_intersection && (0 < dmin - epsilon || 0 > dmax + epsilon)) continue;			
+			
+			if (!is_2d_source && check_intersection && (0 < dmin - epsilon || 0 > dmax + epsilon))
+			{
+				std::cout << "[FAILED] epi is " << epsilon << "d: (" << dmin << "," << dmax << "), normal: (" << nor.x << "," << nor.y << "," << nor.z << ")" << std::endl;
+				continue;
+			}
 			
 		}
+
+		std::cout << "[PASSED]epi is " << epsilon << "d: (" << dmin << "," << dmax << "), normal: (" << nor.x << "," << nor.y << "," << nor.z << ")" << std::endl;
         BoundingBox bb = BoundingBox(vpmin,vpmax);
 
         // Skip over very small openings - these are likely projection errors
@@ -2229,8 +2239,7 @@ bool GenerateOpenings(std::vector<TempOpening>& openings,
         std::vector<TempOpening*> joined_openings(1, &opening);
 
         bool is_rectangle = temp_contour.size() == 4;
-		if (dump)
-			std::cout << "is rectangle: " << is_rectangle;
+
         // See if this BB intersects or is in close adjacency to any other BB we have so far.
         for (ContourVector::iterator it = contours.begin(); it != contours.end(); ) {
             const BoundingBox& ibb = (*it).bb;

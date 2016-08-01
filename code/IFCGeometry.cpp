@@ -543,7 +543,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 	
 	static int fileCount = 0;
 
-	bool dump = false;// !collect_openings && fileCount == 0;
+	bool dump =  !collect_openings && fileCount == 0;
 
     result.verts.reserve(curve.verts.size()*(has_area ? 4 : 2));
     result.vertcnt.reserve(curve.verts.size() + 2);
@@ -640,7 +640,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 				outputStream.close();
 			}
 			
-			if (/* (in[i] - in[next]).Length() > diag * 0.1 && */GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir)) {
+			if (/* (in[i] - in[next]).Length() > diag * 0.1 && */GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, dump)) {
                 ++sides_with_openings;
 				
             }
@@ -676,9 +676,9 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
         }
     }
 	
-	if (openings) {
+	if (openings&& false) {
 		TempMesh tmpM;
-		CloseAllWindows(*conv.apply_openings, tmpM, extrusionDir, curve, dir, dump);
+		CloseAllWindows(*conv.apply_openings, tmpM, extrusionDir, curve, dir, false);
 		if (!tmpM.IsEmpty())
 		{
 			if (dump)
@@ -784,7 +784,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
 					outputStream.close();
 				}
 
-                if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, dump) ) {
+                if( GenerateOpenings(*conv.apply_openings, nors, temp, true, true, dir, false) ) {
                     ++sides_with_v_openings;
                 }
 
@@ -870,7 +870,7 @@ void ProcessExtrudedArea(const IfcExtrudedAreaSolid& solid, const TempMesh& curv
     }
 	
 
-	if (!result.IsEmpty() &&false)
+	if (!result.IsEmpty())
 	{
 		std::string fileName = "C:\\Users\\Carmen\\Desktop\\FinalMesh" + std::to_string(++fileCount) + ".obj";
 		std::ofstream outputStream(fileName.c_str());
