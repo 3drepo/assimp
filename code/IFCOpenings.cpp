@@ -10,18 +10,18 @@ with or without modification, are permitted provided that the
 following conditions are met:
 
 * Redistributions of source code must retain the above
-  copyright notice, this list of conditions and the
-  following disclaimer.
+copyright notice, this list of conditions and the
+following disclaimer.
 
 * Redistributions in binary form must reproduce the above
-  copyright notice, this list of conditions and the
-  following disclaimer in the documentation and/or other
-  materials provided with the distribution.
+copyright notice, this list of conditions and the
+following disclaimer in the documentation and/or other
+materials provided with the distribution.
 
 * Neither the name of the assimp team, nor the names of its
-  contributors may be used to endorse or promote products
-  derived from this software without specific prior
-  written permission of the assimp team.
+contributors may be used to endorse or promote products
+derived from this software without specific prior
+written permission of the assimp team.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -40,9 +40,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /** @file  IFCOpenings.cpp
  *  @brief Implements a subset of Ifc CSG operations for pouring
-  *    holes for windows and doors into walls.
+ *    holes for windows and doors into walls.
  */
-
 
 #ifndef ASSIMP_BUILD_NO_IFC_IMPORTER
 #include "IFCUtil.h"
@@ -57,1422 +56,1059 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 
 namespace Assimp {
-    namespace IFC {
+	namespace IFC {
+		using ClipperLib::ulong64;
+		// XXX use full -+ range ...
+		const ClipperLib::long64 max_ulong64 = 1518500249; // clipper.cpp / hiRange var
 
-        using ClipperLib::ulong64;
-        // XXX use full -+ range ...
-        const ClipperLib::long64 max_ulong64 = 1518500249; // clipper.cpp / hiRange var
-
-        //#define to_int64(p)  (static_cast<ulong64>( std::max( 0., std::min( static_cast<IfcFloat>((p)), 1.) ) * max_ulong64 ))
+		//#define to_int64(p)  (static_cast<ulong64>( std::max( 0., std::min( static_cast<IfcFloat>((p)), 1.) ) * max_ulong64 ))
 #define to_int64(p)  (static_cast<ulong64>(static_cast<IfcFloat>((p) ) * max_ulong64 ))
 #define from_int64(p) (static_cast<IfcFloat>((p)) / max_ulong64)
 #define one_vec (IfcVector2(static_cast<IfcFloat>(1.0),static_cast<IfcFloat>(1.0)))
 
-
-        // fallback method to generate wall openings
-        bool TryAddOpenings_Poly2Tri(const std::vector<TempOpening>& openings,const std::vector<IfcVector3>& nors,
-            TempMesh& curmesh);
-
-
-typedef std::pair< IfcVector2, IfcVector2 > BoundingBox;
-typedef std::map<IfcVector2,size_t,XYSorter> XYSortedField;
-
-static const float PI = acos(-1);
-
-
-// ------------------------------------------------------------------------------------------------
-void QuadrifyPart(const IfcVector2& pmin, const IfcVector2& pmax, XYSortedField& field,
-    const std::vector< BoundingBox >& bbs,
-    std::vector<IfcVector2>& out)
-{
-    if (!(pmin.x-pmax.x) || !(pmin.y-pmax.y)) {
-        return;
-    }
-
-    IfcFloat xs = 1e10, xe = 1e10;
-    bool found = false;
-
-    // Search along the x-axis until we find an opening
-    XYSortedField::iterator start = field.begin();
-    for(; start != field.end(); ++start) {
-        const BoundingBox& bb = bbs[(*start).second];
-        if(bb.first.x >= pmax.x) {
-            break;
-        }
-
-        if (bb.second.x > pmin.x && bb.second.y > pmin.y && bb.first.y < pmax.y) {
-            xs = bb.first.x;
-            xe = bb.second.x;
-            found = true;
-            break;
-        }
-    }
-
-    if (!found) {
-        // the rectangle [pmin,pend] is opaque, fill it
-        out.push_back(pmin);
-        out.push_back(IfcVector2(pmin.x,pmax.y));
-        out.push_back(pmax);
-        out.push_back(IfcVector2(pmax.x,pmin.y));
-        return;
-    }
-
-    xs = std::max(pmin.x,xs);
-    xe = std::min(pmax.x,xe);
-
-    // see if there's an offset to fill at the top of our quad
-    if (xs - pmin.x) {
-        out.push_back(pmin);
-        out.push_back(IfcVector2(pmin.x,pmax.y));
-        out.push_back(IfcVector2(xs,pmax.y));
-        out.push_back(IfcVector2(xs,pmin.y));
-    }
-
-    // search along the y-axis for all openings that overlap xs and our quad
-    IfcFloat ylast = pmin.y;
-    found = false;
-    for(; start != field.end(); ++start) {
-        const BoundingBox& bb = bbs[(*start).second];
-        if (bb.first.x > xs || bb.first.y >= pmax.y) {
-            break;
-        }
-
-        if (bb.second.y > ylast) {
-
-            found = true;
-            const IfcFloat ys = std::max(bb.first.y,pmin.y), ye = std::min(bb.second.y,pmax.y);
-            if (ys - ylast > 0.0f) {
-                QuadrifyPart( IfcVector2(xs,ylast), IfcVector2(xe,ys) ,field,bbs,out);
-            }
-
-            // the following are the window vertices
-
-            /*wnd.push_back(IfcVector2(xs,ys));
-            wnd.push_back(IfcVector2(xs,ye));
-            wnd.push_back(IfcVector2(xe,ye));
-            wnd.push_back(IfcVector2(xe,ys));*/
-            ylast = ye;
-        }
-    }
-    if (!found) {
-        // the rectangle [pmin,pend] is opaque, fill it
-        out.push_back(IfcVector2(xs,pmin.y));
-        out.push_back(IfcVector2(xs,pmax.y));
-        out.push_back(IfcVector2(xe,pmax.y));
-        out.push_back(IfcVector2(xe,pmin.y));
-        return;
-    }
-    if (ylast < pmax.y) {
-        QuadrifyPart( IfcVector2(xs,ylast), IfcVector2(xe,pmax.y) ,field,bbs,out);
-    }
-
-    // now for the whole rest
-    if (pmax.x-xe) {
-        QuadrifyPart(IfcVector2(xe,pmin.y), pmax ,field,bbs,out);
-    }
-}
-
-typedef std::vector<IfcVector2> Contour;
-typedef std::vector<bool> SkipList; // should probably use int for performance reasons
-
-struct ProjectedWindowContour
-{
-    Contour contour;
-    BoundingBox bb;
-    SkipList skiplist;
-    bool is_rectangular;
-
-
-    ProjectedWindowContour(const Contour& contour, const BoundingBox& bb, bool is_rectangular)
-        : contour(contour)
-        , bb(bb)
-        , is_rectangular(is_rectangular)
-    {}
-
-
-    bool IsInvalid() const {
-        return contour.empty();
-    }
-
-    void FlagInvalid() {
-        contour.clear();
-    }
-
-    void PrepareSkiplist() {
-        skiplist.resize(contour.size(),false);
-    }
-};
-
-typedef std::vector< ProjectedWindowContour > ContourVector;
-
-// ------------------------------------------------------------------------------------------------
-bool BoundingBoxesOverlapping( const BoundingBox &ibb, const BoundingBox &bb )
-{
-    // count the '=' case as non-overlapping but as adjacent to each other
-    return ibb.first.x < bb.second.x && ibb.second.x > bb.first.x &&
-        ibb.first.y < bb.second.y && ibb.second.y > bb.first.y;
-}
-
-// ------------------------------------------------------------------------------------------------
-bool IsDuplicateVertex(const IfcVector2& vv, const std::vector<IfcVector2>& temp_contour)
-{
-    // sanity check for duplicate vertices
-    BOOST_FOREACH(const IfcVector2& cp, temp_contour) {
-        if ((cp-vv).SquareLength() < 1e-5f) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// ------------------------------------------------------------------------------------------------
-void ExtractVerticesFromClipper(const ClipperLib::Polygon& poly, std::vector<IfcVector2>& temp_contour,
-    bool filter_duplicates = false)
-{
-    temp_contour.clear();
-    BOOST_FOREACH(const ClipperLib::IntPoint& point, poly) {
-        IfcVector2 vv = IfcVector2( from_int64(point.X), from_int64(point.Y));
-        vv = std::max(vv,IfcVector2());
-        vv = std::min(vv,one_vec);
-
-        if (!filter_duplicates || !IsDuplicateVertex(vv, temp_contour)) {
-            temp_contour.push_back(vv);
-        }
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-BoundingBox GetBoundingBox(const ClipperLib::Polygon& poly)
-{
-    IfcVector2 newbb_min, newbb_max;
-    MinMaxChooser<IfcVector2>()(newbb_min, newbb_max);
-
-    BOOST_FOREACH(const ClipperLib::IntPoint& point, poly) {
-        IfcVector2 vv = IfcVector2( from_int64(point.X), from_int64(point.Y));
-
-        // sanity rounding
-        vv = std::max(vv,IfcVector2());
-        vv = std::min(vv,one_vec);
-
-        newbb_min = std::min(newbb_min,vv);
-        newbb_max = std::max(newbb_max,vv);
-    }
-    return BoundingBox(newbb_min, newbb_max);
-}
-
-// ------------------------------------------------------------------------------------------------
-void InsertWindowContours(const ContourVector& contours,
-    const std::vector<TempOpening>& /*openings*/,
-    TempMesh& curmesh)
-{
-    // fix windows - we need to insert the real, polygonal shapes into the quadratic holes that we have now
-    for(size_t i = 0; i < contours.size();++i) {
-        const BoundingBox& bb = contours[i].bb;
-        const std::vector<IfcVector2>& contour = contours[i].contour;
-        if(contour.empty()) {
-            continue;
-        }
-
-        // check if we need to do it at all - many windows just fit perfectly into their quadratic holes,
-        // i.e. their contours *are* already their bounding boxes.
-        if (contour.size() == 4) {
-            std::set<IfcVector2,XYSorter> verts;
-            for(size_t n = 0; n < 4; ++n) {
-                verts.insert(contour[n]);
-            }
-            const std::set<IfcVector2,XYSorter>::const_iterator end = verts.end();
-            if (verts.find(bb.first)!=end && verts.find(bb.second)!=end
-                && verts.find(IfcVector2(bb.first.x,bb.second.y))!=end
-                && verts.find(IfcVector2(bb.second.x,bb.first.y))!=end
-                ) {
-                    continue;
-            }
-        }
-
-        const IfcFloat diag = (bb.first-bb.second).Length();
-        const IfcFloat epsilon = diag/1000.f;
-
-        // walk through all contour points and find those that lie on the BB corner
-        size_t last_hit = -1, very_first_hit = -1;
-        IfcVector2 edge;
-        for(size_t n = 0, e=0, size = contour.size();; n=(n+1)%size, ++e) {
-
-            // sanity checking
-            if (e == size*2) {
-                IFCImporter::LogError("encountered unexpected topology while generating window contour");
-                break;
-            }
-
-            const IfcVector2& v = contour[n];
-
-            bool hit = false;
-            if (std::fabs(v.x-bb.first.x)<epsilon) {
-                edge.x = bb.first.x;
-                hit = true;
-            }
-            else if (std::fabs(v.x-bb.second.x)<epsilon) {
-                edge.x = bb.second.x;
-                hit = true;
-            }
-
-            if (std::fabs(v.y-bb.first.y)<epsilon) {
-                edge.y = bb.first.y;
-                hit = true;
-            }
-            else if (std::fabs(v.y-bb.second.y)<epsilon) {
-                edge.y = bb.second.y;
-                hit = true;
-            }
-
-            if (hit) {
-                if (last_hit != (size_t)-1) {
-
-                    const size_t old = curmesh.verts.size();
-                    size_t cnt = last_hit > n ? size-(last_hit-n) : n-last_hit;
-                    for(size_t a = last_hit, e = 0; e <= cnt; a=(a+1)%size, ++e) {
-                        // hack: this is to fix cases where opening contours are self-intersecting.
-                        // Clipper doesn't produce such polygons, but as soon as we're back in
-                        // our brave new floating-point world, very small distances are consumed
-                        // by the maximum available precision, leading to self-intersecting
-                        // polygons. This fix makes concave windows fail even worse, but
-                        // anyway, fail is fail.
-                        if ((contour[a] - edge).SquareLength() > diag*diag*0.7) {
-                            continue;
-                        }
-                        curmesh.verts.push_back(IfcVector3(contour[a].x, contour[a].y, 0.0f));
-                    }
-
-                    if (edge != contour[last_hit]) {
-
-                        IfcVector2 corner = edge;
-
-                        if (std::fabs(contour[last_hit].x-bb.first.x)<epsilon) {
-                            corner.x = bb.first.x;
-                        }
-                        else if (std::fabs(contour[last_hit].x-bb.second.x)<epsilon) {
-                            corner.x = bb.second.x;
-                        }
-
-                        if (std::fabs(contour[last_hit].y-bb.first.y)<epsilon) {
-                            corner.y = bb.first.y;
-                        }
-                        else if (std::fabs(contour[last_hit].y-bb.second.y)<epsilon) {
-                            corner.y = bb.second.y;
-                        }
-
-                        curmesh.verts.push_back(IfcVector3(corner.x, corner.y, 0.0f));
-                    }
-                    else if (cnt == 1) {
-                        // avoid degenerate polygons (also known as lines or points)
-                        curmesh.verts.erase(curmesh.verts.begin()+old,curmesh.verts.end());
-                    }
-
-                    if (const size_t d = curmesh.verts.size()-old) {
-                        curmesh.vertcnt.push_back(d);
-                        std::reverse(curmesh.verts.rbegin(),curmesh.verts.rbegin()+d);
-                    }
-                    if (n == very_first_hit) {
-                        break;
-                    }
-                }
-                else {
-                    very_first_hit = n;
-                }
-
-                last_hit = n;
-            }
-        }
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-void MergeWindowContours (const std::vector<IfcVector2>& a,
-    const std::vector<IfcVector2>& b,
-    ClipperLib::ExPolygons& out)
-{
-    out.clear();
-
-    ClipperLib::Clipper clipper;
-    ClipperLib::Polygon clip;
-
-    BOOST_FOREACH(const IfcVector2& pip, a) {
-        clip.push_back(ClipperLib::IntPoint(  to_int64(pip.x), to_int64(pip.y) ));
-    }
-
-    if (ClipperLib::Orientation(clip)) {
-        std::reverse(clip.begin(), clip.end());
-    }
-
-    clipper.AddPolygon(clip, ClipperLib::ptSubject);
-    clip.clear();
-
-    BOOST_FOREACH(const IfcVector2& pip, b) {
-        clip.push_back(ClipperLib::IntPoint(  to_int64(pip.x), to_int64(pip.y) ));
-    }
-
-    if (ClipperLib::Orientation(clip)) {
-        std::reverse(clip.begin(), clip.end());
-    }
-
-    clipper.AddPolygon(clip, ClipperLib::ptSubject);
-    clipper.Execute(ClipperLib::ctUnion, out,ClipperLib::pftNonZero,ClipperLib::pftNonZero);
-}
-
-// ------------------------------------------------------------------------------------------------
-// Subtract a from b
-void MakeDisjunctWindowContours (const std::vector<IfcVector2>& a,
-    const std::vector<IfcVector2>& b,
-    ClipperLib::ExPolygons& out)
-{
-    out.clear();
-
-    ClipperLib::Clipper clipper;
-    ClipperLib::Polygon clip;
-
-    BOOST_FOREACH(const IfcVector2& pip, a) {
-        clip.push_back(ClipperLib::IntPoint(  to_int64(pip.x), to_int64(pip.y) ));
-    }
-
-    if (ClipperLib::Orientation(clip)) {
-        std::reverse(clip.begin(), clip.end());
-    }
-
-    clipper.AddPolygon(clip, ClipperLib::ptClip);
-    clip.clear();
-
-    BOOST_FOREACH(const IfcVector2& pip, b) {
-        clip.push_back(ClipperLib::IntPoint(  to_int64(pip.x), to_int64(pip.y) ));
-    }
-
-    if (ClipperLib::Orientation(clip)) {
-        std::reverse(clip.begin(), clip.end());
-    }
-
-    clipper.AddPolygon(clip, ClipperLib::ptSubject);
-    clipper.Execute(ClipperLib::ctDifference, out,ClipperLib::pftNonZero,ClipperLib::pftNonZero);
-}
-
-// ------------------------------------------------------------------------------------------------
-void CleanupWindowContour(ProjectedWindowContour& window)
-{
-    std::vector<IfcVector2> scratch;
-    std::vector<IfcVector2>& contour = window.contour;
-
-    ClipperLib::Polygon subject;
-    ClipperLib::Clipper clipper;
-    ClipperLib::ExPolygons clipped;
-
-    BOOST_FOREACH(const IfcVector2& pip, contour) {
-        subject.push_back(ClipperLib::IntPoint(  to_int64(pip.x), to_int64(pip.y) ));
-    }
-
-    clipper.AddPolygon(subject,ClipperLib::ptSubject);
-    clipper.Execute(ClipperLib::ctUnion,clipped,ClipperLib::pftNonZero,ClipperLib::pftNonZero);
-
-    // This should yield only one polygon or something went wrong
-    if (clipped.size() != 1) {
-
-        // Empty polygon? drop the contour altogether
-        if(clipped.empty()) {
-            IFCImporter::LogError("error during polygon clipping, window contour is degenerate");
-            window.FlagInvalid();
-            return;
-        }
-
-        // Else: take the first only
-        IFCImporter::LogError("error during polygon clipping, window contour is not convex");
-    }
-
-    ExtractVerticesFromClipper(clipped[0].outer, scratch);
-    // Assume the bounding box doesn't change during this operation
-}
-
-// ------------------------------------------------------------------------------------------------
-void CleanupWindowContours(ContourVector& contours)
-{
-    // Use PolyClipper to clean up window contours
-    try {
-        BOOST_FOREACH(ProjectedWindowContour& window, contours) {
-            CleanupWindowContour(window);
-        }
-    }
-    catch (const char* sx) {
-        IFCImporter::LogError("error during polygon clipping, window shape may be wrong: (Clipper: "
-            + std::string(sx) + ")");
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-void CleanupOuterContour(const std::vector<IfcVector2>& contour_flat, TempMesh& curmesh)
-{
-    std::vector<IfcVector3> vold;
-    std::vector<unsigned int> iold;
-
-    vold.reserve(curmesh.verts.size());
-    iold.reserve(curmesh.vertcnt.size());
-
-    // Fix the outer contour using polyclipper
-    try {
-
-        ClipperLib::Polygon subject;
-        ClipperLib::Clipper clipper;
-        ClipperLib::ExPolygons clipped;
-
-        ClipperLib::Polygon clip;
-        clip.reserve(contour_flat.size());
-        BOOST_FOREACH(const IfcVector2& pip, contour_flat) {
-            clip.push_back(ClipperLib::IntPoint(  to_int64(pip.x), to_int64(pip.y) ));
-        }
-
-        if (!ClipperLib::Orientation(clip)) {
-            std::reverse(clip.begin(), clip.end());
-        }
-
-        // We need to run polyclipper on every single polygon -- we can't run it one all
-        // of them at once or it would merge them all together which would undo all
-        // previous steps
-        subject.reserve(4);
-        size_t index = 0;
-        size_t countdown = 0;
-        BOOST_FOREACH(const IfcVector3& pip, curmesh.verts) {
-            if (!countdown) {
-                countdown = curmesh.vertcnt[index++];
-                if (!countdown) {
-                    continue;
-                }
-            }
-            subject.push_back(ClipperLib::IntPoint(  to_int64(pip.x), to_int64(pip.y) ));
-            if (--countdown == 0) {
-                if (!ClipperLib::Orientation(subject)) {
-                    std::reverse(subject.begin(), subject.end());
-                }
-
-                clipper.AddPolygon(subject,ClipperLib::ptSubject);
-                clipper.AddPolygon(clip,ClipperLib::ptClip);
-
-                clipper.Execute(ClipperLib::ctIntersection,clipped,ClipperLib::pftNonZero,ClipperLib::pftNonZero);
-
-                BOOST_FOREACH(const ClipperLib::ExPolygon& ex, clipped) {
-                    iold.push_back(ex.outer.size());
-                    BOOST_FOREACH(const ClipperLib::IntPoint& point, ex.outer) {
-                        vold.push_back(IfcVector3(
-                            from_int64(point.X),
-                            from_int64(point.Y),
-                            0.0f));
-                    }
-                }
-
-                subject.clear();
-                clipped.clear();
-                clipper.Clear();
-            }
-        }
-    }
-    catch (const char* sx) {
-        IFCImporter::LogError("Ifc: error during polygon clipping, wall contour line may be wrong: (Clipper: "
-            + std::string(sx) + ")");
-
-        return;
-    }
-
-    // swap data arrays
-    std::swap(vold,curmesh.verts);
-    std::swap(iold,curmesh.vertcnt);
-}
-
-typedef std::vector<TempOpening*> OpeningRefs;
-typedef std::vector<OpeningRefs > OpeningRefVector;
-
-typedef std::vector<std::pair<
-    ContourVector::const_iterator,
-    Contour::const_iterator>
-> ContourRefVector;
-
-// ------------------------------------------------------------------------------------------------
-bool BoundingBoxesAdjacent(const BoundingBox& bb, const BoundingBox& ibb)
-{
-    // TODO: I'm pretty sure there is a much more compact way to check this
-    const IfcFloat epsilon = 1e-5f;
-    return  (std::fabs(bb.second.x - ibb.first.x) < epsilon && bb.first.y <= ibb.second.y && bb.second.y >= ibb.first.y) ||
-        (std::fabs(bb.first.x - ibb.second.x) < epsilon && ibb.first.y <= bb.second.y && ibb.second.y >= bb.first.y) ||
-        (std::fabs(bb.second.y - ibb.first.y) < epsilon && bb.first.x <= ibb.second.x && bb.second.x >= ibb.first.x) ||
-        (std::fabs(bb.first.y - ibb.second.y) < epsilon && ibb.first.x <= bb.second.x && ibb.second.x >= bb.first.x);
-}
-
-// ------------------------------------------------------------------------------------------------
-// Check if m0,m1 intersects n0,n1 assuming same ordering of the points in the line segments
-// output the intersection points on n0,n1
-bool IntersectingLineSegments(const IfcVector2& n0, const IfcVector2& n1,
-    const IfcVector2& m0, const IfcVector2& m1,
-    IfcVector2& out0, IfcVector2& out1)
-{
-    const IfcVector2 n0_to_n1 = n1 - n0;
-
-    const IfcVector2 n0_to_m0 = m0 - n0;
-    const IfcVector2 n1_to_m1 = m1 - n1;
-
-    const IfcVector2 n0_to_m1 = m1 - n0;
-
-    const IfcFloat e = 1e-5f;
-    const IfcFloat smalle = 1e-9f;
-
-    static const IfcFloat inf = std::numeric_limits<IfcFloat>::infinity();
-
-    if (!(n0_to_m0.SquareLength() < e*e || std::fabs(n0_to_m0 * n0_to_n1) / (n0_to_m0.Length() * n0_to_n1.Length()) > 1-1e-5 )) {
-        return false;
-    }
-
-    if (!(n1_to_m1.SquareLength() < e*e || std::fabs(n1_to_m1 * n0_to_n1) / (n1_to_m1.Length() * n0_to_n1.Length()) > 1-1e-5 )) {
-        return false;
-    }
-
-    IfcFloat s0;
-    IfcFloat s1;
-
-    // pick the axis with the higher absolute difference so the result
-    // is more accurate. Since we cannot guarantee that the axis with
-    // the higher absolute difference is big enough as to avoid
-    // divisions by zero, the case 0/0 ~ infinity is detected and
-    // handled separately.
-    if(std::fabs(n0_to_n1.x) > std::fabs(n0_to_n1.y)) {
-        s0 = n0_to_m0.x / n0_to_n1.x;
-        s1 = n0_to_m1.x / n0_to_n1.x;
-
-        if (std::fabs(s0) == inf && std::fabs(n0_to_m0.x) < smalle) {
-            s0 = 0.;
-        }
-        if (std::fabs(s1) == inf && std::fabs(n0_to_m1.x) < smalle) {
-            s1 = 0.;
-        }
-    }
-    else {
-        s0 = n0_to_m0.y / n0_to_n1.y;
-        s1 = n0_to_m1.y / n0_to_n1.y;
-
-        if (std::fabs(s0) == inf && std::fabs(n0_to_m0.y) < smalle) {
-            s0 = 0.;
-        }
-        if (std::fabs(s1) == inf && std::fabs(n0_to_m1.y) < smalle) {
-            s1 = 0.;
-        }
-    }
-
-    if (s1 < s0) {
-        std::swap(s1,s0);
-    }
-
-    s0 = std::max(0.0,s0);
-    s1 = std::max(0.0,s1);
-
-    s0 = std::min(1.0,s0);
-    s1 = std::min(1.0,s1);
-
-    if (std::fabs(s1-s0) < e) {
-        return false;
-    }
-
-    out0 = n0 + s0 * n0_to_n1;
-    out1 = n0 + s1 * n0_to_n1;
-
-    return true;
-}
-
-// ------------------------------------------------------------------------------------------------
-void FindAdjacentContours(ContourVector::iterator current, const ContourVector& contours)
-{
-    const IfcFloat sqlen_epsilon = static_cast<IfcFloat>(1e-8);
-    const BoundingBox& bb = (*current).bb;
-
-    // What is to be done here is to populate the skip lists for the contour
-    // and to add necessary padding points when needed.
-    SkipList& skiplist = (*current).skiplist;
-
-    // First step to find possible adjacent contours is to check for adjacent bounding
-    // boxes. If the bounding boxes are not adjacent, the contours lines cannot possibly be.
-    for (ContourVector::const_iterator it = contours.begin(), end = contours.end(); it != end; ++it) {
-        if ((*it).IsInvalid()) {
-            continue;
-        }
-
-        // this left here to make clear we also run on the current contour
-        // to check for overlapping contour segments (which can happen due
-        // to projection artifacts).
-        //if(it == current) {
-        //  continue;
-        //}
-
-        const bool is_me = it == current;
-
-        const BoundingBox& ibb = (*it).bb;
-
-        // Assumption: the bounding boxes are pairwise disjoint or identical
-        ai_assert(is_me || !BoundingBoxesOverlapping(bb, ibb));
-
-        if (is_me || BoundingBoxesAdjacent(bb, ibb)) {
-
-            // Now do a each-against-everyone check for intersecting contour
-            // lines. This obviously scales terribly, but in typical real
-            // world Ifc files it will not matter since most windows that
-            // are adjacent to each others are rectangular anyway.
-
-            Contour& ncontour = (*current).contour;
-            const Contour& mcontour = (*it).contour;
-
-            for (size_t n = 0; n < ncontour.size(); ++n) {
-                const IfcVector2& n0 = ncontour[n];
-                const IfcVector2& n1 = ncontour[(n+1) % ncontour.size()];
-
-                for (size_t m = 0, mend = (is_me ? n : mcontour.size()); m < mend; ++m) {
-                    ai_assert(&mcontour != &ncontour || m < n);
-
-                    const IfcVector2& m0 = mcontour[m];
-                    const IfcVector2& m1 = mcontour[(m+1) % mcontour.size()];
-
-                    IfcVector2 isect0, isect1;
-                    if (IntersectingLineSegments(n0,n1, m0, m1, isect0, isect1)) {
-
-                        if ((isect0 - n0).SquareLength() > sqlen_epsilon) {
-                            ++n;
-
-                            ncontour.insert(ncontour.begin() + n, isect0);
-                            skiplist.insert(skiplist.begin() + n, true);
-                        }
-                        else {
-                            skiplist[n] = true;
-                        }
-
-                        if ((isect1 - n1).SquareLength() > sqlen_epsilon) {
-                            ++n;
-
-                            ncontour.insert(ncontour.begin() + n, isect1);
-                            skiplist.insert(skiplist.begin() + n, false);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-AI_FORCE_INLINE bool LikelyBorder(const IfcVector2& vdelta)
-{
-    const IfcFloat dot_point_epsilon = static_cast<IfcFloat>(1e-5);
-    return std::fabs(vdelta.x * vdelta.y) < dot_point_epsilon;
-}
-
-// ------------------------------------------------------------------------------------------------
-void FindBorderContours(ContourVector::iterator current)
-{
-    const IfcFloat border_epsilon_upper = static_cast<IfcFloat>(1-1e-4);
-    const IfcFloat border_epsilon_lower = static_cast<IfcFloat>(1e-4);
-
-    bool outer_border = false;
-    bool start_on_outer_border = false;
-
-    SkipList& skiplist = (*current).skiplist;
-    IfcVector2 last_proj_point;
-
-    const Contour::const_iterator cbegin = (*current).contour.begin(), cend = (*current).contour.end();
-
-    for (Contour::const_iterator cit = cbegin; cit != cend; ++cit) {
-        const IfcVector2& proj_point = *cit;
-
-        // Check if this connection is along the outer boundary of the projection
-        // plane. In such a case we better drop it because such 'edges' should
-        // not have any geometry to close them (think of door openings).
-        if (proj_point.x <= border_epsilon_lower || proj_point.x >= border_epsilon_upper ||
-            proj_point.y <= border_epsilon_lower || proj_point.y >= border_epsilon_upper) {
-
-                if (outer_border) {
-                    ai_assert(cit != cbegin);
-                    if (LikelyBorder(proj_point - last_proj_point)) {
-                        skiplist[std::distance(cbegin, cit) - 1] = true;
-                    }
-                }
-                else if (cit == cbegin) {
-                    start_on_outer_border = true;
-                }
-
-                outer_border = true;
-        }
-        else {
-            outer_border = false;
-        }
-
-        last_proj_point = proj_point;
-    }
-
-    // handle last segment
-    if (outer_border && start_on_outer_border) {
-        const IfcVector2& proj_point = *cbegin;
-        if (LikelyBorder(proj_point - last_proj_point)) {
-            skiplist[skiplist.size()-1] = true;
-        }
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-AI_FORCE_INLINE bool LikelyDiagonal(IfcVector2 vdelta)
-{
-    vdelta.x = std::fabs(vdelta.x);
-    vdelta.y = std::fabs(vdelta.y);
-    return (std::fabs(vdelta.x-vdelta.y) < 0.8 * std::max(vdelta.x, vdelta.y));
-}
-
-// ------------------------------------------------------------------------------------------------
-void FindLikelyCrossingLines(ContourVector::iterator current)
-{
-    SkipList& skiplist = (*current).skiplist;
-    IfcVector2 last_proj_point;
-
-    const Contour::const_iterator cbegin = (*current).contour.begin(), cend = (*current).contour.end();
-    for (Contour::const_iterator cit = cbegin; cit != cend; ++cit) {
-        const IfcVector2& proj_point = *cit;
-
-        if (cit != cbegin) {
-            IfcVector2 vdelta = proj_point - last_proj_point;
-            if (LikelyDiagonal(vdelta)) {
-                skiplist[std::distance(cbegin, cit) - 1] = true;
-            }
-        }
-
-        last_proj_point = proj_point;
-    }
-
-    // handle last segment
-    if (LikelyDiagonal(*cbegin - last_proj_point)) {
-        skiplist[skiplist.size()-1] = true;
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-size_t CloseWindows(ContourVector& contours,
-    const IfcMatrix4& minv,
-    OpeningRefVector& contours_to_openings,
-    TempMesh& curmesh,
-	const bool &dump = false)
-{
-    size_t closed = 0;
-    // For all contour points, check if one of the assigned openings does
-    // already have points assigned to it. In this case, assume this is
-    // the other side of the wall and generate connections between
-    // the two holes in order to close the window.
-
-    // All this gets complicated by the fact that contours may pertain to
-    // multiple openings(due to merging of adjacent or overlapping openings).
-    // The code is based on the assumption that this happens symmetrically
-    // on both sides of the wall. If it doesn't (which would be a bug anyway)
-    // wrong geometry may be generated.
-    for (ContourVector::iterator it = contours.begin(), end = contours.end(); it != end; ++it) {
-		if (dump)
+		// fallback method to generate wall openings
+		bool TryAddOpenings_Poly2Tri(const std::vector<TempOpening>& openings, const std::vector<IfcVector3>& nors,
+			TempMesh& curmesh);
+
+		typedef std::pair< IfcVector2, IfcVector2 > BoundingBox;
+		typedef std::map<IfcVector2, size_t, XYSorter> XYSortedField;
+
+		static const float PI = acos(-1);
+
+		// ------------------------------------------------------------------------------------------------
+		void QuadrifyPart(const IfcVector2& pmin, const IfcVector2& pmax, XYSortedField& field,
+			const std::vector< BoundingBox >& bbs,
+			std::vector<IfcVector2>& out)
 		{
-			std::cout << " Contour bb: (" << it->bb.first.x << "," << it->bb.first.y
-				<< ")(" << it->bb.second.x << "," << it->bb.second.y << ")" << std::endl;
-		}
-
-
-        if ((*it).IsInvalid()) {
-            continue;
-        }
-        OpeningRefs& refs = contours_to_openings[std::distance(contours.begin(), it)];
-
-        bool has_other_side = false;
-		
-		if (dump)
-		{
-			std::cout << "#openings: " << refs.size() << std::endl;
-		}
-        /*BOOST_FOREACH(const TempOpening* opening, refs) {
-            if(!opening->wallPoints.empty()) {
-				if (dump)
-				{
-					std::cout << "#opening wall points: " << opening->wallPoints.size() << std::endl;
-				}
-                has_other_side = true;
-                break;
-            }
-        }*/
-		
-   //     if (has_other_side) {
-			//std::cout << "Has other side" << std::endl;
-
-   //         ContourRefVector adjacent_contours;
-
-   //         // prepare a skiplist for this contour. The skiplist is used to
-   //         // eliminate unwanted contour lines for adjacent windows and
-   //         // those bordering the outer frame.
-   //         (*it).PrepareSkiplist();
-
-   //         FindAdjacentContours(it, contours);
-   //         FindBorderContours(it);
-
-   //         // if the window is the result of a finite union or intersection of rectangles,
-   //         // there shouldn't be any crossing or diagonal lines in it. Such lines would
-   //         // be artifacts caused by numerical inaccuracies or other bugs in polyclipper
-   //         // and our own code. Since rectangular openings are by far the most frequent
-   //         // case, it is worth filtering for this corner case.
-   //         if((*it).is_rectangular) {
-   //             FindLikelyCrossingLines(it);
-   //         }
-
-   //         ai_assert((*it).skiplist.size() == (*it).contour.size());
-
-   //         SkipList::const_iterator skipbegin = (*it).skiplist.begin();
-
-   //         curmesh.verts.reserve(curmesh.verts.size() + (*it).contour.size() * 4);
-   //         curmesh.vertcnt.reserve(curmesh.vertcnt.size() + (*it).contour.size());
-
-   //         // compare base poly normal and contour normal to detect if we need to reverse the face winding
-   //         IfcVector3 basePolyNormal = TempMesh::ComputePolygonNormal( curmesh.verts.data(), curmesh.vertcnt.front());
-   //         std::vector<IfcVector3> worldSpaceContourVtx( it->contour.size());
-   //         for( size_t a = 0; a < it->contour.size(); ++a )
-   //             worldSpaceContourVtx[a] = minv * IfcVector3( it->contour[a].x, it->contour[a].y, 0.0);
-   //         IfcVector3 contourNormal = TempMesh::ComputePolygonNormal( worldSpaceContourVtx.data(), worldSpaceContourVtx.size());
-   //         bool reverseCountourFaces = (contourNormal * basePolyNormal) > 0.0;
-
-   //         // XXX this algorithm is really a bit inefficient - both in terms
-   //         // of constant factor and of asymptotic runtime.
-   //         std::vector<bool>::const_iterator skipit = skipbegin;
-
-   //         IfcVector3 start0;
-   //         IfcVector3 start1;
-
-   //         const Contour::const_iterator cbegin = (*it).contour.begin(), cend = (*it).contour.end();
-
-   //         bool drop_this_edge = false;
-   //         for (Contour::const_iterator cit = cbegin; cit != cend; ++cit, drop_this_edge = *skipit++) {
-   //             const IfcVector2& proj_point = *cit;
-
-   //             // Locate the closest opposite point. This should be a good heuristic to
-   //             // connect only the points that are really intended to be connected.
-   //             IfcFloat best = static_cast<IfcFloat>(1e10);
-   //             IfcVector3 bestv;
-
-   //             const IfcVector3 world_point = minv * IfcVector3(proj_point.x,proj_point.y,0.0f);
-			//	std::cout << "world_point ( " << world_point.x << "," << world_point.y << " ," << world_point.z << " )" << std::endl;
-   //             BOOST_FOREACH(const TempOpening* opening, refs) {
-   //                 BOOST_FOREACH(const IfcVector3& other, opening->wallPoints) {
-   //                     const IfcFloat sqdist = (world_point - other).SquareLength();
-			//			std::cout << "Other wall point ( " << other.x << "," << other.y << " ," << other.z << " )" << std::endl;
-   //                     if (sqdist < best) {
-   //                         // avoid self-connections
-   //                         if(sqdist < 1e-5) {
-   //                             continue;
-   //                         }
-
-   //                         bestv = other;
-   //                         best = sqdist;
-   //                     }
-   //                 }
-   //             }
-			//	std::cout << "Best wall point ( " << bestv.x << "," << bestv.y << " ," << bestv.z << " )" << std::endl;
-   //             if (drop_this_edge) {
-   //                 curmesh.verts.pop_back();
-   //                 curmesh.verts.pop_back();
-   //             }
-   //             else {
-   //                 curmesh.verts.push_back(((cit == cbegin) != reverseCountourFaces) ? world_point : bestv);
-   //                 curmesh.verts.push_back(((cit == cbegin) != reverseCountourFaces) ? bestv : world_point);
-
-   //                 curmesh.vertcnt.push_back(4);
-   //                 ++closed;
-   //             }
-
-   //             if (cit == cbegin) {
-   //                 start0 = world_point;
-   //                 start1 = bestv;
-   //                 continue;
-   //             }
-
-   //             curmesh.verts.push_back(reverseCountourFaces ? bestv : world_point);
-   //             curmesh.verts.push_back(reverseCountourFaces ? world_point : bestv);
-
-   //             if (cit == cend - 1) {
-   //                 drop_this_edge = *skipit;
-
-   //                 // Check if the final connection (last to first element) is itself
-   //                 // a border edge that needs to be dropped.
-   //                 if (drop_this_edge) {
-   //                     --closed;
-   //                     curmesh.vertcnt.pop_back();
-   //                     curmesh.verts.pop_back();
-   //                     curmesh.verts.pop_back();
-   //                 }
-   //                 else {
-   //                     curmesh.verts.push_back(reverseCountourFaces ? start0 : start1);
-   //                     curmesh.verts.push_back(reverseCountourFaces ? start1 : start0);
-   //                 }
-   //             }
-   //         }
-   //     }
-   //     else {			
-            const Contour::const_iterator cbegin = (*it).contour.begin(), cend = (*it).contour.end();
-            BOOST_FOREACH(TempOpening* opening, refs) {
-                ai_assert(opening->wallPoints.empty());
-                opening->wallPoints.reserve(opening->wallPoints.capacity() + (*it).contour.size());
-                for (Contour::const_iterator cit = cbegin; cit != cend; ++cit) {
-
-                    const IfcVector2& proj_point = *cit;
-                    opening->wallPoints.push_back(minv * IfcVector3(proj_point.x,proj_point.y,0.0f));
-                }
-            }
-        //}
-    }
-    return closed;
-}
-
-bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox &overlapRegion, const bool dump = false)
-{
-	auto bbox1lengthx = bbox1.second.x - bbox1.first.x;
-	auto bbox1lengthy = bbox1.second.y - bbox1.first.y;
-	auto bbox2lengthx = bbox2.second.x - bbox2.first.x;
-	auto bbox2lengthy = bbox2.second.y - bbox2.first.y;
-
-	//if either boxes has no length along the axis it can only be touching at best.
-
-	bool overlapX = (bbox1lengthx > 1e-5 && bbox2lengthx > 1e-5) 
-					&& (bbox1.first.x <= bbox2.first.x && bbox2.first.x < bbox1.second.x
-					|| bbox1.first.x >= bbox2.first.x && bbox1.first.x < bbox2.second.x);
-	bool overlapY = (bbox1lengthy > 1e-5 && bbox2lengthy > 1e-5)
-					&& (bbox1.first.y <= bbox2.first.y && bbox2.first.y < bbox1.second.y
-					|| bbox1.first.y >= bbox2.first.y && bbox1.first.y < bbox2.second.y);
-
-	
-	//boxes are also considered overlapped if their edges touches each other (corner does not count)
-	bool touchingX = fabsf(bbox1.first.x - bbox2.first.x) < 1e-5 || fabsf(bbox1.first.x - bbox2.second.x) < 1e-5
-		|| fabsf(bbox1.second.x - bbox2.second.x) < 1e-5 || fabsf(bbox1.second.x - bbox2.first.x) < 1e-5
-		|| (bbox1.first.x < bbox2.first.x && bbox1.second.x > bbox2.second.x) ||
-		(bbox2.first.x < bbox1.first.x && bbox2.second.x > bbox1.second.x);
-	
-	bool touchingY = fabsf(bbox1.first.y - bbox2.first.y) < 1e-5 || fabsf(bbox1.first.y - bbox2.second.y) < 1e-5
-		|| fabsf(bbox1.second.y - bbox2.second.y) < 1e-5 || fabsf(bbox1.second.y - bbox2.first.y) < 1e-5
-		|| (bbox1.first.y < bbox2.first.y && bbox1.second.y > bbox2.second.y) ||
-		(bbox2.first.y < bbox1.first.y && bbox2.second.y > bbox1.second.y);
-
-	bool overlap = overlapX && overlapY || touchingX && overlapY || touchingY && overlapX;
-
-	if (dump)
-	{
-		std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ") " ;
-		std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ") " ;
-		std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " ) Touching ( "<<touchingX << " , "<< touchingY<<")" << std::endl;
-	}
-	
-	if (overlap)
-	{
-		overlapRegion.first.x = bbox1.first.x >  bbox2.first.x ?  bbox1.first.x : bbox2.first.x;
-		overlapRegion.second.x = bbox2.second.x > bbox1.second.x ? bbox1.second.x : bbox2.second.x;
-		
-		
-		overlapRegion.first.y = bbox1.first.y>  bbox2.first.y? bbox1.first.y: bbox2.first.y;
-		overlapRegion.second.y = bbox2.second.y > bbox1.second.y ? bbox1.second.y : bbox2.second.y;
-		
-
-		auto diff = overlapRegion.second - overlapRegion.first;
-		//std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ")" << std::endl;
-		//std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ")" << std::endl;
-		//std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " )" << std::endl;
-		/*std::cout << " overlapRegion: (" << overlapRegion.first.x << "," << overlapRegion.first.y << ") - (" << overlapRegion.second.x << "," << overlapRegion.second.y << ")" << std::endl;
-		std::cout << " diff: (" << diff.x << "," << diff.y << std::endl;*/
-	}
-	
-
-	return overlap;
-}
-
-std::vector<std::pair<IfcVector2, IfcVector2>> Get2DContour(
-	const TempMesh& curve,
-	const IfcVector3 &dir,
-	const IfcVector3 &xAxis,
-	const IfcVector3 &yAxis,
-	const IfcVector3 &length
-	)
-{
-	std::vector<IfcVector2> res;
-	std::vector<std::pair<IfcVector2, IfcVector2>> pairs;
-	IfcVector2 max(-1e10, -1e10), min(1e10, 1e10);
-	res.reserve(curve.verts.size());
-	for (int i = 0; i < curve.verts.size(); ++i)
-	{
-		auto pointOnPlane = (curve.verts[i] - (curve.verts[i] * dir)*dir);
-		auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
-
-		auto vertDown = (curve.verts[i] + length);
-		auto pointOnPlane2 = (vertDown - (vertDown * dir)*dir);
-		auto point2d2 = IfcVector2(pointOnPlane2*xAxis, pointOnPlane2*yAxis);
-
-		if (!IsDuplicateVertex(point2d, res)) {
-			res.push_back(point2d);
-			min = std::min(point2d, min);
-			max = std::max(point2d, max);
-		}
-
-		if (!IsDuplicateVertex(point2d2, res)) {
-			res.push_back(point2d2);
-			min = std::min(point2d2, min);
-			max = std::max(point2d2, max);
-		}
-	}
-
-	//figure out conjoining points
-	auto halfWay = (max - min) * 0.5 + min;
-	int count = 0;
-	int currentIdx = 0;
-
-	while (count < res.size())
-	{
-		bool closerToXMin = res[currentIdx].x < halfWay.x;
-		bool closerToYMin = res[currentIdx].y < halfWay.y;
-		float bestDist = 1.e10;
-		float bestAng = 360.;
-		int bestPair = currentIdx;
-		for (int i = 0; i < res.size(); ++i)
-		{
-			if (i == currentIdx) continue;
-			auto diff = res[i] - res[currentIdx];
-			auto d = diff.SquareLength();
-			auto tanAng = fabsf(diff.y) / fabsf(diff.x);
-			auto ang = atanf(tanAng);
-
-			bool positiveX = diff.x > 0.;
-			bool positiveY = diff.y > 0.;
-			bool zeroX = fabsf(diff.x) < 1e-5;
-			bool zeroY = fabsf(diff.y) < 1e-5;
-
-
-			if (closerToYMin)
-			{
-				//Calculate the distance between the points
-				if (zeroX) ang = positiveY ? 2 * PI : 4 * PI;
-				else if (zeroY) ang = positiveX ? PI : 3 * PI;
-				else if (positiveY && positiveX)	ang += PI;
-				else if (!positiveX && positiveY) ang += 2 * PI;
-				else if (!positiveX && !positiveY) ang += 3 * PI;
-
-			}
-			else
-			{
-				if (zeroX) ang = positiveY ? PI : 3 * PI;
-				else if (zeroY) ang = positiveX ? 4 * PI : 2 * PI;
-				else if (!positiveX && positiveY) ang += PI;
-				else if (!positiveX && !positiveY) ang += 2 * PI;
-				else if (positiveX && !positiveY) ang += 3 * PI;
-
+			if (!(pmin.x - pmax.x) || !(pmin.y - pmax.y)) {
+				return;
 			}
 
+			IfcFloat xs = 1e10, xe = 1e10;
+			bool found = false;
 
-			if (ang < bestAng || (ang == bestAng && bestDist > d))
-			{
-
-				bestDist = d;
-				bestAng = ang;
-				bestPair = i;
-			}			
-		}
-
-		if (bestPair != currentIdx)
-		{
-			std::pair<IfcVector2, IfcVector2> joint = { res[currentIdx], res[bestPair] };
-			pairs.push_back(joint);
-			currentIdx = bestPair;
-		}
-		++count;
-	}
-	return pairs;
-}
-
-
-void getProjectionVectors(
-	const IfcVector3 &ext_dir,
-	IfcVector3 &ndir,
-	IfcVector3 &xAxis,
-	IfcVector3 &yAxis,
-	const bool skip = false)
-{
-	//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
-	//but for some reason projecting onto the extrusion direction gives wrong looking results.
-	if (skip)
-	{
-		ndir = ext_dir;
-		
-
-	}
-	else
-	{
-		ndir = IfcVector3(3, 4, 0);
-		ndir.z = ext_dir.z == 0 ? 0 : (ext_dir.x*ndir.x + ext_dir.y*ndir.y) / -ext_dir.z;
-	}
-	
-	ndir.Normalize();
-
-	
-
-
-	//define my x and y axis.
-	if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
-	{
-		//can't use 1 0 0 as the x axis
-		xAxis.x = 0; xAxis.y = 1; xAxis.z = 0;
-	}
-	else
-	{
-		xAxis.x = 1; xAxis.y = 0; xAxis.z = 0;
-	}
-
-	xAxis = (xAxis - (xAxis * ndir)*ndir);
-	xAxis.Normalize();
-
-
-	//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
-	yAxis = xAxis ^ ndir;
-}
-
-
-void CloseAllWindows(
-	std::vector<TempOpening> &openings,
-	TempMesh& curmesh,
-	const IfcVector3 &ext_dir,
-	const TempMesh& curve,
-	const IfcVector3 &dir,
-	const bool dump)
-{
-	static int opening_count = 0;
-	std::vector<std::pair<BoundingBox, std::vector<std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>>>>> openingJoints;
-	openingJoints.reserve(openings.size());
-	
-	IfcVector3 ndir, xAxis, yAxis;
-	//Prepare for a plane to project onto 2D
-	getProjectionVectors(ext_dir, ndir, xAxis, yAxis);
-
-	
-
-	BOOST_FOREACH(TempOpening& opening, openings) {
-		/*
-		* Pair up the wall points
-		*/
-		bool dumpConsole = false;//dump && opening_count == 5;
-		if (!opening.wallPoints.empty()) {
-			std::vector<std::vector<IfcVector3>> vecMap;
-			IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
-
-
-			bool first = true;
-			bool firstPair = true;
-			IfcVector3 refPoint;
-			if (dumpConsole)
-				std::cout << "Wall point size: " << opening.wallPoints.size() << std::endl;
-
-			std::vector<bool> toRemovePts(opening.wallPoints.size(), false);
-			for (int i = 0; i < opening.wallPoints.size(); ++i)
-			{
-				if (toRemovePts[i]) continue;
-				for (int j = i+1; j < opening.wallPoints.size(); ++j)
-				{
-					auto diff = opening.wallPoints[i] - opening.wallPoints[j];
-					toRemovePts[j] = toRemovePts[j] || (fabsf(diff.x) < 1e-5  && fabsf(diff.y) < 1e-5  && fabsf(diff.z) < 1e-5);
+			// Search along the x-axis until we find an opening
+			XYSortedField::iterator start = field.begin();
+			for (; start != field.end(); ++start) {
+				const BoundingBox& bb = bbs[(*start).second];
+				if (bb.first.x >= pmax.x) {
+					break;
 				}
 
+				if (bb.second.x > pmin.x && bb.second.y > pmin.y && bb.first.y < pmax.y) {
+					xs = bb.first.x;
+					xe = bb.second.x;
+					found = true;
+					break;
+				}
 			}
 
-			for (int i = opening.wallPoints.size()-1; i >=0; --i)
-			{
-				if (toRemovePts[i])
-					opening.wallPoints.erase(opening.wallPoints.begin()+i);
+			if (!found) {
+				// the rectangle [pmin,pend] is opaque, fill it
+				out.push_back(pmin);
+				out.push_back(IfcVector2(pmin.x, pmax.y));
+				out.push_back(pmax);
+				out.push_back(IfcVector2(pmax.x, pmin.y));
+				return;
 			}
 
-			if (dumpConsole)
-				std::cout << "Wall point size after pruning: " << opening.wallPoints.size() << std::endl;
+			xs = std::max(pmin.x, xs);
+			xe = std::min(pmax.x, xe);
 
-			for (int i = 0; i < opening.wallPoints.size()/2; ++i)
-			{
-				auto &point = opening.wallPoints[i];
-				IfcFloat best = static_cast<IfcFloat>(1e10);
-				IfcVector3 *bestv;
+			// see if there's an offset to fill at the top of our quad
+			if (xs - pmin.x) {
+				out.push_back(pmin);
+				out.push_back(IfcVector2(pmin.x, pmax.y));
+				out.push_back(IfcVector2(xs, pmax.y));
+				out.push_back(IfcVector2(xs, pmin.y));
+			}
 
-				for (int j = opening.wallPoints.size() / 2; j < opening.wallPoints.size(); ++j)
-				{
-					auto &otherPoint = opening.wallPoints[j];
-					const IfcFloat sqdist = (point - otherPoint).SquareLength();
-					if (sqdist < best) {
-						// avoid self-connections
-						if (sqdist < 1e-5) {
+			// search along the y-axis for all openings that overlap xs and our quad
+			IfcFloat ylast = pmin.y;
+			found = false;
+			for (; start != field.end(); ++start) {
+				const BoundingBox& bb = bbs[(*start).second];
+				if (bb.first.x > xs || bb.first.y >= pmax.y) {
+					break;
+				}
+
+				if (bb.second.y > ylast) {
+					found = true;
+					const IfcFloat ys = std::max(bb.first.y, pmin.y), ye = std::min(bb.second.y, pmax.y);
+					if (ys - ylast > 0.0f) {
+						QuadrifyPart(IfcVector2(xs, ylast), IfcVector2(xe, ys), field, bbs, out);
+					}
+
+					// the following are the window vertices
+
+					/*wnd.push_back(IfcVector2(xs,ys));
+					wnd.push_back(IfcVector2(xs,ye));
+					wnd.push_back(IfcVector2(xe,ye));
+					wnd.push_back(IfcVector2(xe,ys));*/
+					ylast = ye;
+				}
+			}
+			if (!found) {
+				// the rectangle [pmin,pend] is opaque, fill it
+				out.push_back(IfcVector2(xs, pmin.y));
+				out.push_back(IfcVector2(xs, pmax.y));
+				out.push_back(IfcVector2(xe, pmax.y));
+				out.push_back(IfcVector2(xe, pmin.y));
+				return;
+			}
+			if (ylast < pmax.y) {
+				QuadrifyPart(IfcVector2(xs, ylast), IfcVector2(xe, pmax.y), field, bbs, out);
+			}
+
+			// now for the whole rest
+			if (pmax.x - xe) {
+				QuadrifyPart(IfcVector2(xe, pmin.y), pmax, field, bbs, out);
+			}
+		}
+
+		typedef std::vector<IfcVector2> Contour;
+		typedef std::vector<bool> SkipList; // should probably use int for performance reasons
+
+		struct ProjectedWindowContour
+		{
+			Contour contour;
+			BoundingBox bb;
+			SkipList skiplist;
+			bool is_rectangular;
+
+			ProjectedWindowContour(const Contour& contour, const BoundingBox& bb, bool is_rectangular)
+				: contour(contour)
+				, bb(bb)
+				, is_rectangular(is_rectangular)
+			{}
+
+			bool IsInvalid() const {
+				return contour.empty();
+			}
+
+			void FlagInvalid() {
+				contour.clear();
+			}
+
+			void PrepareSkiplist() {
+				skiplist.resize(contour.size(), false);
+			}
+		};
+
+		typedef std::vector< ProjectedWindowContour > ContourVector;
+
+		// ------------------------------------------------------------------------------------------------
+		bool BoundingBoxesOverlapping(const BoundingBox &ibb, const BoundingBox &bb)
+		{
+			// count the '=' case as non-overlapping but as adjacent to each other
+			return ibb.first.x < bb.second.x && ibb.second.x > bb.first.x &&
+				ibb.first.y < bb.second.y && ibb.second.y > bb.first.y;
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		bool IsDuplicateVertex(const IfcVector2& vv, const std::vector<IfcVector2>& temp_contour)
+		{
+			// sanity check for duplicate vertices
+			BOOST_FOREACH(const IfcVector2& cp, temp_contour) {
+				if ((cp - vv).SquareLength() < 1e-5f) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void ExtractVerticesFromClipper(const ClipperLib::Polygon& poly, std::vector<IfcVector2>& temp_contour,
+			bool filter_duplicates = false)
+		{
+			temp_contour.clear();
+			BOOST_FOREACH(const ClipperLib::IntPoint& point, poly) {
+				IfcVector2 vv = IfcVector2(from_int64(point.X), from_int64(point.Y));
+				vv = std::max(vv, IfcVector2());
+				vv = std::min(vv, one_vec);
+
+				if (!filter_duplicates || !IsDuplicateVertex(vv, temp_contour)) {
+					temp_contour.push_back(vv);
+				}
+			}
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		BoundingBox GetBoundingBox(const ClipperLib::Polygon& poly)
+		{
+			IfcVector2 newbb_min, newbb_max;
+			MinMaxChooser<IfcVector2>()(newbb_min, newbb_max);
+
+			BOOST_FOREACH(const ClipperLib::IntPoint& point, poly) {
+				IfcVector2 vv = IfcVector2(from_int64(point.X), from_int64(point.Y));
+
+				// sanity rounding
+				vv = std::max(vv, IfcVector2());
+				vv = std::min(vv, one_vec);
+
+				newbb_min = std::min(newbb_min, vv);
+				newbb_max = std::max(newbb_max, vv);
+			}
+			return BoundingBox(newbb_min, newbb_max);
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void InsertWindowContours(const ContourVector& contours,
+			const std::vector<TempOpening>& /*openings*/,
+			TempMesh& curmesh)
+		{
+			// fix windows - we need to insert the real, polygonal shapes into the quadratic holes that we have now
+			for (size_t i = 0; i < contours.size(); ++i) {
+				const BoundingBox& bb = contours[i].bb;
+				const std::vector<IfcVector2>& contour = contours[i].contour;
+				if (contour.empty()) {
+					continue;
+				}
+
+				// check if we need to do it at all - many windows just fit perfectly into their quadratic holes,
+				// i.e. their contours *are* already their bounding boxes.
+				if (contour.size() == 4) {
+					std::set<IfcVector2, XYSorter> verts;
+					for (size_t n = 0; n < 4; ++n) {
+						verts.insert(contour[n]);
+					}
+					const std::set<IfcVector2, XYSorter>::const_iterator end = verts.end();
+					if (verts.find(bb.first) != end && verts.find(bb.second) != end
+						&& verts.find(IfcVector2(bb.first.x, bb.second.y)) != end
+						&& verts.find(IfcVector2(bb.second.x, bb.first.y)) != end
+						) {
+						continue;
+					}
+				}
+
+				const IfcFloat diag = (bb.first - bb.second).Length();
+				const IfcFloat epsilon = diag / 1000.f;
+
+				// walk through all contour points and find those that lie on the BB corner
+				size_t last_hit = -1, very_first_hit = -1;
+				IfcVector2 edge(-1, -1);
+				for (size_t n = 0, e = 0, size = contour.size();; n = (n + 1) % size, ++e) {
+					// sanity checking
+					if (e == size * 2) {
+						IFCImporter::LogError("encountered unexpected topology while generating window contour");
+						break;
+					}
+
+					const IfcVector2& v = contour[n];
+
+					bool hit = false;
+					if (std::fabs(v.x - bb.first.x) < epsilon) {
+						edge.x = bb.first.x;
+						hit = true;
+					}
+					else if (std::fabs(v.x - bb.second.x) < epsilon) {
+						edge.x = bb.second.x;
+						hit = true;
+					}
+
+					if (std::fabs(v.y - bb.first.y) < epsilon) {
+						edge.y = bb.first.y;
+						hit = true;
+					}
+					else if (std::fabs(v.y - bb.second.y) < epsilon) {
+						edge.y = bb.second.y;
+						hit = true;
+					}
+
+					if (hit) {
+						if (last_hit != (size_t)-1) {
+							const size_t old = curmesh.verts.size();
+							size_t cnt = last_hit > n ? size - (last_hit - n) : n - last_hit;
+							for (size_t a = last_hit, e = 0; e <= cnt; a = (a + 1) % size, ++e) {
+								// hack: this is to fix cases where opening contours are self-intersecting.
+								// Clipper doesn't produce such polygons, but as soon as we're back in
+								// our brave new floating-point world, very small distances are consumed
+								// by the maximum available precision, leading to self-intersecting
+								// polygons. This fix makes concave windows fail even worse, but
+								// anyway, fail is fail.
+								if ((contour[a] - edge).SquareLength() > diag*diag*0.7) {
+									continue;
+								}
+								curmesh.verts.push_back(IfcVector3(contour[a].x, contour[a].y, 0.0f));
+							}
+
+							if (edge.x != -1 && edge.y != -1 && edge != contour[last_hit]) {
+								IfcVector2 corner = edge;
+
+								if (std::fabs(contour[last_hit].x - bb.first.x) < epsilon) {
+									corner.x = bb.first.x;
+								}
+								else if (std::fabs(contour[last_hit].x - bb.second.x) < epsilon) {
+									corner.x = bb.second.x;
+								}
+
+								if (std::fabs(contour[last_hit].y - bb.first.y) < epsilon) {
+									corner.y = bb.first.y;
+								}
+								else if (std::fabs(contour[last_hit].y - bb.second.y) < epsilon) {
+									corner.y = bb.second.y;
+								}
+
+								curmesh.verts.push_back(IfcVector3(corner.x, corner.y, 0.0f));
+							}
+							else if (cnt == 1) {
+								// avoid degenerate polygons (also known as lines or points)
+								curmesh.verts.erase(curmesh.verts.begin() + old, curmesh.verts.end());
+							}
+
+							if (const size_t d = curmesh.verts.size() - old) {
+								curmesh.vertcnt.push_back(d);
+								std::reverse(curmesh.verts.rbegin(), curmesh.verts.rbegin() + d);
+							}
+							if (n == very_first_hit) {
+								break;
+							}
+						}
+						else {
+							very_first_hit = n;
+						}
+
+						last_hit = n;
+					}
+				}
+			}
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void MergeWindowContours(const std::vector<IfcVector2>& a,
+			const std::vector<IfcVector2>& b,
+			ClipperLib::ExPolygons& out)
+		{
+			out.clear();
+
+			ClipperLib::Clipper clipper;
+			ClipperLib::Polygon clip;
+
+			BOOST_FOREACH(const IfcVector2& pip, a) {
+				clip.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+			}
+
+			if (ClipperLib::Orientation(clip)) {
+				std::reverse(clip.begin(), clip.end());
+			}
+
+			clipper.AddPolygon(clip, ClipperLib::ptSubject);
+			clip.clear();
+
+			BOOST_FOREACH(const IfcVector2& pip, b) {
+				clip.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+			}
+
+			if (ClipperLib::Orientation(clip)) {
+				std::reverse(clip.begin(), clip.end());
+			}
+
+			clipper.AddPolygon(clip, ClipperLib::ptSubject);
+			clipper.Execute(ClipperLib::ctUnion, out, ClipperLib::pftNonZero, ClipperLib::pftNonZero);
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		// Subtract a from b
+		void MakeDisjunctWindowContours(const std::vector<IfcVector2>& a,
+			const std::vector<IfcVector2>& b,
+			ClipperLib::ExPolygons& out)
+		{
+			out.clear();
+
+			ClipperLib::Clipper clipper;
+			ClipperLib::Polygon clip;
+
+			BOOST_FOREACH(const IfcVector2& pip, a) {
+				clip.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+			}
+
+			if (ClipperLib::Orientation(clip)) {
+				std::reverse(clip.begin(), clip.end());
+			}
+
+			clipper.AddPolygon(clip, ClipperLib::ptClip);
+			clip.clear();
+
+			BOOST_FOREACH(const IfcVector2& pip, b) {
+				clip.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+			}
+
+			if (ClipperLib::Orientation(clip)) {
+				std::reverse(clip.begin(), clip.end());
+			}
+
+			clipper.AddPolygon(clip, ClipperLib::ptSubject);
+			clipper.Execute(ClipperLib::ctDifference, out, ClipperLib::pftNonZero, ClipperLib::pftNonZero);
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void CleanupWindowContour(ProjectedWindowContour& window)
+		{
+			std::vector<IfcVector2> scratch;
+			std::vector<IfcVector2>& contour = window.contour;
+
+			ClipperLib::Polygon subject;
+			ClipperLib::Clipper clipper;
+			ClipperLib::ExPolygons clipped;
+
+			BOOST_FOREACH(const IfcVector2& pip, contour) {
+				subject.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+			}
+
+			clipper.AddPolygon(subject, ClipperLib::ptSubject);
+			clipper.Execute(ClipperLib::ctUnion, clipped, ClipperLib::pftNonZero, ClipperLib::pftNonZero);
+
+			// This should yield only one polygon or something went wrong
+			if (clipped.size() != 1) {
+				// Empty polygon? drop the contour altogether
+				if (clipped.empty()) {
+					IFCImporter::LogError("error during polygon clipping, window contour is degenerate");
+					window.FlagInvalid();
+					return;
+				}
+
+				// Else: take the first only
+				IFCImporter::LogError("error during polygon clipping, window contour is not convex");
+			}
+
+			ExtractVerticesFromClipper(clipped[0].outer, scratch);
+			// Assume the bounding box doesn't change during this operation
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void CleanupWindowContours(ContourVector& contours)
+		{
+			// Use PolyClipper to clean up window contours
+			try {
+				BOOST_FOREACH(ProjectedWindowContour& window, contours) {
+					CleanupWindowContour(window);
+				}
+			}
+			catch (const char* sx) {
+				IFCImporter::LogError("error during polygon clipping, window shape may be wrong: (Clipper: "
+					+ std::string(sx) + ")");
+			}
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void CleanupOuterContour(const std::vector<IfcVector2>& contour_flat, TempMesh& curmesh)
+		{
+			std::vector<IfcVector3> vold;
+			std::vector<unsigned int> iold;
+
+			vold.reserve(curmesh.verts.size());
+			iold.reserve(curmesh.vertcnt.size());
+
+			// Fix the outer contour using polyclipper
+			try {
+				ClipperLib::Polygon subject;
+				ClipperLib::Clipper clipper;
+				ClipperLib::ExPolygons clipped;
+
+				ClipperLib::Polygon clip;
+				clip.reserve(contour_flat.size());
+				BOOST_FOREACH(const IfcVector2& pip, contour_flat) {
+					clip.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+				}
+
+				if (!ClipperLib::Orientation(clip)) {
+					std::reverse(clip.begin(), clip.end());
+				}
+
+				// We need to run polyclipper on every single polygon -- we can't run it one all
+				// of them at once or it would merge them all together which would undo all
+				// previous steps
+				subject.reserve(4);
+				size_t index = 0;
+				size_t countdown = 0;
+				BOOST_FOREACH(const IfcVector3& pip, curmesh.verts) {
+					if (!countdown) {
+						countdown = curmesh.vertcnt[index++];
+						if (!countdown) {
 							continue;
 						}
-
-						//find the vector 
-
-						auto vec = (point - otherPoint).Normalize();
-						//dot product with the extrusion vector
-						IfcVector3 normalizedDir = ext_dir;
-						auto dotProd = vec * normalizedDir.Normalize();
-						auto selfSqred = vec*vec;
-
-						if ((dotProd - selfSqred) < 1e-06)
-						{
-							bestv = &otherPoint;
-							best = sqdist;
+					}
+					subject.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+					if (--countdown == 0) {
+						if (!ClipperLib::Orientation(subject)) {
+							std::reverse(subject.begin(), subject.end());
 						}
 
+						clipper.AddPolygon(subject, ClipperLib::ptSubject);
+						clipper.AddPolygon(clip, ClipperLib::ptClip);
+
+						clipper.Execute(ClipperLib::ctIntersection, clipped, ClipperLib::pftNonZero, ClipperLib::pftNonZero);
+
+						BOOST_FOREACH(const ClipperLib::ExPolygon& ex, clipped) {
+							iold.push_back(ex.outer.size());
+							BOOST_FOREACH(const ClipperLib::IntPoint& point, ex.outer) {
+								vold.push_back(IfcVector3(
+									from_int64(point.X),
+									from_int64(point.Y),
+									0.0f));
+							}
+						}
+
+						subject.clear();
+						clipped.clear();
+						clipper.Clear();
+					}
+				}
+			}
+			catch (const char* sx) {
+				IFCImporter::LogError("Ifc: error during polygon clipping, wall contour line may be wrong: (Clipper: "
+					+ std::string(sx) + ")");
+
+				return;
+			}
+
+			// swap data arrays
+			std::swap(vold, curmesh.verts);
+			std::swap(iold, curmesh.vertcnt);
+		}
+
+		typedef std::vector<TempOpening*> OpeningRefs;
+		typedef std::vector<OpeningRefs > OpeningRefVector;
+
+		typedef std::vector < std::pair <
+			ContourVector::const_iterator,
+			Contour::const_iterator >
+		> ContourRefVector;
+
+		// ------------------------------------------------------------------------------------------------
+		bool BoundingBoxesAdjacent(const BoundingBox& bb, const BoundingBox& ibb)
+		{
+			// TODO: I'm pretty sure there is a much more compact way to check this
+			const IfcFloat epsilon = 1e-5f;
+			return  (std::fabs(bb.second.x - ibb.first.x) < epsilon && bb.first.y <= ibb.second.y && bb.second.y >= ibb.first.y) ||
+				(std::fabs(bb.first.x - ibb.second.x) < epsilon && ibb.first.y <= bb.second.y && ibb.second.y >= bb.first.y) ||
+				(std::fabs(bb.second.y - ibb.first.y) < epsilon && bb.first.x <= ibb.second.x && bb.second.x >= ibb.first.x) ||
+				(std::fabs(bb.first.y - ibb.second.y) < epsilon && ibb.first.x <= bb.second.x && ibb.second.x >= bb.first.x);
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		// Check if m0,m1 intersects n0,n1 assuming same ordering of the points in the line segments
+		// output the intersection points on n0,n1
+		bool IntersectingLineSegments(const IfcVector2& n0, const IfcVector2& n1,
+			const IfcVector2& m0, const IfcVector2& m1,
+			IfcVector2& out0, IfcVector2& out1)
+		{
+			const IfcVector2 n0_to_n1 = n1 - n0;
+
+			const IfcVector2 n0_to_m0 = m0 - n0;
+			const IfcVector2 n1_to_m1 = m1 - n1;
+
+			const IfcVector2 n0_to_m1 = m1 - n0;
+
+			const IfcFloat e = 1e-5f;
+			const IfcFloat smalle = 1e-9f;
+
+			static const IfcFloat inf = std::numeric_limits<IfcFloat>::infinity();
+
+			if (!(n0_to_m0.SquareLength() < e*e || std::fabs(n0_to_m0 * n0_to_n1) / (n0_to_m0.Length() * n0_to_n1.Length()) > 1 - 1e-5)) {
+				return false;
+			}
+
+			if (!(n1_to_m1.SquareLength() < e*e || std::fabs(n1_to_m1 * n0_to_n1) / (n1_to_m1.Length() * n0_to_n1.Length()) > 1 - 1e-5)) {
+				return false;
+			}
+
+			IfcFloat s0;
+			IfcFloat s1;
+
+			// pick the axis with the higher absolute difference so the result
+			// is more accurate. Since we cannot guarantee that the axis with
+			// the higher absolute difference is big enough as to avoid
+			// divisions by zero, the case 0/0 ~ infinity is detected and
+			// handled separately.
+			if (std::fabs(n0_to_n1.x) > std::fabs(n0_to_n1.y)) {
+				s0 = n0_to_m0.x / n0_to_n1.x;
+				s1 = n0_to_m1.x / n0_to_n1.x;
+
+				if (std::fabs(s0) == inf && std::fabs(n0_to_m0.x) < smalle) {
+					s0 = 0.;
+				}
+				if (std::fabs(s1) == inf && std::fabs(n0_to_m1.x) < smalle) {
+					s1 = 0.;
+				}
+			}
+			else {
+				s0 = n0_to_m0.y / n0_to_n1.y;
+				s1 = n0_to_m1.y / n0_to_n1.y;
+
+				if (std::fabs(s0) == inf && std::fabs(n0_to_m0.y) < smalle) {
+					s0 = 0.;
+				}
+				if (std::fabs(s1) == inf && std::fabs(n0_to_m1.y) < smalle) {
+					s1 = 0.;
+				}
+			}
+
+			if (s1 < s0) {
+				std::swap(s1, s0);
+			}
+
+			s0 = std::max(0.0, s0);
+			s1 = std::max(0.0, s1);
+
+			s0 = std::min(1.0, s0);
+			s1 = std::min(1.0, s1);
+
+			if (std::fabs(s1 - s0) < e) {
+				return false;
+			}
+
+			out0 = n0 + s0 * n0_to_n1;
+			out1 = n0 + s1 * n0_to_n1;
+
+			return true;
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void FindAdjacentContours(ContourVector::iterator current, const ContourVector& contours)
+		{
+			const IfcFloat sqlen_epsilon = static_cast<IfcFloat>(1e-8);
+			const BoundingBox& bb = (*current).bb;
+
+			// What is to be done here is to populate the skip lists for the contour
+			// and to add necessary padding points when needed.
+			SkipList& skiplist = (*current).skiplist;
+
+			// First step to find possible adjacent contours is to check for adjacent bounding
+			// boxes. If the bounding boxes are not adjacent, the contours lines cannot possibly be.
+			for (ContourVector::const_iterator it = contours.begin(), end = contours.end(); it != end; ++it) {
+				if ((*it).IsInvalid()) {
+					continue;
+				}
+
+				// this left here to make clear we also run on the current contour
+				// to check for overlapping contour segments (which can happen due
+				// to projection artifacts).
+				//if(it == current) {
+				//  continue;
+				//}
+
+				const bool is_me = it == current;
+
+				const BoundingBox& ibb = (*it).bb;
+
+				// Assumption: the bounding boxes are pairwise disjoint or identical
+				ai_assert(is_me || !BoundingBoxesOverlapping(bb, ibb));
+
+				if (is_me || BoundingBoxesAdjacent(bb, ibb)) {
+					// Now do a each-against-everyone check for intersecting contour
+					// lines. This obviously scales terribly, but in typical real
+					// world Ifc files it will not matter since most windows that
+					// are adjacent to each others are rectangular anyway.
+
+					Contour& ncontour = (*current).contour;
+					const Contour& mcontour = (*it).contour;
+
+					for (size_t n = 0; n < ncontour.size(); ++n) {
+						const IfcVector2& n0 = ncontour[n];
+						const IfcVector2& n1 = ncontour[(n + 1) % ncontour.size()];
+
+						for (size_t m = 0, mend = (is_me ? n : mcontour.size()); m < mend; ++m) {
+							ai_assert(&mcontour != &ncontour || m < n);
+
+							const IfcVector2& m0 = mcontour[m];
+							const IfcVector2& m1 = mcontour[(m + 1) % mcontour.size()];
+
+							IfcVector2 isect0, isect1;
+							if (IntersectingLineSegments(n0, n1, m0, m1, isect0, isect1)) {
+								if ((isect0 - n0).SquareLength() > sqlen_epsilon) {
+									++n;
+
+									ncontour.insert(ncontour.begin() + n, isect0);
+									skiplist.insert(skiplist.begin() + n, true);
+								}
+								else {
+									skiplist[n] = true;
+								}
+
+								if ((isect1 - n1).SquareLength() > sqlen_epsilon) {
+									++n;
+
+									ncontour.insert(ncontour.begin() + n, isect1);
+									skiplist.insert(skiplist.begin() + n, false);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		AI_FORCE_INLINE bool LikelyBorder(const IfcVector2& vdelta)
+		{
+			const IfcFloat dot_point_epsilon = static_cast<IfcFloat>(1e-5);
+			return std::fabs(vdelta.x * vdelta.y) < dot_point_epsilon;
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void FindBorderContours(ContourVector::iterator current)
+		{
+			const IfcFloat border_epsilon_upper = static_cast<IfcFloat>(1 - 1e-4);
+			const IfcFloat border_epsilon_lower = static_cast<IfcFloat>(1e-4);
+
+			bool outer_border = false;
+			bool start_on_outer_border = false;
+
+			SkipList& skiplist = (*current).skiplist;
+			IfcVector2 last_proj_point;
+
+			const Contour::const_iterator cbegin = (*current).contour.begin(), cend = (*current).contour.end();
+
+			for (Contour::const_iterator cit = cbegin; cit != cend; ++cit) {
+				const IfcVector2& proj_point = *cit;
+
+				// Check if this connection is along the outer boundary of the projection
+				// plane. In such a case we better drop it because such 'edges' should
+				// not have any geometry to close them (think of door openings).
+				if (proj_point.x <= border_epsilon_lower || proj_point.x >= border_epsilon_upper ||
+					proj_point.y <= border_epsilon_lower || proj_point.y >= border_epsilon_upper) {
+					if (outer_border) {
+						ai_assert(cit != cbegin);
+						if (LikelyBorder(proj_point - last_proj_point)) {
+							skiplist[std::distance(cbegin, cit) - 1] = true;
+						}
+					}
+					else if (cit == cbegin) {
+						start_on_outer_border = true;
+					}
+
+					outer_border = true;
+				}
+				else {
+					outer_border = false;
+				}
+
+				last_proj_point = proj_point;
+			}
+
+			// handle last segment
+			if (outer_border && start_on_outer_border) {
+				const IfcVector2& proj_point = *cbegin;
+				if (LikelyBorder(proj_point - last_proj_point)) {
+					skiplist[skiplist.size() - 1] = true;
+				}
+			}
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		AI_FORCE_INLINE bool LikelyDiagonal(IfcVector2 vdelta)
+		{
+			vdelta.x = std::fabs(vdelta.x);
+			vdelta.y = std::fabs(vdelta.y);
+			return (std::fabs(vdelta.x - vdelta.y) < 0.8 * std::max(vdelta.x, vdelta.y));
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		void FindLikelyCrossingLines(ContourVector::iterator current)
+		{
+			SkipList& skiplist = (*current).skiplist;
+			IfcVector2 last_proj_point;
+
+			const Contour::const_iterator cbegin = (*current).contour.begin(), cend = (*current).contour.end();
+			for (Contour::const_iterator cit = cbegin; cit != cend; ++cit) {
+				const IfcVector2& proj_point = *cit;
+
+				if (cit != cbegin) {
+					IfcVector2 vdelta = proj_point - last_proj_point;
+					if (LikelyDiagonal(vdelta)) {
+						skiplist[std::distance(cbegin, cit) - 1] = true;
 					}
 				}
 
-				
-				//By the nature of the algorithm one side is processed first before the other
-				//So it is safe to assume the first half of the points are going to be on the same side
-				// Unless the wall is in a very odd shape in which case, good luck!
+				last_proj_point = proj_point;
+			}
 
-				//FIXME: with the 2D Project, theoretically we should be able to pair up the points 
-				// as they would map on to the same 2D coordinates thus this function is over engineered
+			// handle last segment
+			if (LikelyDiagonal(*cbegin - last_proj_point)) {
+				skiplist[skiplist.size() - 1] = true;
+			}
+		}
 
-				vecMap.push_back({ point, *bestv });
+		// ------------------------------------------------------------------------------------------------
+		size_t CloseWindows(ContourVector& contours,
+			const IfcMatrix4& minv,
+			OpeningRefVector& contours_to_openings,
+			TempMesh& curmesh,
+			const bool &dump = false)
+		{
+			size_t closed = 0;
+			// For all contour points, check if one of the assigned openings does
+			// already have points assigned to it. In this case, assume this is
+			// the other side of the wall and generate connections between
+			// the two holes in order to close the window.
 
-			}//for (auto &point : opening.wallPoints)
+			// All this gets complicated by the fact that contours may pertain to
+			// multiple openings(due to merging of adjacent or overlapping openings).
+			// The code is based on the assumption that this happens symmetrically
+			// on both sides of the wall. If it doesn't (which would be a bug anyway)
+			// wrong geometry may be generated.
+			for (ContourVector::iterator it = contours.begin(), end = contours.end(); it != end; ++it) {
+				if (dump)
+				{
+					std::cout << " Contour bb: (" << it->bb.first.x << "," << it->bb.first.y
+						<< ")(" << it->bb.second.x << "," << it->bb.second.y << ")" << std::endl;
+				}
+
+				if ((*it).IsInvalid()) {
+					continue;
+				}
+				OpeningRefs& refs = contours_to_openings[std::distance(contours.begin(), it)];
+
+				bool has_other_side = false;
+
+				if (dump)
+				{
+					std::cout << "#openings: " << refs.size() << std::endl;
+				}
+				/*BOOST_FOREACH(const TempOpening* opening, refs) {
+					if(!opening->wallPoints.empty()) {
+					if (dump)
+					{
+					std::cout << "#opening wall points: " << opening->wallPoints.size() << std::endl;
+					}
+					has_other_side = true;
+					break;
+					}
+					}*/
+
+				//     if (has_other_side) {
+				//std::cout << "Has other side" << std::endl;
+
+				//         ContourRefVector adjacent_contours;
+
+				//         // prepare a skiplist for this contour. The skiplist is used to
+				//         // eliminate unwanted contour lines for adjacent windows and
+				//         // those bordering the outer frame.
+				//         (*it).PrepareSkiplist();
+
+				//         FindAdjacentContours(it, contours);
+				//         FindBorderContours(it);
+
+				//         // if the window is the result of a finite union or intersection of rectangles,
+				//         // there shouldn't be any crossing or diagonal lines in it. Such lines would
+				//         // be artifacts caused by numerical inaccuracies or other bugs in polyclipper
+				//         // and our own code. Since rectangular openings are by far the most frequent
+				//         // case, it is worth filtering for this corner case.
+				//         if((*it).is_rectangular) {
+				//             FindLikelyCrossingLines(it);
+				//         }
+
+				//         ai_assert((*it).skiplist.size() == (*it).contour.size());
+
+				//         SkipList::const_iterator skipbegin = (*it).skiplist.begin();
+
+				//         curmesh.verts.reserve(curmesh.verts.size() + (*it).contour.size() * 4);
+				//         curmesh.vertcnt.reserve(curmesh.vertcnt.size() + (*it).contour.size());
+
+				//         // compare base poly normal and contour normal to detect if we need to reverse the face winding
+				//         IfcVector3 basePolyNormal = TempMesh::ComputePolygonNormal( curmesh.verts.data(), curmesh.vertcnt.front());
+				//         std::vector<IfcVector3> worldSpaceContourVtx( it->contour.size());
+				//         for( size_t a = 0; a < it->contour.size(); ++a )
+				//             worldSpaceContourVtx[a] = minv * IfcVector3( it->contour[a].x, it->contour[a].y, 0.0);
+				//         IfcVector3 contourNormal = TempMesh::ComputePolygonNormal( worldSpaceContourVtx.data(), worldSpaceContourVtx.size());
+				//         bool reverseCountourFaces = (contourNormal * basePolyNormal) > 0.0;
+
+				//         // XXX this algorithm is really a bit inefficient - both in terms
+				//         // of constant factor and of asymptotic runtime.
+				//         std::vector<bool>::const_iterator skipit = skipbegin;
+
+				//         IfcVector3 start0;
+				//         IfcVector3 start1;
+
+				//         const Contour::const_iterator cbegin = (*it).contour.begin(), cend = (*it).contour.end();
+
+				//         bool drop_this_edge = false;
+				//         for (Contour::const_iterator cit = cbegin; cit != cend; ++cit, drop_this_edge = *skipit++) {
+				//             const IfcVector2& proj_point = *cit;
+
+				//             // Locate the closest opposite point. This should be a good heuristic to
+				//             // connect only the points that are really intended to be connected.
+				//             IfcFloat best = static_cast<IfcFloat>(1e10);
+				//             IfcVector3 bestv;
+
+				//             const IfcVector3 world_point = minv * IfcVector3(proj_point.x,proj_point.y,0.0f);
+				//	std::cout << "world_point ( " << world_point.x << "," << world_point.y << " ," << world_point.z << " )" << std::endl;
+				//             BOOST_FOREACH(const TempOpening* opening, refs) {
+				//                 BOOST_FOREACH(const IfcVector3& other, opening->wallPoints) {
+				//                     const IfcFloat sqdist = (world_point - other).SquareLength();
+				//			std::cout << "Other wall point ( " << other.x << "," << other.y << " ," << other.z << " )" << std::endl;
+				//                     if (sqdist < best) {
+				//                         // avoid self-connections
+				//                         if(sqdist < 1e-5) {
+				//                             continue;
+				//                         }
+
+				//                         bestv = other;
+				//                         best = sqdist;
+				//                     }
+				//                 }
+				//             }
+				//	std::cout << "Best wall point ( " << bestv.x << "," << bestv.y << " ," << bestv.z << " )" << std::endl;
+				//             if (drop_this_edge) {
+				//                 curmesh.verts.pop_back();
+				//                 curmesh.verts.pop_back();
+				//             }
+				//             else {
+				//                 curmesh.verts.push_back(((cit == cbegin) != reverseCountourFaces) ? world_point : bestv);
+				//                 curmesh.verts.push_back(((cit == cbegin) != reverseCountourFaces) ? bestv : world_point);
+
+				//                 curmesh.vertcnt.push_back(4);
+				//                 ++closed;
+				//             }
+
+				//             if (cit == cbegin) {
+				//                 start0 = world_point;
+				//                 start1 = bestv;
+				//                 continue;
+				//             }
+
+				//             curmesh.verts.push_back(reverseCountourFaces ? bestv : world_point);
+				//             curmesh.verts.push_back(reverseCountourFaces ? world_point : bestv);
+
+				//             if (cit == cend - 1) {
+				//                 drop_this_edge = *skipit;
+
+				//                 // Check if the final connection (last to first element) is itself
+				//                 // a border edge that needs to be dropped.
+				//                 if (drop_this_edge) {
+				//                     --closed;
+				//                     curmesh.vertcnt.pop_back();
+				//                     curmesh.verts.pop_back();
+				//                     curmesh.verts.pop_back();
+				//                 }
+				//                 else {
+				//                     curmesh.verts.push_back(reverseCountourFaces ? start0 : start1);
+				//                     curmesh.verts.push_back(reverseCountourFaces ? start1 : start0);
+				//                 }
+				//             }
+				//         }
+				//     }
+				//     else {
+				const Contour::const_iterator cbegin = (*it).contour.begin(), cend = (*it).contour.end();
+				BOOST_FOREACH(TempOpening* opening, refs) {
+					ai_assert(opening->wallPoints.empty());
+					opening->wallPoints.reserve(opening->wallPoints.capacity() + (*it).contour.size());
+					for (Contour::const_iterator cit = cbegin; cit != cend; ++cit) {
+						const IfcVector2& proj_point = *cit;
+						opening->wallPoints.push_back(minv * IfcVector3(proj_point.x, proj_point.y, 0.0f));
+					}
+				}
+				//}
+			}
+			return closed;
+		}
+
+		bool isIntersect(const BoundingBox &bbox1, const BoundingBox &bbox2, BoundingBox &overlapRegion, const bool dump = false)
+		{
+			auto bbox1lengthx = bbox1.second.x - bbox1.first.x;
+			auto bbox1lengthy = bbox1.second.y - bbox1.first.y;
+			auto bbox2lengthx = bbox2.second.x - bbox2.first.x;
+			auto bbox2lengthy = bbox2.second.y - bbox2.first.y;
+
+			//if either boxes has no length along the axis it can only be touching at best.
+
+			bool overlapX = (bbox1lengthx > 1e-5 && bbox2lengthx > 1e-5)
+				&& (bbox1.first.x <= bbox2.first.x && bbox2.first.x < bbox1.second.x
+				|| bbox1.first.x >= bbox2.first.x && bbox1.first.x < bbox2.second.x);
+			bool overlapY = (bbox1lengthy > 1e-5 && bbox2lengthy > 1e-5)
+				&& (bbox1.first.y <= bbox2.first.y && bbox2.first.y < bbox1.second.y
+				|| bbox1.first.y >= bbox2.first.y && bbox1.first.y < bbox2.second.y);
+
+			//boxes are also considered overlapped if their edges touches each other (corner does not count)
+			bool touchingX = fabsf(bbox1.first.x - bbox2.first.x) < 1e-5 || fabsf(bbox1.first.x - bbox2.second.x) < 1e-5
+				|| fabsf(bbox1.second.x - bbox2.second.x) < 1e-5 || fabsf(bbox1.second.x - bbox2.first.x) < 1e-5
+				|| (bbox1.first.x < bbox2.first.x && bbox1.second.x > bbox2.second.x) ||
+				(bbox2.first.x < bbox1.first.x && bbox2.second.x > bbox1.second.x);
+
+			bool touchingY = fabsf(bbox1.first.y - bbox2.first.y) < 1e-5 || fabsf(bbox1.first.y - bbox2.second.y) < 1e-5
+				|| fabsf(bbox1.second.y - bbox2.second.y) < 1e-5 || fabsf(bbox1.second.y - bbox2.first.y) < 1e-5
+				|| (bbox1.first.y < bbox2.first.y && bbox1.second.y > bbox2.second.y) ||
+				(bbox2.first.y < bbox1.first.y && bbox2.second.y > bbox1.second.y);
+
+			bool overlap = overlapX && overlapY || touchingX && overlapY || touchingY && overlapX;
 
 			if (dump)
 			{
-				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane"+std::to_string(opening_count)+".obj";
-				std::ofstream outputStream(fileName.c_str());
-				for (const auto v : vecMap)
-				{
-					outputStream << "v " << v[0].x << " " << v[0].y << " " << v[0].z << std::endl;
-
-				}
-				for (int i = 0; i < vecMap.size(); i += 4)
-				{
-					outputStream << "f ";
-					if (i + 4 >= vecMap.size())
-					{
-						
-						for (int j = i + 1; j <= vecMap.size(); ++j)
-							outputStream << j << " ";
-						
-					}
-					else
-					{
-						for (int j = i + 1; j <= i+4; ++j)
-							outputStream << j << " ";
-					}
-					outputStream << std::endl;
-				
-				}
-				outputStream.close();
+				std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ") ";
+				std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ") ";
+				std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " ) Touching ( " << touchingX << " , " << touchingY << ")" << std::endl;
 			}
 
-			if (dump)
+			if (overlap)
 			{
-				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPoint3d"+std::to_string(opening_count)+".obj";
-				std::ofstream outputStream(fileName.c_str());
-				for (const auto v : opening.wallPoints)
-				{
-					outputStream << "v " << v.x << " " << v.y << " " << v.z << std::endl;
+				overlapRegion.first.x = bbox1.first.x > bbox2.first.x ? bbox1.first.x : bbox2.first.x;
+				overlapRegion.second.x = bbox2.second.x > bbox1.second.x ? bbox1.second.x : bbox2.second.x;
 
-				}
+				overlapRegion.first.y = bbox1.first.y > bbox2.first.y ? bbox1.first.y : bbox2.first.y;
+				overlapRegion.second.y = bbox2.second.y > bbox1.second.y ? bbox1.second.y : bbox2.second.y;
 
-				for (int i = 0; i < opening.wallPoints.size(); i += 4)
-				{
-					outputStream << "f ";
-					if (i + 4 >= opening.wallPoints.size())
-					{
-
-						for (int j = i + 1; j <= opening.wallPoints.size(); ++j)
-							outputStream << j << " ";
-
-					}
-					else
-					{
-						for (int j = i + 1; j <= i + 4; ++j)
-							outputStream << j << " ";
-					}
-					outputStream << std::endl;
-
-				}
-				outputStream.close();
+				auto diff = overlapRegion.second - overlapRegion.first;
+				//std::cout << " box 1: (" << bbox1.first.x << "," << bbox1.first.y << ") - (" << bbox1.second.x << "," << bbox1.second.y << ")" << std::endl;
+				//std::cout << " box 2: (" << bbox2.first.x << "," << bbox2.first.y << ") - (" << bbox2.second.x << "," << bbox2.second.y << ")" << std::endl;
+				//std::cout << "Overlap? ( " << overlapX << ", " << overlapY << " )" << std::endl;
+				/*std::cout << " overlapRegion: (" << overlapRegion.first.x << "," << overlapRegion.first.y << ") - (" << overlapRegion.second.x << "," << overlapRegion.second.y << ")" << std::endl;
+				std::cout << " diff: (" << diff.x << "," << diff.y << std::endl;*/
 			}
 
-			//Attempt an isometric projection of the wall points to make it 2D
-			std::vector<IfcVector2> wallpoints2d;		
-			
-			std::vector<std::pair<IfcVector2, std::pair<IfcVector3, IfcVector3>>> wallPoints2d;
-			IfcVector2 wpmax(-1e10, -1e10), wpmin(1e10, 1e10);
-			for (const auto v : vecMap)
-			{
+			return overlap;
+		}
 
-				auto pointOnPlane = (v[0] - (v[0] * ndir)*ndir);
+		std::vector<std::pair<IfcVector2, IfcVector2>> Get2DContour(
+			const TempMesh& curve,
+			const IfcVector3 &dir,
+			const IfcVector3 &xAxis,
+			const IfcVector3 &yAxis,
+			const IfcVector3 &length
+			)
+		{
+			std::vector<IfcVector2> res;
+			std::vector<std::pair<IfcVector2, IfcVector2>> pairs;
+			IfcVector2 max(-1e10, -1e10), min(1e10, 1e10);
+			res.reserve(curve.verts.size());
+			for (int i = 0; i < curve.verts.size(); ++i)
+			{
+				auto pointOnPlane = (curve.verts[i] - (curve.verts[i] * dir)*dir);
 				auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
 
-				wallPoints2d.push_back({ point2d, { v[0], v[1] } });
+				auto vertDown = (curve.verts[i] + length);
+				auto pointOnPlane2 = (vertDown - (vertDown * dir)*dir);
+				auto point2d2 = IfcVector2(pointOnPlane2*xAxis, pointOnPlane2*yAxis);
 
-
-				wpmax.x = std::max(wpmax.x, point2d.x);
-				wpmax.y = std::max(wpmax.y, point2d.y);
-				wpmin.x = std::min(wpmin.x, point2d.x);
-				wpmin.y = std::min(wpmin.y, point2d.y);
-
-			}
-
-			if (dump)
-			{
-				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane2d"+std::to_string(opening_count)+".obj";
-				std::ofstream outputStream(fileName.c_str());
-				for (const auto v : wallPoints2d)
-				{
-
-					outputStream << "v " << v.first.x << " " << v.first.y << " 0" << std::endl;
-
+				if (!IsDuplicateVertex(point2d, res)) {
+					res.push_back(point2d);
+					min = std::min(point2d, min);
+					max = std::max(point2d, max);
 				}
 
-				for (int i = 0; i < wallPoints2d.size(); i += 4)
-				{
-					outputStream << "f ";
-					if (i + 4 >= wallPoints2d.size())
-					{
-
-						for (int j = i + 1; j <= wallPoints2d.size(); ++j)
-							outputStream << j << " ";
-
-					}
-					else
-					{
-						for (int j = i + 1; j <= i + 4; ++j)
-							outputStream << j << " ";
-					}
-					outputStream << std::endl;
-
+				if (!IsDuplicateVertex(point2d2, res)) {
+					res.push_back(point2d2);
+					min = std::min(point2d2, min);
+					max = std::max(point2d2, max);
 				}
-
-				outputStream.close();
 			}
-			
+
+			//figure out conjoining points
+			auto halfWay = (max - min) * 0.5 + min;
 			int count = 0;
 			int currentIdx = 0;
 
-
-
-			auto halfWay = (wpmax - wpmin) * 0.5 + wpmin;
-			if (dump)
+			while (count < res.size())
 			{
-				std::cout << " bbox: (" << wpmin.x << "," << wpmin.y << ")(" << wpmax.x << "," << wpmax.y << ")" << std::endl;
-				std::cout << " midway: (" << halfWay.x << "," << halfWay.y << ")" << std::endl; 
-			}
-			openingJoints.resize(openingJoints.size()+1);
-			openingJoints.back().first.first = wpmin;
-			openingJoints.back().first.second = wpmax;
-			openingJoints.back().second.clear();
-			/*
-			* Using only one side of the wall points, join up the contour
-			*/
-			while (count < wallPoints2d.size())
-			{
-				bool closerToXMin = wallPoints2d[currentIdx].first.x < halfWay.x;
-				bool closerToYMin = wallPoints2d[currentIdx].first.y < halfWay.y;
+				bool closerToXMin = res[currentIdx].x < halfWay.x;
+				bool closerToYMin = res[currentIdx].y < halfWay.y;
 				float bestDist = 1.e10;
 				float bestAng = 360.;
 				int bestPair = currentIdx;
-				for (int i = 0; i < wallPoints2d.size(); ++i)
+				for (int i = 0; i < res.size(); ++i)
 				{
 					if (i == currentIdx) continue;
-					auto diff = wallPoints2d[i].first - wallPoints2d[currentIdx].first;
+					auto diff = res[i] - res[currentIdx];
 					auto d = diff.SquareLength();
 					auto tanAng = fabsf(diff.y) / fabsf(diff.x);
 					auto ang = atanf(tanAng);
@@ -1482,7 +1118,6 @@ void CloseAllWindows(
 					bool zeroX = fabsf(diff.x) < 1e-5;
 					bool zeroY = fabsf(diff.y) < 1e-5;
 
-
 					if (closerToYMin)
 					{
 						//Calculate the distance between the points
@@ -1491,7 +1126,6 @@ void CloseAllWindows(
 						else if (positiveY && positiveX)	ang += PI;
 						else if (!positiveX && positiveY) ang += 2 * PI;
 						else if (!positiveX && !positiveY) ang += 3 * PI;
-					
 					}
 					else
 					{
@@ -1500,1298 +1134,1688 @@ void CloseAllWindows(
 						else if (!positiveX && positiveY) ang += PI;
 						else if (!positiveX && !positiveY) ang += 2 * PI;
 						else if (positiveX && !positiveY) ang += 3 * PI;
-
 					}
-
 
 					if (ang < bestAng || (ang == bestAng && bestDist > d))
 					{
-
 						bestDist = d;
 						bestAng = ang;
 						bestPair = i;
 					}
-
-					if (dumpConsole)
-					{
-						std::cout << " [" << i << "] (" << wallPoints2d[i].first.x << ","
-							<< wallPoints2d[i].first.y << ") diff: (" << diff.x << ","
-							<< diff.y << ") d: " << d << " ang: " << ang << " closer to X: " << closerToXMin << " Y " << closerToYMin 
-							<< "( " << (zeroX ? "zeroX" : (positiveX ? "posX" : "negX")) << "," << (zeroY ? "zeroY" : (positiveY ? "posY" : "negY")) << ") " << std::endl;
-					}
-					
 				}
+
 				if (bestPair != currentIdx)
 				{
-					if(dumpConsole)
-						std::cout << " Found best pair for " << currentIdx << ", pair is " << bestPair << std::endl;
+					std::pair<IfcVector2, IfcVector2> joint = { res[currentIdx], res[bestPair] };
+					pairs.push_back(joint);
+					currentIdx = bestPair;
+				}
+				++count;
+			}
+			return pairs;
+		}
+
+		void getProjectionVectors(
+			const IfcVector3 &ext_dir,
+			IfcVector3 &ndir,
+			IfcVector3 &xAxis,
+			IfcVector3 &yAxis,
+			const bool skip = false)
+		{
+			//FIXME: I shouldn't be projecting at an orthogonal to the extrusion direction
+			//but for some reason projecting onto the extrusion direction gives wrong looking results.
+			if (skip)
+			{
+				ndir = ext_dir;
+			}
+			else
+			{
+				ndir = IfcVector3(3, 4, 0);
+				ndir.z = ext_dir.z == 0 ? 0 : (ext_dir.x*ndir.x + ext_dir.y*ndir.y) / -ext_dir.z;
+			}
+
+			ndir.Normalize();
+
+			//define my x and y axis.
+			if (ndir.x == 1 && ndir.y == 0 && ndir.z == 0)
+			{
+				//can't use 1 0 0 as the x axis
+				xAxis.x = 0; xAxis.y = 1; xAxis.z = 0;
+			}
+			else
+			{
+				xAxis.x = 1; xAxis.y = 0; xAxis.z = 0;
+			}
+
+			xAxis = (xAxis - (xAxis * ndir)*ndir);
+			xAxis.Normalize();
+
+			//y axis is a vector that is orthongal to both my projection direction and the x axis -> cross product
+			yAxis = xAxis ^ ndir;
+		}
+
+		void CloseAllWindows(
+			std::vector<TempOpening> &openings,
+			TempMesh& curmesh,
+			const IfcVector3 &ext_dir,
+			const TempMesh& curve,
+			const IfcVector3 &dir,
+			const bool dump)
+		{
+			static int opening_count = 0;
+			std::vector<std::pair<BoundingBox, std::vector<std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>>>>> openingJoints;
+			openingJoints.reserve(openings.size());
+
+			IfcVector3 ndir, xAxis, yAxis;
+			//Prepare for a plane to project onto 2D
+			getProjectionVectors(ext_dir, ndir, xAxis, yAxis);
+
+			BOOST_FOREACH(TempOpening& opening, openings) {
+				/*
+				* Pair up the wall points
+				*/
+				bool dumpConsole = false;//dump && opening_count == 5;
+				if (!opening.wallPoints.empty()) {
+					std::vector<std::vector<IfcVector3>> vecMap;
+					IfcVector3 openingBBmin = opening.wallPoints[0], openingBBmax = opening.wallPoints[0];
+
+					bool first = true;
+					bool firstPair = true;
+					IfcVector3 refPoint;
+					if (dumpConsole)
+						std::cout << "Wall point size: " << opening.wallPoints.size() << std::endl;
+
+					std::vector<bool> toRemovePts(opening.wallPoints.size(), false);
+					for (int i = 0; i < opening.wallPoints.size(); ++i)
+					{
+						if (toRemovePts[i]) continue;
+						for (int j = i + 1; j < opening.wallPoints.size(); ++j)
+						{
+							auto diff = opening.wallPoints[i] - opening.wallPoints[j];
+							toRemovePts[j] = toRemovePts[j] || (fabsf(diff.x) < 1e-5  && fabsf(diff.y) < 1e-5  && fabsf(diff.z) < 1e-5);
+						}
+					}
+
+					for (int i = opening.wallPoints.size() - 1; i >= 0; --i)
+					{
+						if (toRemovePts[i])
+							opening.wallPoints.erase(opening.wallPoints.begin() + i);
+					}
+
+					if (dumpConsole)
+						std::cout << "Wall point size after pruning: " << opening.wallPoints.size() << std::endl;
+
+					for (int i = 0; i < opening.wallPoints.size() / 2; ++i)
+					{
+						auto &point = opening.wallPoints[i];
+						IfcFloat best = static_cast<IfcFloat>(1e10);
+						IfcVector3 *bestv;
+
+						for (int j = opening.wallPoints.size() / 2; j < opening.wallPoints.size(); ++j)
+						{
+							auto &otherPoint = opening.wallPoints[j];
+							const IfcFloat sqdist = (point - otherPoint).SquareLength();
+							if (sqdist < best) {
+								// avoid self-connections
+								if (sqdist < 1e-5) {
+									continue;
+								}
+
+								//find the vector
+
+								auto vec = (point - otherPoint).Normalize();
+								//dot product with the extrusion vector
+								IfcVector3 normalizedDir = ext_dir;
+								auto dotProd = vec * normalizedDir.Normalize();
+								auto selfSqred = vec*vec;
+
+								if ((dotProd - selfSqred) < 1e-06)
+								{
+									bestv = &otherPoint;
+									best = sqdist;
+								}
+							}
+						}
+
+						//By the nature of the algorithm one side is processed first before the other
+						//So it is safe to assume the first half of the points are going to be on the same side
+						// Unless the wall is in a very odd shape in which case, good luck!
+
+						//FIXME: with the 2D Project, theoretically we should be able to pair up the points
+						// as they would map on to the same 2D coordinates thus this function is over engineered
+
+						vecMap.push_back({ point, *bestv });
+					}//for (auto &point : opening.wallPoints)
+
 					if (dump)
 					{
-						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joint_"+std::to_string(opening_count)+"_" + std::to_string(currentIdx) + ".obj";
+						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane" + std::to_string(opening_count) + ".obj";
 						std::ofstream outputStream(fileName.c_str());
-						outputStream << "v " << wallPoints2d[currentIdx].second.first.x << " "
-							<< wallPoints2d[currentIdx].second.first.y << " " << wallPoints2d[currentIdx].second.first.z << std::endl;
-						outputStream << "v " << wallPoints2d[currentIdx].second.second.x << " "
-							<< wallPoints2d[currentIdx].second.second.y << " " << wallPoints2d[currentIdx].second.second.z << std::endl;
-
-						outputStream << "v " << wallPoints2d[bestPair].second.first.x << " "
-							<< wallPoints2d[bestPair].second.first.y << " " << wallPoints2d[bestPair].second.first.z << std::endl;
-						outputStream << "v " << wallPoints2d[bestPair].second.second.x << " "
-							<< wallPoints2d[bestPair].second.second.y << " " << wallPoints2d[bestPair].second.second.z << std::endl;
-						outputStream << "f 1 3 4 2" << std::endl;
+						for (const auto v : vecMap)
+						{
+							outputStream << "v " << v[0].x << " " << v[0].y << " " << v[0].z << std::endl;
+						}
+						for (int i = 0; i < vecMap.size(); i += 4)
+						{
+							outputStream << "f ";
+							if (i + 4 >= vecMap.size())
+							{
+								for (int j = i + 1; j <= vecMap.size(); ++j)
+									outputStream << j << " ";
+							}
+							else
+							{
+								for (int j = i + 1; j <= i + 4; ++j)
+									outputStream << j << " ";
+							}
+							outputStream << std::endl;
+						}
 						outputStream.close();
 					}
-					
 
-					count++;
-
-
-					std::vector< IfcVector2> vertices2d;
-					std::vector< IfcVector3> vertices3d;
-
-					//FIXME: normals are pretty non deterministic here.
-					vertices3d.push_back(wallPoints2d[bestPair].second.first);
-					vertices3d.push_back(wallPoints2d[currentIdx].second.first);
-					vertices3d.push_back(wallPoints2d[currentIdx].second.second);
-					vertices3d.push_back(wallPoints2d[bestPair].second.second);
-					
-
-					
-
-					vertices2d.push_back(wallPoints2d[currentIdx].first);
-					vertices2d.push_back(wallPoints2d[bestPair].first);
-					
-					openingJoints.back().second.push_back({ vertices2d, vertices3d });
-
-
-					currentIdx = bestPair;
-
-				}
-				else
-				{
-					if (dumpConsole)
-						std::cout << "Could not find a pair for " << currentIdx << std::endl;
-				}
-			}
-		}
-
-		opening.wallPoints.clear();
-		++opening_count;
-	}//BOOST_FOREACH(TempOpening& opening, openings)
-
-
-	//Get contour of mesh
-	auto meshContour = Get2DContour(curve, ndir, xAxis, yAxis, dir);
-
-	if (dump)
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\MeshContour.obj";
-		std::ofstream outputStream(fileName.c_str());
-		int vCount = 0;
-		for (const auto v : meshContour)
-		{
-			outputStream << "v " << v.first.x << " " << v.first.y << " 0" << std::endl;
-			outputStream << "v " << v.second.x << " " << v.second.y << " 0" << std::endl;
-			vCount += 2;
-
-		}
-		for (int i = 0; i < vCount; i += 4)
-		{
-			outputStream << "f ";
-			if (i + 2 >= vCount)
-			{
-
-				for (int j = i + 1; j <= vCount; ++j)
-					outputStream << j << " ";
-
-			}
-			else
-			{
-				for (int j = i + 1; j <= i + 4; ++j)
-					outputStream << j << " ";
-			}
-			outputStream << std::endl;
-
-		}
-		outputStream.close();
-	}
-
-	if (dump)
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\Mesh.obj";
-		std::ofstream outputStream(fileName.c_str());
-		TempMesh tmp = curve;
-		aiMesh *mesh = tmp.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-		}
-
-		for (int i = 0; i < mesh->mNumFaces; ++i)
-		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
-			}
-			outputStream << std::endl;
-		}
-		outputStream.close();
-	}
-
-
-	/*
-	* Now we've found all the joints, check if there are any overlaps  between openings and remove any of those joints
-	*/
-
-	for (int i = 0; i < openingJoints.size() ; ++i)
-	{
-
-		std::vector<bool> toIgnore(openingJoints[i].second.size(), false);
-		for (int j = 0; j < openingJoints.size(); ++j)
-		{
-			if (i == j) continue;
-
-			//Check if there's overlapping/touching boundaries
-			auto bbox1 = openingJoints[i].first;
-			auto bbox2 = openingJoints[j].first;
-
-			BoundingBox overlapRegion, dummy;
-			//determine the overlapping region
-				
-
-			if (isIntersect(bbox1, bbox2, overlapRegion))
-			{
-				std::cout << "WallPoint check["<<i<<"]["<<j<<"]" << std::endl;
-				//overlapped, identify any joints that lies on the overlapping region and remove them
-				//FIXME: We probably have to patch up the sides within this region.....
-				for (int k = 0; k < openingJoints[i].second.size(); ++k)
-				{
-					std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>> wallPointGroup = openingJoints[i].second[k];
-					
-					BoundingBox wallPbbox;
-					wallPbbox.first.x = wallPointGroup.first[0].x < wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
-					wallPbbox.first.y = wallPointGroup.first[0].y < wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
-					wallPbbox.second.x = wallPointGroup.first[0].x > wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
-					wallPbbox.second.y = wallPointGroup.first[0].y > wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
-					toIgnore[k] = toIgnore[k] || isIntersect(overlapRegion, wallPbbox, dummy, dump);
-				}	
-				std::cout << "WallPoint end" << std::endl;
-			}
-		}
-
-		//Check with mesh contour
-		std::cout << "[" << i << "]" << " Contour check..." << std::endl;
-		for(int j = 0; j < meshContour.size(); ++j)
-		{
-			for (int k = 0; k < openingJoints[i].second.size(); ++k)
-			{
-				std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>> wallPointGroup = openingJoints[i].second[k];
-
-				BoundingBox wallPbbox, meshContourbbox, region;
-				wallPbbox.first.x = wallPointGroup.first[0].x < wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
-				wallPbbox.first.y = wallPointGroup.first[0].y < wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
-				wallPbbox.second.x = wallPointGroup.first[0].x > wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
-				wallPbbox.second.y = wallPointGroup.first[0].y > wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
-
-				meshContourbbox.first.x = meshContour[j].first.x <  meshContour[j].second.x ? meshContour[j].first.x : meshContour[j].second.x;
-				meshContourbbox.first.y = meshContour[j].first.y <  meshContour[j].second.y ? meshContour[j].first.y : meshContour[j].second.y;
-				meshContourbbox.second.x = meshContour[j].first.x >  meshContour[j].second.x ? meshContour[j].first.x : meshContour[j].second.x;
-				meshContourbbox.second.y = meshContour[j].first.y >  meshContour[j].second.y ? meshContour[j].first.y : meshContour[j].second.y;
-				toIgnore[k] = toIgnore[k] || isIntersect(meshContourbbox, wallPbbox, region, dump);
-			}
-			
-		}
-		std::cout << "[" << i << "]" << " Contour end" << std::endl;
-		
-		for (int j = 0; j < toIgnore.size(); ++j)
-		{
-			if (!toIgnore[j])
-			{
-				auto wallPointGroup = openingJoints[i].second[j];
-
-				for (auto &point : wallPointGroup.second)
-				{
-					curmesh.verts.push_back(point);
-				}
-				curmesh.vertcnt.push_back(wallPointGroup.second.size());
-			}
-			else
-			{
-				std::cout << "["<< i << "]["<< j << "] is ignored..." << std::endl;
-			}
-		}
-		
-	}
-
-}
-
-// ------------------------------------------------------------------------------------------------
-void Quadrify(const std::vector< BoundingBox >& bbs, TempMesh& curmesh)
-{
-    ai_assert(curmesh.IsEmpty());
-
-    std::vector<IfcVector2> quads;
-    quads.reserve(bbs.size()*4);
-
-    // sort openings by x and y axis as a preliminiary to the QuadrifyPart() algorithm
-    XYSortedField field;
-    for (std::vector<BoundingBox>::const_iterator it = bbs.begin(); it != bbs.end(); ++it) {
-        if (field.find((*it).first) != field.end()) {
-            IFCImporter::LogWarn("constraint failure during generation of wall openings, results may be faulty");
-        }
-        field[(*it).first] = std::distance(bbs.begin(),it);
-    }
-
-    QuadrifyPart(IfcVector2(),one_vec,field,bbs,quads);
-    ai_assert(!(quads.size() % 4));
-
-    curmesh.vertcnt.resize(quads.size()/4,4);
-    curmesh.verts.reserve(quads.size());
-    BOOST_FOREACH(const IfcVector2& v2, quads) {
-        curmesh.verts.push_back(IfcVector3(v2.x, v2.y, static_cast<IfcFloat>(0.0)));
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-void Quadrify(const ContourVector& contours, TempMesh& curmesh)
-{
-    std::vector<BoundingBox> bbs;
-    bbs.reserve(contours.size());
-
-    BOOST_FOREACH(const ContourVector::value_type& val, contours) {
-        bbs.push_back(val.bb);
-    }
-
-    Quadrify(bbs, curmesh);
-}
-
-// ------------------------------------------------------------------------------------------------
-IfcMatrix4 ProjectOntoPlane(std::vector<IfcVector2>& out_contour, const TempMesh& in_mesh,
-    bool &ok, IfcVector3& nor_out)
-{
-    const std::vector<IfcVector3>& in_verts = in_mesh.verts;
-    ok = true;
-
-    IfcMatrix4 m = IfcMatrix4(DerivePlaneCoordinateSpace(in_mesh, ok, nor_out));
-    if(!ok) {
-        return IfcMatrix4();
-    }
-#ifdef ASSIMP_BUILD_DEBUG
-    const IfcFloat det = m.Determinant();
-    ai_assert(std::fabs(det-1) < 1e-5);
-#endif
-
-    IfcFloat zcoord = 0;
-    out_contour.reserve(in_verts.size());
-
-
-    IfcVector3 vmin, vmax;
-    MinMaxChooser<IfcVector3>()(vmin, vmax);
-
-    // Project all points into the new coordinate system, collect min/max verts on the way
-    BOOST_FOREACH(const IfcVector3& x, in_verts) {
-        const IfcVector3 vv = m * x;
-        // keep Z offset in the plane coordinate system. Ignoring precision issues
-        // (which  are present, of course), this should be the same value for
-        // all polygon vertices (assuming the polygon is planar).
-
-        // XXX this should be guarded, but we somehow need to pick a suitable
-        // epsilon
-        // if(coord != -1.0f) {
-        //  assert(std::fabs(coord - vv.z) < 1e-3f);
-        // }
-        zcoord += vv.z;
-        vmin = std::min(vv, vmin);
-        vmax = std::max(vv, vmax);
-
-        out_contour.push_back(IfcVector2(vv.x,vv.y));
-    }
-
-    zcoord /= in_verts.size();
-
-    // Further improve the projection by mapping the entire working set into
-    // [0,1] range. This gives us a consistent data range so all epsilons
-    // used below can be constants.
-    vmax -= vmin;
-    BOOST_FOREACH(IfcVector2& vv, out_contour) {
-        vv.x  = (vv.x - vmin.x) / vmax.x;
-        vv.y  = (vv.y - vmin.y) / vmax.y;
-
-        // sanity rounding
-        vv = std::max(vv,IfcVector2());
-        vv = std::min(vv,one_vec);
-    }
-
-    IfcMatrix4 mult;
-    mult.a1 = static_cast<IfcFloat>(1.0) / vmax.x;
-    mult.b2 = static_cast<IfcFloat>(1.0) / vmax.y;
-
-    mult.a4 = -vmin.x * mult.a1;
-    mult.b4 = -vmin.y * mult.b2;
-    mult.c4 = -zcoord;
-    m = mult * m;
-
-    // debug code to verify correctness
-#ifdef ASSIMP_BUILD_DEBUG
-    std::vector<IfcVector2> out_contour2;
-    BOOST_FOREACH(const IfcVector3& x, in_verts) {
-        const IfcVector3& vv = m * x;
-
-        out_contour2.push_back(IfcVector2(vv.x,vv.y));
-        ai_assert(std::fabs(vv.z) < vmax.z + 1e-8);
-    }
-
-    for(size_t i = 0; i < out_contour.size(); ++i) {
-        ai_assert((out_contour[i]-out_contour2[i]).SquareLength() < 1e-6);
-    }
-#endif
-
-    return m;
-}
-
-BoundingBox GetProjectedBoundingBox(
-	const TempMesh& curmesh, 
-	const IfcVector3 &ndir,
-	const IfcVector3 &xaxis,
-	const IfcVector3 &yaxis )
-{
-	BoundingBox res;
-	res.first.x = 1e10;
-	res.first.y = 1e10;
-	res.second.x = -1e10;
-	res.second.x = -1e10;
-	for (int i = 0; i < curmesh.verts.size(); ++i)
-	{
-		auto pointOnPlane = (curmesh.verts[i] - (curmesh.verts[i] * ndir)*ndir);
-		auto point2d = IfcVector2(pointOnPlane*xaxis, pointOnPlane*yaxis);
-
-		res.first = std::min(res.first, point2d);
-		res.second = std::max(res.second, point2d);
-
-	}
-	return res;
-}
-
-// ------------------------------------------------------------------------------------------------
-bool GenerateOpenings(std::vector<TempOpening>& openings,
-    const std::vector<IfcVector3>& nors,
-    TempMesh& curmesh,
-    bool check_intersection,
-    bool generate_connection_geometry,
-    const IfcVector3& wall_extrusion_axis,
-	const bool dump)
-{
-    OpeningRefVector contours_to_openings;
-
-    // Try to derive a solid base plane within the current surface for use as
-    // working coordinate system. Map all vertices onto this plane and
-    // rescale them to [0,1] range. This normalization means all further
-    // epsilons need not be scaled.
-    bool ok = true;
-
-    std::vector<IfcVector2> contour_flat;
-
-    IfcVector3 nor;
-    const IfcMatrix4 m = ProjectOntoPlane(contour_flat, curmesh,  ok, nor);
-    if(!ok) {
-		std::cout << "not ok." << std::endl;
-        return false;
-    }
-
-	IfcVector3 ndir, xAxis, yAxis;
-	//Prepare for a plane to project onto 2D
-	getProjectionVectors(wall_extrusion_axis, ndir, xAxis, yAxis, true);
-
-	const BoundingBox orgMesh2D = GetProjectedBoundingBox(curmesh, ndir, xAxis, yAxis);
-	
-
-    // Obtain inverse transform for getting back to world space later on
-    const IfcMatrix4 minv = IfcMatrix4(m).Inverse();
-
-    // Compute bounding boxes for all 2D openings in projection space
-    ContourVector contours;
-
-    std::vector<IfcVector2> temp_contour;
-    std::vector<IfcVector2> temp_contour2;
-
-    IfcVector3 wall_extrusion_axis_norm = wall_extrusion_axis;
-    wall_extrusion_axis_norm.Normalize();
-	if (dump)
-		std::cout << "#openings : " << openings.size() << std::endl; 
-	static int count = -1;	
-	if(dump) ++count;
-
-	int openingsCount = -1;
-	if (dump)
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingMesh"
-			+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = curmesh.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-		}
-
-		for (int i = 0; i < mesh->mNumFaces; ++i)
-		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
-			}
-			outputStream << std::endl;
-		}
-
-		outputStream.close();
-
-		 fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingMesh2d"
-			+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
-		 outputStream = std::ofstream(fileName.c_str());
-		
-		for (int i = 0; i < curmesh.verts.size(); ++i)
-		{
-			
-			auto pointOnPlane = (curmesh.verts[i] - (curmesh.verts[i] * ndir)*ndir);
-			auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
-
-			outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
-		}
-
-		for (int i = 0; i < curmesh.verts.size(); i+=4)
-		{
-
-			outputStream << "f";
-			if (i + 4 <= curmesh.verts.size())
-			{
-				outputStream << " " << i << " " << i+1 << " " << i+2 << " " << i+3;
-			}
-			else
-			{
-				for (int j = i; j < curmesh.verts.size(); ++j)
-					outputStream << " " << i;
-			}
-			outputStream << std::endl;
-		}
-	}
-
-	BOOST_FOREACH(TempOpening& opening, openings) {
-		++openingsCount;
-		// extrusionDir may be 0,0,0 on case where the opening mesh is not an
-		// IfcExtrudedAreaSolid but something else (i.e. a brep)
-		IfcVector3 norm_extrusion_dir = opening.extrusionDir;
-		if (norm_extrusion_dir.SquareLength() > 1e-10) {
-			norm_extrusion_dir.Normalize();
-		}
-		else {
-			norm_extrusion_dir = IfcVector3();
-		}
-
-		TempMesh* profile_data = opening.profileMesh.get();
-
-		const BoundingBox openingBbox = GetProjectedBoundingBox(*profile_data, ndir, xAxis, yAxis);
-
-
-		bool is_2d_source = false;
-
-		/*
-		* Using the 2D Profile does not work as  it neglects where abouts is the geometry on the 3rd dimension
-		* Some geometry are being extruded when they, in fact, does not intersect in 3D Space!
-		*/
-		//if (opening.profileMesh2D && norm_extrusion_dir.SquareLength() > 0) {
-
-		//       if(std::fabs(norm_extrusion_dir * wall_extrusion_axis_norm) < 0.1) {
-		//           // horizontal extrusion
-		//           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
-		//               profile_data = opening.profileMesh2D.get();
-		//               is_2d_source = true;
-		//std::cout << "2D Source - Horizontal Extrusion" << std::endl;
-		//           }
-		//       }
-		//       else {
-		//           // vertical extrusion
-		//           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
-		//               profile_data = opening.profileMesh2D.get();
-		//               is_2d_source = true;
-		//std::cout << "2D Source - Vertical Extrusion" << std::endl;
-		//           }
-		//       }
-		//}
-		if (dump)
-		{
-			std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile"
-				+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
-			std::ofstream outputStream(fileName.c_str());
-			aiMesh *mesh = profile_data->ToMesh();
-			for (int i = 0; i < mesh->mNumVertices; ++i)
-			{
-				outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-			}
-
-			for (int i = 0; i < mesh->mNumFaces; ++i)
-			{
-				auto face = mesh->mFaces[i];
-				outputStream << "f";
-				for (int j = 0; j < face.mNumIndices; ++j)
-				{
-					outputStream << " " << face.mIndices[j] + 1;
-				}
-				outputStream << std::endl;
-			}
-
-
-			fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile2d"
-				+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
-			outputStream = std::ofstream(fileName.c_str());
-
-			for (int i = 0; i < profile_data->verts.size(); ++i)
-			{
-
-				auto pointOnPlane = (profile_data->verts[i] - (profile_data->verts[i] * ndir)*ndir);
-				auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
-
-				outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
-			}
-
-			for (int i = 0; i < profile_data->verts.size(); i += 4)
-			{
-
-				outputStream << "f";
-				if (i + 4 <= profile_data->verts.size())
-				{
-					outputStream << " " << i << " " << i + 1 << " " << i + 2 << " " << i + 3;
-				}
-				else
-				{
-					for (int j = i; j < profile_data->verts.size(); ++j)
-						outputStream << " " << i;
-				}
-				outputStream << std::endl;
-			}
-		}
-
-		
-
-        std::vector<IfcVector3> profile_verts = profile_data->verts;
-        std::vector<unsigned int> profile_vertcnts = profile_data->vertcnt;
-        if(profile_verts.size() <= 2) {
-            continue;
-        }
-
-        // The opening meshes are real 3D meshes so skip over all faces
-        // clearly facing into the wrong direction. Also, we need to check
-        // whether the meshes do actually intersect the base surface plane.
-        // This is done by recording minimum and maximum values for the
-        // d component of the plane equation for all polys and checking
-        // against surface d.
-
-        // Use the sign of the dot product of the face normal to the plane
-        // normal to determine to which side of the difference mesh a
-        // triangle belongs. Get independent bounding boxes and vertex
-        // sets for both sides and take the better one (we can't just
-        // take both - this would likely cause major screwup of vertex
-        // winding, producing errors as late as in CloseWindows()).
-        IfcFloat dmin, dmax;
-        MinMaxChooser<IfcFloat>()(dmin,dmax);
-
-        temp_contour.clear();
-        temp_contour2.clear();
-
-        IfcVector2 vpmin,vpmax;
-        MinMaxChooser<IfcVector2>()(vpmin,vpmax);
-
-        IfcVector2 vpmin2,vpmax2;
-        MinMaxChooser<IfcVector2>()(vpmin2,vpmax2);
-
-		std::vector<IfcVector3> vertices[2];
-		std::vector<std::vector<int>> faceMap[2];
-		faceMap[0].push_back(std::vector<int>());
-		faceMap[1].push_back(std::vector<int>());
-
-        for (size_t f = 0, vi_total = 0, fend = profile_vertcnts.size(); f < fend; ++f) {
-
-            bool side_flag = true;
-            if (!is_2d_source) {
-                const IfcVector3 face_nor = ((profile_verts[vi_total+2] - profile_verts[vi_total]) ^
-                    (profile_verts[vi_total+1] - profile_verts[vi_total])).Normalize();
-
-                const IfcFloat abs_dot_face_nor = std::abs(nor * face_nor);
-                if (abs_dot_face_nor < 0.9) {
-                    vi_total += profile_vertcnts[f];
-                    continue;
-                }
-
-                side_flag = nor * face_nor > 0;
-            }
-            for (unsigned int vi = 0, vend = profile_vertcnts[f]; vi < vend; ++vi, ++vi_total) {
-                const IfcVector3& x = profile_verts[vi_total];
-				
-
-                const IfcVector3 v = m * x;
-                IfcVector2 vv(v.x, v.y);
-
-                //if(check_intersection) {
-                    dmin = std::min(dmin, v.z);
-                    dmax = std::max(dmax, v.z);
-                //}
-
-                // sanity rounding
-                vv = std::max(vv,IfcVector2());
-                vv = std::min(vv,one_vec);
-
-                if(side_flag) {
-                    vpmin = std::min(vpmin,vv);
-                    vpmax = std::max(vpmax,vv);
-                }
-                else {
-                    vpmin2 = std::min(vpmin2,vv);
-                    vpmax2 = std::max(vpmax2,vv);
-                }
-
-                std::vector<IfcVector2>& store = side_flag ? temp_contour : temp_contour2;
-
-                if (!IsDuplicateVertex(vv, store)) {
-                    store.push_back(vv);
-                }
-				IfcVector3 point(vv.x, vv.y, 0);
-				vertices[(int)side_flag].push_back(point);
-				faceMap[(int)side_flag].back().push_back(f + vi + 1);
-				
-            }
-			faceMap[(int)side_flag].push_back(std::vector<int>());
-        }
-		if (dump)
-		{
-			std::cout << " temp_contour : " << temp_contour.size() << " temp_contour2 " << temp_contour2.size() << std::endl;
-			for (int i = 0; i < 2; ++i)
-			{
-				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile" 
-					+ std::to_string(openingsCount) + "_" + std::to_string(count) + "_" + std::to_string(i) + ".obj";
-				std::ofstream outputStream(fileName.c_str());
-				for (const auto &point : vertices[i])
-				{
-					outputStream << "v " << point.x << " " << point.y << " " << point.z << std::endl;
-				}
-				for (const auto &face : faceMap[i])
-				{
-					outputStream << "f";
-					for (const auto pos : face)
+					if (dump)
 					{
-						outputStream << " " << pos;
+						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPoint3d" + std::to_string(opening_count) + ".obj";
+						std::ofstream outputStream(fileName.c_str());
+						for (const auto v : opening.wallPoints)
+						{
+							outputStream << "v " << v.x << " " << v.y << " " << v.z << std::endl;
+						}
+
+						for (int i = 0; i < opening.wallPoints.size(); i += 4)
+						{
+							outputStream << "f ";
+							if (i + 4 >= opening.wallPoints.size())
+							{
+								for (int j = i + 1; j <= opening.wallPoints.size(); ++j)
+									outputStream << j << " ";
+							}
+							else
+							{
+								for (int j = i + 1; j <= i + 4; ++j)
+									outputStream << j << " ";
+							}
+							outputStream << std::endl;
+						}
+						outputStream.close();
+					}
+
+					//Attempt an isometric projection of the wall points to make it 2D
+					std::vector<IfcVector2> wallpoints2d;
+
+					std::vector<std::pair<IfcVector2, std::pair<IfcVector3, IfcVector3>>> wallPoints2d;
+					IfcVector2 wpmax(-1e10, -1e10), wpmin(1e10, 1e10);
+					for (const auto v : vecMap)
+					{
+						auto pointOnPlane = (v[0] - (v[0] * ndir)*ndir);
+						auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
+
+						wallPoints2d.push_back({ point2d, { v[0], v[1] } });
+
+						wpmax.x = std::max(wpmax.x, point2d.x);
+						wpmax.y = std::max(wpmax.y, point2d.y);
+						wpmin.x = std::min(wpmin.x, point2d.x);
+						wpmin.y = std::min(wpmin.y, point2d.y);
+					}
+
+					if (dump)
+					{
+						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WallPointPlane2d" + std::to_string(opening_count) + ".obj";
+						std::ofstream outputStream(fileName.c_str());
+						for (const auto v : wallPoints2d)
+						{
+							outputStream << "v " << v.first.x << " " << v.first.y << " 0" << std::endl;
+						}
+
+						for (int i = 0; i < wallPoints2d.size(); i += 4)
+						{
+							outputStream << "f ";
+							if (i + 4 >= wallPoints2d.size())
+							{
+								for (int j = i + 1; j <= wallPoints2d.size(); ++j)
+									outputStream << j << " ";
+							}
+							else
+							{
+								for (int j = i + 1; j <= i + 4; ++j)
+									outputStream << j << " ";
+							}
+							outputStream << std::endl;
+						}
+
+						outputStream.close();
+					}
+
+					int count = 0;
+					int currentIdx = 0;
+
+					auto halfWay = (wpmax - wpmin) * 0.5 + wpmin;
+					if (dump)
+					{
+						std::cout << " bbox: (" << wpmin.x << "," << wpmin.y << ")(" << wpmax.x << "," << wpmax.y << ")" << std::endl;
+						std::cout << " midway: (" << halfWay.x << "," << halfWay.y << ")" << std::endl;
+					}
+					openingJoints.resize(openingJoints.size() + 1);
+					openingJoints.back().first.first = wpmin;
+					openingJoints.back().first.second = wpmax;
+					openingJoints.back().second.clear();
+					/*
+					* Using only one side of the wall points, join up the contour
+					*/
+					while (count < wallPoints2d.size())
+					{
+						bool closerToXMin = wallPoints2d[currentIdx].first.x < halfWay.x;
+						bool closerToYMin = wallPoints2d[currentIdx].first.y < halfWay.y;
+						float bestDist = 1.e10;
+						float bestAng = 360.;
+						int bestPair = currentIdx;
+						for (int i = 0; i < wallPoints2d.size(); ++i)
+						{
+							if (i == currentIdx) continue;
+							auto diff = wallPoints2d[i].first - wallPoints2d[currentIdx].first;
+							auto d = diff.SquareLength();
+							auto tanAng = fabsf(diff.y) / fabsf(diff.x);
+							auto ang = atanf(tanAng);
+
+							bool positiveX = diff.x > 0.;
+							bool positiveY = diff.y > 0.;
+							bool zeroX = fabsf(diff.x) < 1e-5;
+							bool zeroY = fabsf(diff.y) < 1e-5;
+
+							if (closerToYMin)
+							{
+								//Calculate the distance between the points
+								if (zeroX) ang = positiveY ? 2 * PI : 4 * PI;
+								else if (zeroY) ang = positiveX ? PI : 3 * PI;
+								else if (positiveY && positiveX)	ang += PI;
+								else if (!positiveX && positiveY) ang += 2 * PI;
+								else if (!positiveX && !positiveY) ang += 3 * PI;
+							}
+							else
+							{
+								if (zeroX) ang = positiveY ? PI : 3 * PI;
+								else if (zeroY) ang = positiveX ? 4 * PI : 2 * PI;
+								else if (!positiveX && positiveY) ang += PI;
+								else if (!positiveX && !positiveY) ang += 2 * PI;
+								else if (positiveX && !positiveY) ang += 3 * PI;
+							}
+
+							if (ang < bestAng || (ang == bestAng && bestDist > d))
+							{
+								bestDist = d;
+								bestAng = ang;
+								bestPair = i;
+							}
+
+							if (dumpConsole)
+							{
+								std::cout << " [" << i << "] (" << wallPoints2d[i].first.x << ","
+									<< wallPoints2d[i].first.y << ") diff: (" << diff.x << ","
+									<< diff.y << ") d: " << d << " ang: " << ang << " closer to X: " << closerToXMin << " Y " << closerToYMin
+									<< "( " << (zeroX ? "zeroX" : (positiveX ? "posX" : "negX")) << "," << (zeroY ? "zeroY" : (positiveY ? "posY" : "negY")) << ") " << std::endl;
+							}
+						}
+						if (bestPair != currentIdx)
+						{
+							if (dumpConsole)
+								std::cout << " Found best pair for " << currentIdx << ", pair is " << bestPair << std::endl;
+							if (dump)
+							{
+								std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\joint_" + std::to_string(opening_count) + "_" + std::to_string(currentIdx) + ".obj";
+								std::ofstream outputStream(fileName.c_str());
+								outputStream << "v " << wallPoints2d[currentIdx].second.first.x << " "
+									<< wallPoints2d[currentIdx].second.first.y << " " << wallPoints2d[currentIdx].second.first.z << std::endl;
+								outputStream << "v " << wallPoints2d[currentIdx].second.second.x << " "
+									<< wallPoints2d[currentIdx].second.second.y << " " << wallPoints2d[currentIdx].second.second.z << std::endl;
+
+								outputStream << "v " << wallPoints2d[bestPair].second.first.x << " "
+									<< wallPoints2d[bestPair].second.first.y << " " << wallPoints2d[bestPair].second.first.z << std::endl;
+								outputStream << "v " << wallPoints2d[bestPair].second.second.x << " "
+									<< wallPoints2d[bestPair].second.second.y << " " << wallPoints2d[bestPair].second.second.z << std::endl;
+								outputStream << "f 1 3 4 2" << std::endl;
+								outputStream.close();
+							}
+
+							count++;
+
+							std::vector< IfcVector2> vertices2d;
+							std::vector< IfcVector3> vertices3d;
+
+							//FIXME: normals are pretty non deterministic here.
+							vertices3d.push_back(wallPoints2d[bestPair].second.first);
+							vertices3d.push_back(wallPoints2d[currentIdx].second.first);
+							vertices3d.push_back(wallPoints2d[currentIdx].second.second);
+							vertices3d.push_back(wallPoints2d[bestPair].second.second);
+
+							vertices2d.push_back(wallPoints2d[currentIdx].first);
+							vertices2d.push_back(wallPoints2d[bestPair].first);
+
+							openingJoints.back().second.push_back({ vertices2d, vertices3d });
+
+							currentIdx = bestPair;
+						}
+						else
+						{
+							if (dumpConsole)
+								std::cout << "Could not find a pair for " << currentIdx << std::endl;
+						}
+					}
+				}
+
+				opening.wallPoints.clear();
+				++opening_count;
+			}//BOOST_FOREACH(TempOpening& opening, openings)
+
+			//Get contour of mesh
+			auto meshContour = Get2DContour(curve, ndir, xAxis, yAxis, dir);
+
+			if (dump)
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\MeshContour.obj";
+				std::ofstream outputStream(fileName.c_str());
+				int vCount = 0;
+				for (const auto v : meshContour)
+				{
+					outputStream << "v " << v.first.x << " " << v.first.y << " 0" << std::endl;
+					outputStream << "v " << v.second.x << " " << v.second.y << " 0" << std::endl;
+					vCount += 2;
+				}
+				for (int i = 0; i < vCount; i += 4)
+				{
+					outputStream << "f ";
+					if (i + 2 >= vCount)
+					{
+						for (int j = i + 1; j <= vCount; ++j)
+							outputStream << j << " ";
+					}
+					else
+					{
+						for (int j = i + 1; j <= i + 4; ++j)
+							outputStream << j << " ";
 					}
 					outputStream << std::endl;
+				}
+				outputStream.close();
+			}
 
+			if (dump)
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\Mesh.obj";
+				std::ofstream outputStream(fileName.c_str());
+				TempMesh tmp = curve;
+				aiMesh *mesh = tmp.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+				outputStream.close();
+			}
+
+			/*
+			* Now we've found all the joints, check if there are any overlaps  between openings and remove any of those joints
+			*/
+
+			for (int i = 0; i < openingJoints.size(); ++i)
+			{
+				std::vector<bool> toIgnore(openingJoints[i].second.size(), false);
+				for (int j = 0; j < openingJoints.size(); ++j)
+				{
+					if (i == j) continue;
+
+					//Check if there's overlapping/touching boundaries
+					auto bbox1 = openingJoints[i].first;
+					auto bbox2 = openingJoints[j].first;
+
+					BoundingBox overlapRegion, dummy;
+					//determine the overlapping region
+
+					if (isIntersect(bbox1, bbox2, overlapRegion))
+					{
+						std::cout << "WallPoint check[" << i << "][" << j << "]" << std::endl;
+						//overlapped, identify any joints that lies on the overlapping region and remove them
+						//FIXME: We probably have to patch up the sides within this region.....
+						for (int k = 0; k < openingJoints[i].second.size(); ++k)
+						{
+							std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>> wallPointGroup = openingJoints[i].second[k];
+
+							BoundingBox wallPbbox;
+							wallPbbox.first.x = wallPointGroup.first[0].x < wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
+							wallPbbox.first.y = wallPointGroup.first[0].y < wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
+							wallPbbox.second.x = wallPointGroup.first[0].x > wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
+							wallPbbox.second.y = wallPointGroup.first[0].y > wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
+							toIgnore[k] = toIgnore[k] || isIntersect(overlapRegion, wallPbbox, dummy, dump);
+						}
+						std::cout << "WallPoint end" << std::endl;
+					}
+				}
+
+				//Check with mesh contour
+				std::cout << "[" << i << "]" << " Contour check..." << std::endl;
+				for (int j = 0; j < meshContour.size(); ++j)
+				{
+					for (int k = 0; k < openingJoints[i].second.size(); ++k)
+					{
+						std::pair<std::vector<IfcVector2>, std::vector<IfcVector3>> wallPointGroup = openingJoints[i].second[k];
+
+						BoundingBox wallPbbox, meshContourbbox, region;
+						wallPbbox.first.x = wallPointGroup.first[0].x < wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
+						wallPbbox.first.y = wallPointGroup.first[0].y < wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
+						wallPbbox.second.x = wallPointGroup.first[0].x > wallPointGroup.first[1].x ? wallPointGroup.first[0].x : wallPointGroup.first[1].x;
+						wallPbbox.second.y = wallPointGroup.first[0].y > wallPointGroup.first[1].y ? wallPointGroup.first[0].y : wallPointGroup.first[1].y;
+
+						meshContourbbox.first.x = meshContour[j].first.x < meshContour[j].second.x ? meshContour[j].first.x : meshContour[j].second.x;
+						meshContourbbox.first.y = meshContour[j].first.y < meshContour[j].second.y ? meshContour[j].first.y : meshContour[j].second.y;
+						meshContourbbox.second.x = meshContour[j].first.x > meshContour[j].second.x ? meshContour[j].first.x : meshContour[j].second.x;
+						meshContourbbox.second.y = meshContour[j].first.y > meshContour[j].second.y ? meshContour[j].first.y : meshContour[j].second.y;
+						toIgnore[k] = toIgnore[k] || isIntersect(meshContourbbox, wallPbbox, region, dump);
+					}
+				}
+				std::cout << "[" << i << "]" << " Contour end" << std::endl;
+
+				for (int j = 0; j < toIgnore.size(); ++j)
+				{
+					if (!toIgnore[j])
+					{
+						auto wallPointGroup = openingJoints[i].second[j];
+
+						for (auto &point : wallPointGroup.second)
+						{
+							curmesh.verts.push_back(point);
+						}
+						curmesh.vertcnt.push_back(wallPointGroup.second.size());
+					}
+					else
+					{
+						std::cout << "[" << i << "][" << j << "] is ignored..." << std::endl;
+					}
 				}
 			}
-			
 		}
-	
 
-        if (temp_contour2.size() > 2) {
-            ai_assert(!is_2d_source);
-            const IfcVector2 area = vpmax-vpmin;
-            const IfcVector2 area2 = vpmax2-vpmin2;
-            if (temp_contour.size() <= 2 || std::fabs(area2.x * area2.y) > std::fabs(area.x * area.y)) {
-                temp_contour.swap(temp_contour2);
-
-                vpmax = vpmax2;
-                vpmin = vpmin2;
-            }
-        }
-        if(temp_contour.size() <= 2) {
-            continue;
-        }
-
-		static int intersectionCount = 0;
-		++intersectionCount;
-		BoundingBox dummy;		
-
-		const IfcFloat epsilon = std::fabs(dmax - dmin) * 0.0001;
-
-
-
-		if (!is_2d_source && check_intersection &&!isIntersect(orgMesh2D, openingBbox, dummy))
+		// ------------------------------------------------------------------------------------------------
+		void Quadrify(const std::vector< BoundingBox >& bbs, TempMesh& curmesh)
 		{
-			//If episilon test is satisified, let it carry on.
+			ai_assert(curmesh.IsEmpty());
 
-			// TODO: This epsilon may be too large
-			const IfcFloat epsilon = std::fabs(dmax - dmin) * 0.0001;
-			
-			if (!is_2d_source && check_intersection && (0 < dmin - epsilon || 0 > dmax + epsilon))
-			{
-				std::cout << "[FAILED] epi is " << epsilon << "d: (" << dmin << "," << dmax << "), normal: (" << nor.x << "," << nor.y << "," << nor.z << ")" << std::endl;
-				continue;
+			std::vector<IfcVector2> quads;
+			quads.reserve(bbs.size() * 4);
+
+			// sort openings by x and y axis as a preliminiary to the QuadrifyPart() algorithm
+			XYSortedField field;
+			for (std::vector<BoundingBox>::const_iterator it = bbs.begin(); it != bbs.end(); ++it) {
+				if (field.find((*it).first) != field.end()) {
+					IFCImporter::LogWarn("constraint failure during generation of wall openings, results may be faulty");
+				}
+				field[(*it).first] = std::distance(bbs.begin(), it);
 			}
-			
-		}
 
-		std::cout << "[PASSED]epi is " << epsilon << "d: (" << dmin << "," << dmax << "), normal: (" << nor.x << "," << nor.y << "," << nor.z << ")" << std::endl;
-        BoundingBox bb = BoundingBox(vpmin,vpmax);
+			QuadrifyPart(IfcVector2(), one_vec, field, bbs, quads);
+			ai_assert(!(quads.size() % 4));
 
-        // Skip over very small openings - these are likely projection errors
-        // (i.e. they don't belong to this side of the wall)
-        if(std::fabs(vpmax.x - vpmin.x) * std::fabs(vpmax.y - vpmin.y) < static_cast<IfcFloat>(1e-10)) {
-            continue;
-        }
-        std::vector<TempOpening*> joined_openings(1, &opening);
-
-        bool is_rectangle = temp_contour.size() == 4;
-
-        // See if this BB intersects or is in close adjacency to any other BB we have so far.
-        for (ContourVector::iterator it = contours.begin(); it != contours.end(); ) {
-            const BoundingBox& ibb = (*it).bb;
-
-            if (BoundingBoxesOverlapping(ibb, bb)) {
-
-                if (!(*it).is_rectangular) {
-                    is_rectangle = false;
-                }
-
-                const std::vector<IfcVector2>& other = (*it).contour;
-                ClipperLib::ExPolygons poly;
-
-                // First check whether subtracting the old contour (to which ibb belongs)
-                // from the new contour (to which bb belongs) yields an updated bb which
-                // no longer overlaps ibb
-                MakeDisjunctWindowContours(other, temp_contour, poly);
-                if(poly.size() == 1) {
-
-                    const BoundingBox newbb = GetBoundingBox(poly[0].outer);
-                    if (!BoundingBoxesOverlapping(ibb, newbb )) {
-                         // Good guy bounding box
-                         bb = newbb ;
-
-                         ExtractVerticesFromClipper(poly[0].outer, temp_contour, false);
-                         continue;
-                    }
-                }
-
-                // Take these two overlapping contours and try to merge them. If they
-                // overlap (which should not happen, but in fact happens-in-the-real-
-                // world [tm] ), resume using a single contour and a single bounding box.
-                MergeWindowContours(temp_contour, other, poly);
-
-                if (poly.size() > 1) {
-                    return TryAddOpenings_Poly2Tri(openings, nors, curmesh);
-                }
-                else if (poly.size() == 0) {
-                    IFCImporter::LogWarn("ignoring duplicate opening");
-                    temp_contour.clear();
-                    break;
-                }
-                else {
-                    IFCImporter::LogDebug("merging overlapping openings");
-                    ExtractVerticesFromClipper(poly[0].outer, temp_contour, false);
-
-                    // Generate the union of the bounding boxes
-                    bb.first = std::min(bb.first, ibb.first);
-                    bb.second = std::max(bb.second, ibb.second);
-
-                    // Update contour-to-opening tables accordingly
-                    if (generate_connection_geometry) {
-                        std::vector<TempOpening*>& t = contours_to_openings[std::distance(contours.begin(),it)];
-                        joined_openings.insert(joined_openings.end(), t.begin(), t.end());
-
-                        contours_to_openings.erase(contours_to_openings.begin() + std::distance(contours.begin(),it));
-                    }
-
-                    contours.erase(it);
-
-                    // Restart from scratch because the newly formed BB might now
-                    // overlap any other BB which its constituent BBs didn't
-                    // previously overlap.
-                    it = contours.begin();
-                    continue;
-                }
-            }
-            ++it;
-        }
-
-        if(!temp_contour.empty()) {
-            if (generate_connection_geometry) {
-                contours_to_openings.push_back(std::vector<TempOpening*>(
-                    joined_openings.begin(),
-                    joined_openings.end()));
-            }
-
-            contours.push_back(ProjectedWindowContour(temp_contour, bb, is_rectangle));
-        }
-    }//FOREACH opening
-
-    // Check if we still have any openings left - it may well be that this is
-    // not the cause, for example if all the opening candidates don't intersect
-    // this surface or point into a direction perpendicular to it.
-
-    if (contours.empty()) {
-        return false;
-    }
-
-    curmesh.Clear();
-
-    // Generate a base subdivision into quads to accommodate the given list
-    // of window bounding boxes.
-    Quadrify(contours,curmesh);
-
-	if (dump && !curmesh.IsEmpty())
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\quadrified" + std::to_string(count) + ".obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = curmesh.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-		}
-
-		for (int i = 0; i < mesh->mNumFaces; ++i)
-		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
+			curmesh.vertcnt.resize(quads.size() / 4, 4);
+			curmesh.verts.reserve(quads.size());
+			BOOST_FOREACH(const IfcVector2& v2, quads) {
+				curmesh.verts.push_back(IfcVector3(v2.x, v2.y, static_cast<IfcFloat>(0.0)));
 			}
-			outputStream << std::endl;
-		}
-	}
-
-
-    // Run a sanity cleanup pass on the window contours to avoid generating
-    // artifacts during the contour generation phase later on.
-    CleanupWindowContours(contours);
-	if (dump && !curmesh.IsEmpty())
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WindowContours" + std::to_string(count) + ".obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = curmesh.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
 		}
 
-		for (int i = 0; i < mesh->mNumFaces; ++i)
+		// ------------------------------------------------------------------------------------------------
+		void Quadrify(const ContourVector& contours, TempMesh& curmesh)
 		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
+			std::vector<BoundingBox> bbs;
+			bbs.reserve(contours.size());
+
+			BOOST_FOREACH(const ContourVector::value_type& val, contours) {
+				bbs.push_back(val.bb);
 			}
-			outputStream << std::endl;
-		}
-	}
 
-    // Previously we reduced all windows to rectangular AABBs in projection
-    // space, now it is time to fill the gaps between the BBs and the real
-    // window openings.
-    InsertWindowContours(contours,openings, curmesh);
-	if (dump && !curmesh.IsEmpty())
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\InsertWindowContours" + std::to_string(count) + ".obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = curmesh.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+			Quadrify(bbs, curmesh);
 		}
 
-		for (int i = 0; i < mesh->mNumFaces; ++i)
+		// ------------------------------------------------------------------------------------------------
+		IfcMatrix4 ProjectOntoPlane(std::vector<IfcVector2>& out_contour, const TempMesh& in_mesh,
+			bool &ok, IfcVector3& nor_out)
 		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
+			const std::vector<IfcVector3>& in_verts = in_mesh.verts;
+			ok = true;
+
+			IfcMatrix4 m = IfcMatrix4(DerivePlaneCoordinateSpace(in_mesh, ok, nor_out));
+			if (!ok) {
+				return IfcMatrix4();
 			}
-			outputStream << std::endl;
-		}
-	}
+#ifdef ASSIMP_BUILD_DEBUG
+			const IfcFloat det = m.Determinant();
+			ai_assert(std::fabs(det - 1) < 1e-5);
+#endif
 
-    // Clip the entire outer contour of our current result against the real
-    // outer contour of the surface. This is necessary because the result
-    // of the Quadrify() algorithm is always a square area spanning
-    // over [0,1]^2 (i.e. entire projection space).
-    CleanupOuterContour(contour_flat, curmesh);
-	if (dump && !curmesh.IsEmpty())
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\cleanupOuter" + std::to_string(count) + ".obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = curmesh.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-		}
+			IfcFloat zcoord = 0;
+			out_contour.reserve(in_verts.size());
 
-		for (int i = 0; i < mesh->mNumFaces; ++i)
-		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
+			IfcVector3 vmin, vmax;
+			MinMaxChooser<IfcVector3>()(vmin, vmax);
+
+			// Project all points into the new coordinate system, collect min/max verts on the way
+			BOOST_FOREACH(const IfcVector3& x, in_verts) {
+				const IfcVector3 vv = m * x;
+				// keep Z offset in the plane coordinate system. Ignoring precision issues
+				// (which  are present, of course), this should be the same value for
+				// all polygon vertices (assuming the polygon is planar).
+
+				// XXX this should be guarded, but we somehow need to pick a suitable
+				// epsilon
+				// if(coord != -1.0f) {
+				//  assert(std::fabs(coord - vv.z) < 1e-3f);
+				// }
+				zcoord += vv.z;
+				vmin = std::min(vv, vmin);
+				vmax = std::max(vv, vmax);
+
+				out_contour.push_back(IfcVector2(vv.x, vv.y));
 			}
-			outputStream << std::endl;
-		}
-	}
 
-    // Undo the projection and get back to world (or local object) space
-    BOOST_FOREACH(IfcVector3& v3, curmesh.verts) {
-        v3 = minv * v3;
-    }
+			zcoord /= in_verts.size();
 
-	if (dump && !curmesh.IsEmpty())
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\precloseWindow" + std::to_string(count) + ".obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = curmesh.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-		}
+			// Further improve the projection by mapping the entire working set into
+			// [0,1] range. This gives us a consistent data range so all epsilons
+			// used below can be constants.
+			vmax -= vmin;
+			BOOST_FOREACH(IfcVector2& vv, out_contour) {
+				vv.x = (vv.x - vmin.x) / vmax.x;
+				vv.y = (vv.y - vmin.y) / vmax.y;
 
-		for (int i = 0; i < mesh->mNumFaces; ++i)
-		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
+				// sanity rounding
+				vv = std::max(vv, IfcVector2());
+				vv = std::min(vv, one_vec);
 			}
-			outputStream << std::endl;
-		}
-	}
 
-    // Generate window caps to connect the symmetric openings on both sides
-    // of the wall.
-	//This function will only generate wall points, the wall points needs to be 
-	//joined up later when they are all found.
-    if (generate_connection_geometry) {
-        CloseWindows(contours, minv, contours_to_openings, curmesh, dump);
-    }
+			IfcMatrix4 mult;
+			mult.a1 = static_cast<IfcFloat>(1.0) / vmax.x;
+			mult.b2 = static_cast<IfcFloat>(1.0) / vmax.y;
 
-	if (dump && !curmesh.IsEmpty())
-	{
-		std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindow" + std::to_string(count) + ".obj";
-		std::ofstream outputStream(fileName.c_str());
-		aiMesh *mesh = curmesh.ToMesh();
-		for (int i = 0; i < mesh->mNumVertices; ++i)
-		{
-			outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
-		}
+			mult.a4 = -vmin.x * mult.a1;
+			mult.b4 = -vmin.y * mult.b2;
+			mult.c4 = -zcoord;
+			m = mult * m;
 
-		for (int i = 0; i < mesh->mNumFaces; ++i)
-		{
-			auto face = mesh->mFaces[i];
-			outputStream << "f";
-			for (int j = 0; j < face.mNumIndices; ++j)
-			{
-				outputStream << " " << face.mIndices[j] + 1;
+			// debug code to verify correctness
+#ifdef ASSIMP_BUILD_DEBUG
+			std::vector<IfcVector2> out_contour2;
+			BOOST_FOREACH(const IfcVector3& x, in_verts) {
+				const IfcVector3& vv = m * x;
+
+				out_contour2.push_back(IfcVector2(vv.x, vv.y));
+				ai_assert(std::fabs(vv.z) < vmax.z + 1e-8);
 			}
-			outputStream << std::endl;
+
+			for (size_t i = 0; i < out_contour.size(); ++i) {
+				ai_assert((out_contour[i] - out_contour2[i]).SquareLength() < 1e-6);
+			}
+#endif
+
+			return m;
 		}
-	}
 
-    return true;
-}
-
-// ------------------------------------------------------------------------------------------------
-bool TryAddOpenings_Poly2Tri(const std::vector<TempOpening>& openings,const std::vector<IfcVector3>& nors,
-    TempMesh& curmesh)
-{
-    IFCImporter::LogWarn("forced to use poly2tri fallback method to generate wall openings");
-    std::vector<IfcVector3>& out = curmesh.verts;
-
-    bool result = false;
-
-    // Try to derive a solid base plane within the current surface for use as
-    // working coordinate system.
-    bool ok;
-    IfcVector3 nor;
-    const IfcMatrix3 m = DerivePlaneCoordinateSpace(curmesh, ok, nor);
-    if (!ok) {
-        return false;
-    }
-
-    const IfcMatrix3 minv = IfcMatrix3(m).Inverse();
-
-
-    IfcFloat coord = -1;
-
-    std::vector<IfcVector2> contour_flat;
-    contour_flat.reserve(out.size());
-
-    IfcVector2 vmin, vmax;
-    MinMaxChooser<IfcVector2>()(vmin, vmax);
-
-    // Move all points into the new coordinate system, collecting min/max verts on the way
-    BOOST_FOREACH(IfcVector3& x, out) {
-        const IfcVector3 vv = m * x;
-
-        // keep Z offset in the plane coordinate system. Ignoring precision issues
-        // (which  are present, of course), this should be the same value for
-        // all polygon vertices (assuming the polygon is planar).
-
-
-        // XXX this should be guarded, but we somehow need to pick a suitable
-        // epsilon
-        // if(coord != -1.0f) {
-        //  assert(std::fabs(coord - vv.z) < 1e-3f);
-        // }
-
-        coord = vv.z;
-
-        vmin = std::min(IfcVector2(vv.x, vv.y), vmin);
-        vmax = std::max(IfcVector2(vv.x, vv.y), vmax);
-
-        contour_flat.push_back(IfcVector2(vv.x,vv.y));
-    }
-
-    // With the current code in DerivePlaneCoordinateSpace,
-    // vmin,vmax should always be the 0...1 rectangle (+- numeric inaccuracies)
-    // but here we won't rely on this.
-
-    vmax -= vmin;
-
-    // If this happens then the projection must have been wrong.
-    assert(vmax.Length());
-
-    ClipperLib::ExPolygons clipped;
-    ClipperLib::Polygons holes_union;
-
-
-    IfcVector3 wall_extrusion;
-    bool do_connections = false, first = true;
-
-    try {
-
-        ClipperLib::Clipper clipper_holes;
-        size_t c = 0;
-
-        BOOST_FOREACH(const TempOpening& t,openings) {
-            const IfcVector3& outernor = nors[c++];
-            const IfcFloat dot = nor * outernor;
-            if (std::fabs(dot)<1.f-1e-6f) {
-                continue;
-            }
-
-            const std::vector<IfcVector3>& va = t.profileMesh->verts;
-            if(va.size() <= 2) {
-                continue;
-            }
-
-            std::vector<IfcVector2> contour;
-
-            BOOST_FOREACH(const IfcVector3& xx, t.profileMesh->verts) {
-                IfcVector3 vv = m *  xx, vv_extr = m * (xx + t.extrusionDir);
-
-                const bool is_extruded_side = std::fabs(vv.z - coord) > std::fabs(vv_extr.z - coord);
-                if (first) {
-                    first = false;
-                    if (dot > 0.f) {
-                        do_connections = true;
-                        wall_extrusion = t.extrusionDir;
-                        if (is_extruded_side) {
-                            wall_extrusion = - wall_extrusion;
-                        }
-                    }
-                }
-
-                // XXX should not be necessary - but it is. Why? For precision reasons?
-                vv = is_extruded_side ? vv_extr : vv;
-                contour.push_back(IfcVector2(vv.x,vv.y));
-            }
-
-            ClipperLib::Polygon hole;
-            BOOST_FOREACH(IfcVector2& pip, contour) {
-                pip.x  = (pip.x - vmin.x) / vmax.x;
-                pip.y  = (pip.y - vmin.y) / vmax.y;
-
-                hole.push_back(ClipperLib::IntPoint(  to_int64(pip.x), to_int64(pip.y) ));
-            }
-
-            if (!ClipperLib::Orientation(hole)) {
-                std::reverse(hole.begin(), hole.end());
-            //  assert(ClipperLib::Orientation(hole));
-            }
-
-            /*ClipperLib::Polygons pol_temp(1), pol_temp2(1);
-            pol_temp[0] = hole;
-
-            ClipperLib::OffsetPolygons(pol_temp,pol_temp2,5.0);
-            hole = pol_temp2[0];*/
-
-            clipper_holes.AddPolygon(hole,ClipperLib::ptSubject);
-        }
-
-        clipper_holes.Execute(ClipperLib::ctUnion,holes_union,
-            ClipperLib::pftNonZero,
-            ClipperLib::pftNonZero);
-
-        if (holes_union.empty()) {
-            return false;
-        }
-
-        // Now that we have the big union of all holes, subtract it from the outer contour
-        // to obtain the final polygon to feed into the triangulator.
-        {
-            ClipperLib::Polygon poly;
-            BOOST_FOREACH(IfcVector2& pip, contour_flat) {
-                pip.x  = (pip.x - vmin.x) / vmax.x;
-                pip.y  = (pip.y - vmin.y) / vmax.y;
-
-                poly.push_back(ClipperLib::IntPoint( to_int64(pip.x), to_int64(pip.y) ));
-            }
-
-            if (ClipperLib::Orientation(poly)) {
-                std::reverse(poly.begin(), poly.end());
-            }
-            clipper_holes.Clear();
-            clipper_holes.AddPolygon(poly,ClipperLib::ptSubject);
-
-            clipper_holes.AddPolygons(holes_union,ClipperLib::ptClip);
-            clipper_holes.Execute(ClipperLib::ctDifference,clipped,
-                ClipperLib::pftNonZero,
-                ClipperLib::pftNonZero);
-        }
-
-    }
-    catch (const char* sx) {
-        IFCImporter::LogError("Ifc: error during polygon clipping, skipping openings for this face: (Clipper: "
-            + std::string(sx) + ")");
-
-        return false;
-    }
-
-    std::vector<IfcVector3> old_verts;
-    std::vector<unsigned int> old_vertcnt;
-
-    old_verts.swap(curmesh.verts);
-    old_vertcnt.swap(curmesh.vertcnt);
-
-
-    // add connection geometry to close the adjacent 'holes' for the openings
-    // this should only be done from one side of the wall or the polygons
-    // would be emitted twice.
-    if (false && do_connections) {
-
-        std::vector<IfcVector3> tmpvec;
-        BOOST_FOREACH(ClipperLib::Polygon& opening, holes_union) {
-
-            assert(ClipperLib::Orientation(opening));
-
-            tmpvec.clear();
-
-            BOOST_FOREACH(ClipperLib::IntPoint& point, opening) {
-
-                tmpvec.push_back( minv * IfcVector3(
-                    vmin.x + from_int64(point.X) * vmax.x,
-                    vmin.y + from_int64(point.Y) * vmax.y,
-                    coord));
-            }
-
-            for(size_t i = 0, size = tmpvec.size(); i < size; ++i) {
-                const size_t next = (i+1)%size;
-
-                curmesh.vertcnt.push_back(4);
-
-                const IfcVector3& in_world = tmpvec[i];
-                const IfcVector3& next_world = tmpvec[next];
-
-                // Assumptions: no 'partial' openings, wall thickness roughly the same across the wall
-                curmesh.verts.push_back(in_world);
-                curmesh.verts.push_back(in_world+wall_extrusion);
-                curmesh.verts.push_back(next_world+wall_extrusion);
-                curmesh.verts.push_back(next_world);
-            }
-        }
-    }
-
-    std::vector< std::vector<p2t::Point*> > contours;
-    BOOST_FOREACH(ClipperLib::ExPolygon& clip, clipped) {
-
-        contours.clear();
-
-        // Build the outer polygon contour line for feeding into poly2tri
-        std::vector<p2t::Point*> contour_points;
-        BOOST_FOREACH(ClipperLib::IntPoint& point, clip.outer) {
-            contour_points.push_back( new p2t::Point(from_int64(point.X), from_int64(point.Y)) );
-        }
-
-        p2t::CDT* cdt ;
-        try {
-            // Note: this relies on custom modifications in poly2tri to raise runtime_error's
-            // instead if assertions. These failures are not debug only, they can actually
-            // happen in production use if the input data is broken. An assertion would be
-            // inappropriate.
-            cdt = new p2t::CDT(contour_points);
-        }
-        catch(const std::exception& e) {
-            IFCImporter::LogError("Ifc: error during polygon triangulation, skipping some openings: (poly2tri: "
-                + std::string(e.what()) + ")");
-            continue;
-        }
-
-
-        // Build the poly2tri inner contours for all holes we got from ClipperLib
-        BOOST_FOREACH(ClipperLib::Polygon& opening, clip.holes) {
-
-            contours.push_back(std::vector<p2t::Point*>());
-            std::vector<p2t::Point*>& contour = contours.back();
-
-            BOOST_FOREACH(ClipperLib::IntPoint& point, opening) {
-                contour.push_back( new p2t::Point(from_int64(point.X), from_int64(point.Y)) );
-            }
-
-            cdt->AddHole(contour);
-        }
-
-        try {
-            // Note: See above
-            cdt->Triangulate();
-        }
-        catch(const std::exception& e) {
-            IFCImporter::LogError("Ifc: error during polygon triangulation, skipping some openings: (poly2tri: "
-                + std::string(e.what()) + ")");
-            continue;
-        }
-
-        const std::vector<p2t::Triangle*> tris = cdt->GetTriangles();
-
-        // Collect the triangles we just produced
-        BOOST_FOREACH(p2t::Triangle* tri, tris) {
-            for(int i = 0; i < 3; ++i) {
-
-                const IfcVector2 v = IfcVector2(
-                    static_cast<IfcFloat>( tri->GetPoint(i)->x ),
-                    static_cast<IfcFloat>( tri->GetPoint(i)->y )
-                );
-
-                assert(v.x <= 1.0 && v.x >= 0.0 && v.y <= 1.0 && v.y >= 0.0);
-                const IfcVector3 v3 = minv * IfcVector3(vmin.x + v.x * vmax.x, vmin.y + v.y * vmax.y,coord) ;
-
-                curmesh.verts.push_back(v3);
-            }
-            curmesh.vertcnt.push_back(3);
-        }
-
-        result = true;
-    }
-
-    if (!result) {
-        // revert -- it's a shame, but better than nothing
-        curmesh.verts.insert(curmesh.verts.end(),old_verts.begin(), old_verts.end());
-        curmesh.vertcnt.insert(curmesh.vertcnt.end(),old_vertcnt.begin(), old_vertcnt.end());
-
-        IFCImporter::LogError("Ifc: revert, could not generate openings for this wall");
-    }
-
-    return result;
-}
-
-
-    } // ! IFC
+		BoundingBox GetProjectedBoundingBox(
+			const TempMesh& curmesh,
+			const IfcVector3 &ndir,
+			const IfcVector3 &xaxis,
+			const IfcVector3 &yaxis)
+		{
+			BoundingBox res;
+			res.first.x = 1e10;
+			res.first.y = 1e10;
+			res.second.x = -1e10;
+			res.second.x = -1e10;
+			for (int i = 0; i < curmesh.verts.size(); ++i)
+			{
+				auto pointOnPlane = (curmesh.verts[i] - (curmesh.verts[i] * ndir)*ndir);
+				auto point2d = IfcVector2(pointOnPlane*xaxis, pointOnPlane*yaxis);
+
+				res.first = std::min(res.first, point2d);
+				res.second = std::max(res.second, point2d);
+			}
+			return res;
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		bool GenerateOpenings(std::vector<TempOpening>& openings,
+			const std::vector<IfcVector3>& nors,
+			TempMesh& curmesh,
+			bool check_intersection,
+			bool generate_connection_geometry,
+			const IfcVector3& wall_extrusion_axis,
+			const bool dump)
+		{
+			OpeningRefVector contours_to_openings;
+
+			// Try to derive a solid base plane within the current surface for use as
+			// working coordinate system. Map all vertices onto this plane and
+			// rescale them to [0,1] range. This normalization means all further
+			// epsilons need not be scaled.
+			bool ok = true;
+
+			std::vector<IfcVector2> contour_flat;
+
+			IfcVector3 nor;
+			const IfcMatrix4 m = ProjectOntoPlane(contour_flat, curmesh, ok, nor);
+			if (!ok) {
+				std::cout << "not ok." << std::endl;
+				return false;
+			}
+
+			IfcVector3 ndir, xAxis, yAxis;
+			//Prepare for a plane to project onto 2D
+			getProjectionVectors(wall_extrusion_axis, ndir, xAxis, yAxis, false);
+
+			const BoundingBox orgMesh2D = GetProjectedBoundingBox(curmesh, ndir, xAxis, yAxis);
+
+			// Obtain inverse transform for getting back to world space later on
+			const IfcMatrix4 minv = IfcMatrix4(m).Inverse();
+
+			// Compute bounding boxes for all 2D openings in projection space
+			ContourVector contours;
+
+			std::vector<IfcVector2> temp_contour;
+			std::vector<IfcVector2> temp_contour2;
+
+			IfcVector3 wall_extrusion_axis_norm = wall_extrusion_axis;
+			wall_extrusion_axis_norm.Normalize();
+			if (dump)
+				std::cout << "#openings : " << openings.size() << std::endl;
+			static int count = -1;
+			if (dump) ++count;
+
+			int openingsCount = -1;
+			if (dump)
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingMesh"
+					+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
+				std::ofstream outputStream(fileName.c_str());
+				aiMesh *mesh = curmesh.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+
+				outputStream.close();
+
+				fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingMesh2d"
+					+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
+				outputStream = std::ofstream(fileName.c_str());
+
+				for (int i = 0; i < curmesh.verts.size(); ++i)
+				{
+					auto pointOnPlane = (curmesh.verts[i] - (curmesh.verts[i] * ndir)*ndir);
+					auto point2d = IfcVector2(pointOnPlane*xAxis, pointOnPlane*yAxis);
+
+					outputStream << "v " << point2d.x << " " << point2d.y << " 0" << std::endl;
+				}
+
+				for (int i = 1; i <= curmesh.verts.size(); i += 4)
+				{
+					outputStream << "f";
+					if (i + 4 <= curmesh.verts.size())
+					{
+						outputStream << " " << i << " " << i + 1 << " " << i + 2 << " " << i + 3;
+					}
+					else
+					{
+						for (int j = i; j <= curmesh.verts.size(); ++j)
+							outputStream << " " << j;
+					}
+					outputStream << std::endl;
+				}
+			}
+
+			BOOST_FOREACH(TempOpening& opening, openings) {
+				++openingsCount;
+				// extrusionDir may be 0,0,0 on case where the opening mesh is not an
+				// IfcExtrudedAreaSolid but something else (i.e. a brep)
+				IfcVector3 norm_extrusion_dir = opening.extrusionDir;
+				if (norm_extrusion_dir.SquareLength() > 1e-10) {
+					norm_extrusion_dir.Normalize();
+				}
+				else {
+					norm_extrusion_dir = IfcVector3();
+				}
+
+				TempMesh* profile_data = opening.profileMesh.get();
+
+				const BoundingBox openingBbox = GetProjectedBoundingBox(*profile_data, ndir, xAxis, yAxis);
+
+				bool is_2d_source = false;
+
+				/*
+				* Using the 2D Profile does not work as  it neglects where abouts is the geometry on the 3rd dimension
+				* Some geometry are being extruded when they, in fact, does not intersect in 3D Space!
+				*/
+				//if (opening.profileMesh2D && norm_extrusion_dir.SquareLength() > 0) {
+				//       if(std::fabs(norm_extrusion_dir * wall_extrusion_axis_norm) < 0.1) {
+				//           // horizontal extrusion
+				//           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
+				//               profile_data = opening.profileMesh2D.get();
+				//               is_2d_source = true;
+				//std::cout << "2D Source - Horizontal Extrusion" << std::endl;
+				//           }
+				//       }
+				//       else {
+				//           // vertical extrusion
+				//           if (std::fabs(norm_extrusion_dir * nor) > 0.9) {
+				//               profile_data = opening.profileMesh2D.get();
+				//               is_2d_source = true;
+				//std::cout << "2D Source - Vertical Extrusion" << std::endl;
+				//           }
+				//       }
+				//}
+				if (dump)
+				{
+					std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingProfile"
+						+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
+					std::ofstream outputStream(fileName.c_str());
+					aiMesh *mesh = profile_data->ToMesh();
+					for (int i = 0; i < mesh->mNumVertices; ++i)
+					{
+						outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+					}
+
+					for (int i = 0; i < mesh->mNumFaces; ++i)
+					{
+						auto face = mesh->mFaces[i];
+						outputStream << "f";
+						for (int j = 0; j < face.mNumIndices; ++j)
+						{
+							outputStream << " " << face.mIndices[j] + 1;
+						}
+						outputStream << std::endl;
+					}
+				}
+
+				std::vector<IfcVector3> profile_verts = profile_data->verts;
+				std::vector<unsigned int> profile_vertcnts = profile_data->vertcnt;
+				if (profile_verts.size() <= 2) {
+					if (dump)
+						std::cout << "Invalid Profile: " << openingsCount << std::endl;
+					continue;
+				}
+
+				// The opening meshes are real 3D meshes so skip over all faces
+				// clearly facing into the wrong direction. Also, we need to check
+				// whether the meshes do actually intersect the base surface plane.
+				// This is done by recording minimum and maximum values for the
+				// d component of the plane equation for all polys and checking
+				// against surface d.
+
+				// Use the sign of the dot product of the face normal to the plane
+				// normal to determine to which side of the difference mesh a
+				// triangle belongs. Get independent bounding boxes and vertex
+				// sets for both sides and take the better one (we can't just
+				// take both - this would likely cause major screwup of vertex
+				// winding, producing errors as late as in CloseWindows()).
+				IfcFloat dmin, dmax;
+				MinMaxChooser<IfcFloat>()(dmin, dmax);
+
+				temp_contour.clear();
+				temp_contour2.clear();
+
+				IfcVector2 vpmin, vpmax;
+				MinMaxChooser<IfcVector2>()(vpmin, vpmax);
+
+				IfcVector2 vpmin2, vpmax2;
+				MinMaxChooser<IfcVector2>()(vpmin2, vpmax2);
+
+				if (opening.contour.size() && !is_2d_source)
+				{
+					std::vector<IfcVector2> contour[2];
+					std::vector<IfcVector2> contour_end[2];
+					for (int i = 0; i < opening.contour.size(); ++i)
+					{
+						bool side_flag = true;
+
+						const size_t next = (i + 1) % opening.contour.size();
+
+						std::vector<IfcVector3> vertices;
+						vertices.push_back(opening.contour[i]);
+						vertices.push_back(opening.contour[next]);
+						vertices.push_back(opening.contour[next] + opening.extrusionDir);
+						vertices.push_back(opening.contour[next] + opening.extrusionDir);
+
+						const auto face_nor = ((vertices[2] - vertices[0]) ^ (vertices[1] - vertices[0])).Normalize();
+
+						const IfcFloat abs_dot_face_nor = std::abs(nor * face_nor);
+						if (abs_dot_face_nor < 0.9) {
+							continue;
+						}
+
+						side_flag = nor * face_nor > 0;
+
+						for (int i = 0; i < vertices.size(); ++i)
+						{
+							const IfcVector3& x = vertices[i];
+
+							const IfcVector3 v = m * x;
+							IfcVector2 vv(v.x, v.y);
+
+							//if(check_intersection) {
+							dmin = std::min(dmin, v.z);
+							dmax = std::max(dmax, v.z);
+							//}
+
+							// sanity rounding
+							vv = std::max(vv, IfcVector2());
+							vv = std::min(vv, one_vec);
+
+							if (side_flag) {
+								vpmin = std::min(vpmin, vv);
+								vpmax = std::max(vpmax, vv);
+							}
+							else {
+								vpmin2 = std::min(vpmin2, vv);
+								vpmax2 = std::max(vpmax2, vv);
+							}
+
+							std::vector<IfcVector2>& store = i > 1 ? contour[(int)side_flag] : contour_end[(int)side_flag];
+
+							store.push_back(vv);
+						}
+					}
+					for (int i = 0; i < 2; ++i)
+					{
+						std::reverse(contour_end[i].begin(), contour_end[i].end());
+						contour[i].insert(contour[i].end(), contour_end[i].begin(), contour_end[i].end());
+
+						//remove duplicates
+						for (int j = 0; j < contour[i].size();)
+						{
+							auto lastPt = j == 0 ? contour[i].size() - 1 : j - 1;
+							if (contour[i][j].x == contour[i][lastPt].x
+								&& contour[i][j].y == contour[i][lastPt].y)
+							{
+								contour[i].erase(contour[i].begin() + j);
+							}
+							else
+								++j;
+						}
+					}
+
+					temp_contour = contour[1];
+					temp_contour2 = contour[0];
+				}
+				else
+				{
+					for (size_t f = 0, vi_total = 0, fend = profile_vertcnts.size(); f < fend; ++f) {
+						bool side_flag = true;
+						if (!is_2d_source) {
+							const IfcVector3 face_nor = ((profile_verts[vi_total + 2] - profile_verts[vi_total]) ^
+								(profile_verts[vi_total + 1] - profile_verts[vi_total])).Normalize();
+
+							const IfcFloat abs_dot_face_nor = std::abs(nor * face_nor);
+							if (abs_dot_face_nor < 0.9) {
+								vi_total += profile_vertcnts[f];
+								continue;
+							}
+
+							side_flag = nor * face_nor > 0;
+						}
+						for (unsigned int vi = 0, vend = profile_vertcnts[f]; vi < vend; ++vi, ++vi_total) {
+							const IfcVector3& x = profile_verts[vi_total];
+
+							const IfcVector3 v = m * x;
+							IfcVector2 vv(v.x, v.y);
+
+							//if(check_intersection) {
+							dmin = std::min(dmin, v.z);
+							dmax = std::max(dmax, v.z);
+							//}
+
+							// sanity rounding
+							vv = std::max(vv, IfcVector2());
+							vv = std::min(vv, one_vec);
+
+							if (side_flag) {
+								vpmin = std::min(vpmin, vv);
+								vpmax = std::max(vpmax, vv);
+							}
+							else {
+								vpmin2 = std::min(vpmin2, vv);
+								vpmax2 = std::max(vpmax2, vv);
+							}
+
+							std::vector<IfcVector2>& store = side_flag ? temp_contour : temp_contour2;
+
+							if (!IsDuplicateVertex(vv, store)) {
+								store.push_back(vv);
+								IfcVector3 point(vv.x, vv.y, 0);
+							}
+						}
+					}
+				}
+
+				if (temp_contour2.size() > 2) {
+					ai_assert(!is_2d_source);
+					const IfcVector2 area = vpmax - vpmin;
+					const IfcVector2 area2 = vpmax2 - vpmin2;
+					if (temp_contour.size() <= 2 || std::fabs(area2.x * area2.y) > std::fabs(area.x * area.y)) {
+						temp_contour.swap(temp_contour2);
+
+						vpmax = vpmax2;
+						vpmin = vpmin2;
+					}
+				}
+				if (temp_contour.size() <= 2) {
+					if (dump)
+						std::cout << "Contour not shaped: " << openingsCount << std::endl;
+					continue;
+				}
+
+				if (dump)
+				{
+					std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\openingContour"
+						+ std::to_string(openingsCount) + "_" + std::to_string(count) + ".obj";
+					std::ofstream outputStream(fileName.c_str());
+					for (const auto &point : temp_contour)
+					{
+						outputStream << "v " << point.x << " " << point.y << " 0" << std::endl;
+					}
+
+					for (int j = 1; j <= temp_contour.size() / 2; ++j)
+					{
+						outputStream << "f";
+						outputStream << " " << j << " " << temp_contour.size() - j + 1 << " " << temp_contour.size() - j << " " << j + 1;
+						outputStream << std::endl;
+					}
+				}
+
+				static int intersectionCount = 0;
+				++intersectionCount;
+				BoundingBox dummy;
+
+				const IfcFloat epsilon = std::fabs(dmax - dmin) * 0.0001;
+
+				if (!is_2d_source && check_intersection &&!isIntersect(orgMesh2D, openingBbox, dummy))
+				{
+					//If episilon test is satisified, let it carry on.
+
+					// TODO: This epsilon may be too large
+					const IfcFloat epsilon = std::fabs(dmax - dmin) * 0.0001;
+
+					if (!is_2d_source && check_intersection && (0 < dmin - epsilon || 0 > dmax + epsilon))
+					{
+						if (dump)
+							std::cout << std::to_string(openingsCount) << "[FAILED] epi is " << epsilon << "d: (" << dmin << "," << dmax << "), normal: (" << nor.x << "," << nor.y << "," << nor.z << ")" << std::endl;
+						continue;
+					}
+				}
+				if (dump)
+					std::cout << std::to_string(openingsCount) << "[PASSED]epi is " << epsilon << "d: (" << dmin << "," << dmax << "), normal: (" << nor.x << "," << nor.y << "," << nor.z << ")" << std::endl;
+				BoundingBox bb = BoundingBox(vpmin, vpmax);
+
+				// Skip over very small openings - these are likely projection errors
+				// (i.e. they don't belong to this side of the wall)
+				if (std::fabs(vpmax.x - vpmin.x) * std::fabs(vpmax.y - vpmin.y) < static_cast<IfcFloat>(1e-10)) {
+					if (dump)
+						std::cout << "Tiny opening: " << openingsCount << std::endl;
+					continue;
+				}
+				std::vector<TempOpening*> joined_openings(1, &opening);
+
+				bool is_rectangle = temp_contour.size() == 4;
+
+				// See if this BB intersects or is in close adjacency to any other BB we have so far.
+				int contourCnt = 0;
+				for (ContourVector::iterator it = contours.begin(); it != contours.end();) {
+					const BoundingBox& ibb = (*it).bb;
+
+					if (BoundingBoxesOverlapping(ibb, bb)) {
+						if (!(*it).is_rectangular) {
+							is_rectangle = false;
+						}
+
+						const std::vector<IfcVector2>& other = (*it).contour;
+						ClipperLib::ExPolygons poly;
+
+						// First check whether subtracting the old contour (to which ibb belongs)
+						// from the new contour (to which bb belongs) yields an updated bb which
+						// no longer overlaps ibb
+
+						MakeDisjunctWindowContours(other, temp_contour, poly);
+						if (poly.size() == 1) {
+							const BoundingBox newbb = GetBoundingBox(poly[0].outer);
+							if (!BoundingBoxesOverlapping(ibb, newbb)) {
+								// Good guy bounding box
+								bb = newbb;
+
+								ExtractVerticesFromClipper(poly[0].outer, temp_contour, false);
+								continue;
+							}
+						}
+
+						// Take these two overlapping contours and try to merge them. If they
+						// overlap (which should not happen, but in fact happens-in-the-real-
+						// world [tm] ), resume using a single contour and a single bounding box.
+						MergeWindowContours(temp_contour, other, poly);
+
+						if (poly.size() > 1) {
+							if (dump)
+								std::cout << " At try add openings overlapping happened @ " << contourCnt << std::endl;
+							//return TryAddOpenings_Poly2Tri(openings, nors, curmesh);
+						}
+						else if (poly.size() == 0) {
+							IFCImporter::LogWarn("ignoring duplicate opening");
+							if (dump)
+								std::cout << " Duplicate opening @ " << contourCnt << std::endl;
+							temp_contour.clear();
+							break;
+						}
+						else {
+							IFCImporter::LogDebug("merging overlapping openings");
+							if (dump)
+								std::cout << " merging overlapping openings @ " << contourCnt << std::endl;
+
+							if (dump)
+							{
+								static int i = 0;
+								++i;
+
+								std::cout << "[" << i << "] bounding boxes: (" << bb.first.x << "," << bb.first.y << ")(" << bb.second.x << "," << bb.second.y << ") and (" << ibb.first.x << "," << ibb.first.y << ")(" << ibb.second.x << "," << ibb.second.y << ")" << std::endl;
+								std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\mergedContourPair1(" + std::to_string(i) + ").obj";
+								std::ofstream outputStream(fileName.c_str());
+
+								for (const auto &contouringPt : temp_contour)
+								{
+									outputStream << "v " << to_int64(contouringPt.x) << " " << to_int64(contouringPt.y) << " 0" << std::endl;
+								}
+								for (int j = 1; j <= temp_contour.size() / 2; ++j)
+								{
+									outputStream << "f";
+									outputStream << " " << j << " " << temp_contour.size() - j + 1 << " " << temp_contour.size() - j << " " << j + 1;
+									outputStream << std::endl;
+								}
+								outputStream.close();
+
+								fileName = "C:\\Users\\Carmen\\Desktop\\test\\mergedContourPair2(" + std::to_string(i) + ").obj";
+								outputStream = std::ofstream(fileName.c_str());
+
+								for (const auto &contouringPt : other)
+								{
+									outputStream << "v " << to_int64(contouringPt.x) << " " << to_int64(contouringPt.y) << " 0" << std::endl;
+								}
+								for (int j = 1; j <= other.size() / 2; ++j)
+								{
+									outputStream << "f";
+									outputStream << " " << j << " " << other.size() - j + 1 << " " << other.size() - j << " " << j + 1;
+									outputStream << std::endl;
+								}
+								outputStream.close();
+
+								fileName = "C:\\Users\\Carmen\\Desktop\\test\\mergedContour" + std::to_string(i) + ".obj";
+								outputStream = std::ofstream(fileName.c_str());
+
+								for (const auto &contouringPt : poly[0].outer)
+								{
+									outputStream << "v " << contouringPt.X << " " << contouringPt.Y << " 0" << std::endl;
+								}
+								for (int j = 1; j <= temp_contour.size() / 2; ++j)
+								{
+									outputStream << "f";
+									outputStream << " " << j << " " << temp_contour.size() - j + 1 << " " << temp_contour.size() - j << " " << j + 1;
+									outputStream << std::endl;
+								}
+								outputStream.close();
+							}
+
+							ExtractVerticesFromClipper(poly[0].outer, temp_contour, false);
+
+							// Generate the union of the bounding boxes
+							bb.first = std::min(bb.first, ibb.first);
+							bb.second = std::max(bb.second, ibb.second);
+
+							// Update contour-to-opening tables accordingly
+							if (generate_connection_geometry) {
+								std::vector<TempOpening*>& t = contours_to_openings[std::distance(contours.begin(), it)];
+								joined_openings.insert(joined_openings.end(), t.begin(), t.end());
+
+								contours_to_openings.erase(contours_to_openings.begin() + std::distance(contours.begin(), it));
+							}
+
+							contours.erase(it);
+
+							// Restart from scratch because the newly formed BB might now
+							// overlap any other BB which its constituent BBs didn't
+							// previously overlap.
+							it = contours.begin();
+							if (dump)
+								std::cout << " merged. going back to initial contour. contour size is : " << contours.size() << std::endl;
+							contourCnt = 0;
+
+							continue;
+						}
+					}
+					++it;
+					contourCnt++;
+				}
+
+				if (!temp_contour.empty()) {
+					if (generate_connection_geometry) {
+						contours_to_openings.push_back(std::vector<TempOpening*>(
+							joined_openings.begin(),
+							joined_openings.end()));
+					}
+
+					contours.push_back(ProjectedWindowContour(temp_contour, bb, is_rectangle));
+				}
+				if (dump)
+					std::cout << "end of opening: " << openingsCount << " size of contour is : " << contours.size() << std::endl;
+			}//FOREACH opening
+			// Check if we still have any openings left - it may well be that this is
+			// not the cause, for example if all the opening candidates don't intersect
+			// this surface or point into a direction perpendicular to it.
+
+			if (contours.empty()) {
+				return false;
+			}
+
+			curmesh.Clear();
+
+			if (dump)
+			{
+				std::cout << " dumping contours. size of contour is : " << contours.size() << std::endl;
+				for (int i = 0; i < contours.size(); ++i)
+				{
+					std::cout << "[" << i << "] bounding box: (" << contours[i].bb.first.x << "," << contours[i].bb.first.y
+						<< ") (" << contours[i].bb.second.x << "," << contours[i].bb.second.y << ")";
+
+					std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\finalContour" + std::to_string(i) + ".obj";
+					std::ofstream outputStream(fileName.c_str());
+
+					for (const auto &contouringPt : contours[i].contour)
+					{
+						outputStream << "v " << contouringPt.x << " " << contouringPt.y << " 0" << std::endl;
+					}
+					for (int j = 1; j <= contours[i].contour.size(); j += 4)
+					{
+						outputStream << "f";
+						if (j + 4 <= contours[i].contour.size())
+						{
+							outputStream << " " << j << " " << j + 1 << " " << j + 2 << " " << j + 3;
+						}
+						else
+						{
+							for (int k = j; k <= contours[i].contour.size(); ++k)
+								outputStream << " " << k;
+						}
+						outputStream << std::endl;
+					}
+					outputStream.close();
+				}
+			}
+
+			// Generate a base subdivision into quads to accommodate the given list
+			// of window bounding boxes.
+			Quadrify(contours, curmesh);
+
+			if (dump && !curmesh.IsEmpty())
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\quadrified" + std::to_string(count) + ".obj";
+				std::ofstream outputStream(fileName.c_str());
+				aiMesh *mesh = curmesh.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+			}
+
+			// Run a sanity cleanup pass on the window contours to avoid generating
+			// artifacts during the contour generation phase later on.
+			CleanupWindowContours(contours);
+			if (dump && !curmesh.IsEmpty())
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\WindowContours" + std::to_string(count) + ".obj";
+				std::ofstream outputStream(fileName.c_str());
+				aiMesh *mesh = curmesh.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+			}
+
+			// Previously we reduced all windows to rectangular AABBs in projection
+			// space, now it is time to fill the gaps between the BBs and the real
+			// window openings.
+			InsertWindowContours(contours, openings, curmesh);
+			if (dump && !curmesh.IsEmpty())
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\InsertWindowContours" + std::to_string(count) + ".obj";
+				std::ofstream outputStream(fileName.c_str());
+				aiMesh *mesh = curmesh.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+			}
+
+			// Clip the entire outer contour of our current result against the real
+			// outer contour of the surface. This is necessary because the result
+			// of the Quadrify() algorithm is always a square area spanning
+			// over [0,1]^2 (i.e. entire projection space).
+			CleanupOuterContour(contour_flat, curmesh);
+			if (dump && !curmesh.IsEmpty())
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\cleanupOuter" + std::to_string(count) + ".obj";
+				std::ofstream outputStream(fileName.c_str());
+				aiMesh *mesh = curmesh.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+			}
+
+			// Undo the projection and get back to world (or local object) space
+			BOOST_FOREACH(IfcVector3& v3, curmesh.verts) {
+				v3 = minv * v3;
+			}
+
+			if (dump && !curmesh.IsEmpty())
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\precloseWindow" + std::to_string(count) + ".obj";
+				std::ofstream outputStream(fileName.c_str());
+				aiMesh *mesh = curmesh.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+			}
+
+			// Generate window caps to connect the symmetric openings on both sides
+			// of the wall.
+			//This function will only generate wall points, the wall points needs to be
+			//joined up later when they are all found.
+			if (generate_connection_geometry) {
+				CloseWindows(contours, minv, contours_to_openings, curmesh, dump);
+			}
+
+			if (dump && !curmesh.IsEmpty())
+			{
+				std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\closeWindow" + std::to_string(count) + ".obj";
+				std::ofstream outputStream(fileName.c_str());
+				aiMesh *mesh = curmesh.ToMesh();
+				for (int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					outputStream << "v " << mesh->mVertices[i].x << " " << mesh->mVertices[i].y << " " << mesh->mVertices[i].z << std::endl;
+				}
+
+				for (int i = 0; i < mesh->mNumFaces; ++i)
+				{
+					auto face = mesh->mFaces[i];
+					outputStream << "f";
+					for (int j = 0; j < face.mNumIndices; ++j)
+					{
+						outputStream << " " << face.mIndices[j] + 1;
+					}
+					outputStream << std::endl;
+				}
+			}
+
+			return true;
+		}
+
+		// ------------------------------------------------------------------------------------------------
+		bool TryAddOpenings_Poly2Tri(const std::vector<TempOpening>& openings, const std::vector<IfcVector3>& nors,
+			TempMesh& curmesh)
+		{
+			IFCImporter::LogWarn("forced to use poly2tri fallback method to generate wall openings");
+			std::vector<IfcVector3>& out = curmesh.verts;
+
+			bool result = false;
+
+			// Try to derive a solid base plane within the current surface for use as
+			// working coordinate system.
+			bool ok;
+			IfcVector3 nor;
+			const IfcMatrix3 m = DerivePlaneCoordinateSpace(curmesh, ok, nor);
+			if (!ok) {
+				return false;
+			}
+
+			const IfcMatrix3 minv = IfcMatrix3(m).Inverse();
+
+			IfcFloat coord = -1;
+
+			std::vector<IfcVector2> contour_flat;
+			contour_flat.reserve(out.size());
+
+			IfcVector2 vmin, vmax;
+			MinMaxChooser<IfcVector2>()(vmin, vmax);
+
+			// Move all points into the new coordinate system, collecting min/max verts on the way
+			BOOST_FOREACH(IfcVector3& x, out) {
+				const IfcVector3 vv = m * x;
+
+				// keep Z offset in the plane coordinate system. Ignoring precision issues
+				// (which  are present, of course), this should be the same value for
+				// all polygon vertices (assuming the polygon is planar).
+
+				// XXX this should be guarded, but we somehow need to pick a suitable
+				// epsilon
+				// if(coord != -1.0f) {
+				//  assert(std::fabs(coord - vv.z) < 1e-3f);
+				// }
+
+				coord = vv.z;
+
+				vmin = std::min(IfcVector2(vv.x, vv.y), vmin);
+				vmax = std::max(IfcVector2(vv.x, vv.y), vmax);
+
+				contour_flat.push_back(IfcVector2(vv.x, vv.y));
+			}
+
+			// With the current code in DerivePlaneCoordinateSpace,
+			// vmin,vmax should always be the 0...1 rectangle (+- numeric inaccuracies)
+			// but here we won't rely on this.
+
+			vmax -= vmin;
+
+			// If this happens then the projection must have been wrong.
+			assert(vmax.Length());
+
+			ClipperLib::ExPolygons clipped;
+			ClipperLib::Polygons holes_union;
+
+			IfcVector3 wall_extrusion;
+			bool do_connections = false, first = true;
+
+			try {
+				ClipperLib::Clipper clipper_holes;
+				size_t c = 0;
+
+				BOOST_FOREACH(const TempOpening& t, openings) {
+					const IfcVector3& outernor = nors[c++];
+					const IfcFloat dot = nor * outernor;
+					if (std::fabs(dot) < 1.f - 1e-6f) {
+						continue;
+					}
+
+					const std::vector<IfcVector3>& va = t.profileMesh->verts;
+					if (va.size() <= 2) {
+						continue;
+					}
+
+					std::vector<IfcVector2> contour;
+
+					BOOST_FOREACH(const IfcVector3& xx, t.profileMesh->verts) {
+						IfcVector3 vv = m *  xx, vv_extr = m * (xx + t.extrusionDir);
+
+						const bool is_extruded_side = std::fabs(vv.z - coord) > std::fabs(vv_extr.z - coord);
+						if (first) {
+							first = false;
+							if (dot > 0.f) {
+								do_connections = true;
+								wall_extrusion = t.extrusionDir;
+								if (is_extruded_side) {
+									wall_extrusion = -wall_extrusion;
+								}
+							}
+						}
+
+						// XXX should not be necessary - but it is. Why? For precision reasons?
+						vv = is_extruded_side ? vv_extr : vv;
+						contour.push_back(IfcVector2(vv.x, vv.y));
+					}
+
+					ClipperLib::Polygon hole;
+					BOOST_FOREACH(IfcVector2& pip, contour) {
+						pip.x = (pip.x - vmin.x) / vmax.x;
+						pip.y = (pip.y - vmin.y) / vmax.y;
+
+						hole.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+					}
+
+					if (!ClipperLib::Orientation(hole)) {
+						std::reverse(hole.begin(), hole.end());
+						//  assert(ClipperLib::Orientation(hole));
+					}
+
+					/*ClipperLib::Polygons pol_temp(1), pol_temp2(1);
+					pol_temp[0] = hole;
+
+					ClipperLib::OffsetPolygons(pol_temp,pol_temp2,5.0);
+					hole = pol_temp2[0];*/
+
+					clipper_holes.AddPolygon(hole, ClipperLib::ptSubject);
+				}
+
+				clipper_holes.Execute(ClipperLib::ctUnion, holes_union,
+					ClipperLib::pftNonZero,
+					ClipperLib::pftNonZero);
+
+				if (holes_union.empty()) {
+					return false;
+				}
+
+				// Now that we have the big union of all holes, subtract it from the outer contour
+				// to obtain the final polygon to feed into the triangulator.
+		{
+			ClipperLib::Polygon poly;
+			BOOST_FOREACH(IfcVector2& pip, contour_flat) {
+				pip.x = (pip.x - vmin.x) / vmax.x;
+				pip.y = (pip.y - vmin.y) / vmax.y;
+
+				poly.push_back(ClipperLib::IntPoint(to_int64(pip.x), to_int64(pip.y)));
+			}
+
+			if (ClipperLib::Orientation(poly)) {
+				std::reverse(poly.begin(), poly.end());
+			}
+			clipper_holes.Clear();
+			clipper_holes.AddPolygon(poly, ClipperLib::ptSubject);
+
+			clipper_holes.AddPolygons(holes_union, ClipperLib::ptClip);
+			clipper_holes.Execute(ClipperLib::ctDifference, clipped,
+				ClipperLib::pftNonZero,
+				ClipperLib::pftNonZero);
+		}
+			}
+			catch (const char* sx) {
+				IFCImporter::LogError("Ifc: error during polygon clipping, skipping openings for this face: (Clipper: "
+					+ std::string(sx) + ")");
+
+				return false;
+			}
+
+			std::vector<IfcVector3> old_verts;
+			std::vector<unsigned int> old_vertcnt;
+
+			old_verts.swap(curmesh.verts);
+			old_vertcnt.swap(curmesh.vertcnt);
+
+			// add connection geometry to close the adjacent 'holes' for the openings
+			// this should only be done from one side of the wall or the polygons
+			// would be emitted twice.
+			if (false && do_connections) {
+				std::vector<IfcVector3> tmpvec;
+				BOOST_FOREACH(ClipperLib::Polygon& opening, holes_union) {
+					assert(ClipperLib::Orientation(opening));
+
+					tmpvec.clear();
+
+					BOOST_FOREACH(ClipperLib::IntPoint& point, opening) {
+						tmpvec.push_back(minv * IfcVector3(
+							vmin.x + from_int64(point.X) * vmax.x,
+							vmin.y + from_int64(point.Y) * vmax.y,
+							coord));
+					}
+
+					for (size_t i = 0, size = tmpvec.size(); i < size; ++i) {
+						const size_t next = (i + 1) % size;
+
+						curmesh.vertcnt.push_back(4);
+
+						const IfcVector3& in_world = tmpvec[i];
+						const IfcVector3& next_world = tmpvec[next];
+
+						// Assumptions: no 'partial' openings, wall thickness roughly the same across the wall
+						curmesh.verts.push_back(in_world);
+						curmesh.verts.push_back(in_world + wall_extrusion);
+						curmesh.verts.push_back(next_world + wall_extrusion);
+						curmesh.verts.push_back(next_world);
+					}
+				}
+			}
+
+			std::vector< std::vector<p2t::Point*> > contours;
+			BOOST_FOREACH(ClipperLib::ExPolygon& clip, clipped) {
+				contours.clear();
+
+				// Build the outer polygon contour line for feeding into poly2tri
+				std::vector<p2t::Point*> contour_points;
+				BOOST_FOREACH(ClipperLib::IntPoint& point, clip.outer) {
+					contour_points.push_back(new p2t::Point(from_int64(point.X), from_int64(point.Y)));
+				}
+
+				p2t::CDT* cdt;
+				try {
+					// Note: this relies on custom modifications in poly2tri to raise runtime_error's
+					// instead if assertions. These failures are not debug only, they can actually
+					// happen in production use if the input data is broken. An assertion would be
+					// inappropriate.
+					cdt = new p2t::CDT(contour_points);
+				}
+				catch (const std::exception& e) {
+					IFCImporter::LogError("Ifc: error during polygon triangulation, skipping some openings: (poly2tri: "
+						+ std::string(e.what()) + ")");
+					continue;
+				}
+
+				// Build the poly2tri inner contours for all holes we got from ClipperLib
+				BOOST_FOREACH(ClipperLib::Polygon& opening, clip.holes) {
+					contours.push_back(std::vector<p2t::Point*>());
+					std::vector<p2t::Point*>& contour = contours.back();
+
+					BOOST_FOREACH(ClipperLib::IntPoint& point, opening) {
+						contour.push_back(new p2t::Point(from_int64(point.X), from_int64(point.Y)));
+					}
+
+					cdt->AddHole(contour);
+				}
+
+				try {
+					// Note: See above
+					cdt->Triangulate();
+				}
+				catch (const std::exception& e) {
+					IFCImporter::LogError("Ifc: error during polygon triangulation, skipping some openings: (poly2tri: "
+						+ std::string(e.what()) + ")");
+					continue;
+				}
+
+				const std::vector<p2t::Triangle*> tris = cdt->GetTriangles();
+
+				// Collect the triangles we just produced
+				BOOST_FOREACH(p2t::Triangle* tri, tris) {
+					for (int i = 0; i < 3; ++i) {
+						const IfcVector2 v = IfcVector2(
+							static_cast<IfcFloat>(tri->GetPoint(i)->x),
+							static_cast<IfcFloat>(tri->GetPoint(i)->y)
+							);
+
+						assert(v.x <= 1.0 && v.x >= 0.0 && v.y <= 1.0 && v.y >= 0.0);
+						const IfcVector3 v3 = minv * IfcVector3(vmin.x + v.x * vmax.x, vmin.y + v.y * vmax.y, coord);
+
+						curmesh.verts.push_back(v3);
+					}
+					curmesh.vertcnt.push_back(3);
+				}
+
+				result = true;
+			}
+
+			if (!result) {
+				// revert -- it's a shame, but better than nothing
+				curmesh.verts.insert(curmesh.verts.end(), old_verts.begin(), old_verts.end());
+				curmesh.vertcnt.insert(curmesh.vertcnt.end(), old_vertcnt.begin(), old_vertcnt.end());
+
+				IFCImporter::LogError("Ifc: revert, could not generate openings for this wall");
+			}
+
+			return result;
+		}
+	} // ! IFC
 } // ! Assimp
 
 #undef to_int64
