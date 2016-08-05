@@ -198,6 +198,28 @@ namespace Assimp {
 		typedef std::vector< ProjectedWindowContour > ContourVector;
 
 		// ------------------------------------------------------------------------------------------------
+		int BoundingBoxesEncapsulated(const BoundingBox &ibb, const BoundingBox &bb)
+		{
+			auto diff1 = ibb.first - bb.first;
+			auto diff2 = ibb.second - bb.second;
+
+			if ((ibb.first.x <= bb.first.x || fabsf(diff1.x) < 1e-6) && (ibb.second.x >= bb.second.x || fabsf(diff2.x) < 1e-6) &&
+				(ibb.first.y <= bb.first.y || fabsf(diff1.y) < 1e-6) && (ibb.second.y >= bb.second.y || fabsf(diff2.y) < 1e-6))
+			{
+				return -1;
+			}
+			else if ((bb.first.x <= ibb.first.x || fabsf(diff1.x) < 1e-6) && (bb.second.x >= ibb.second.x || fabsf(diff2.x) < 1e-6) &&
+				(bb.first.y <= ibb.first.y || fabsf(diff1.y) < 1e-6) && (bb.second.y >= ibb.second.y || fabsf(diff2.y) < 1e-6))
+			{
+				return 1;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+
+		// ------------------------------------------------------------------------------------------------
 		bool BoundingBoxesOverlapping(const BoundingBox &ibb, const BoundingBox &bb)
 		{
 			// count the '=' case as non-overlapping but as adjacent to each other
@@ -1999,7 +2021,7 @@ namespace Assimp {
 						vertices.push_back(opening.contour[i]);
 						vertices.push_back(opening.contour[next]);
 						vertices.push_back(opening.contour[next] + opening.extrusionDir);
-						vertices.push_back(opening.contour[next] + opening.extrusionDir);
+						vertices.push_back(opening.contour[i] + opening.extrusionDir);
 
 						const auto face_nor = ((vertices[2] - vertices[0]) ^ (vertices[1] - vertices[0])).Normalize();
 
@@ -2036,8 +2058,9 @@ namespace Assimp {
 							}
 
 							std::vector<IfcVector2>& store = i > 1 ? contour[(int)side_flag] : contour_end[(int)side_flag];
-
-							store.push_back(vv);
+							if (!IsDuplicateVertex(vv, store)) {
+								store.push_back(vv);
+							}
 						}
 					}
 					for (int i = 0; i < 2; ++i)
@@ -2046,13 +2069,10 @@ namespace Assimp {
 						contour[i].insert(contour[i].end(), contour_end[i].begin(), contour_end[i].end());
 
 						//remove duplicates
-						for (int j = 0; j < contour[i].size();)
+						for (int j = 0; j < contour_end[i].size();)
 						{
-							auto lastPt = j == 0 ? contour[i].size() - 1 : j - 1;
-							if (contour[i][j].x == contour[i][lastPt].x
-								&& contour[i][j].y == contour[i][lastPt].y)
-							{
-								contour[i].erase(contour[i].begin() + j);
+							if (!IsDuplicateVertex(contour_end[i][j], contour[i])) {
+								contour[i].push_back(contour_end[i][j]);
 							}
 							else
 								++j;
@@ -2218,8 +2238,41 @@ namespace Assimp {
 
 						if (poly.size() > 1) {
 							if (dump)
-								std::cout << " At try add openings overlapping happened @ " << contourCnt << std::endl;
-							//return TryAddOpenings_Poly2Tri(openings, nors, curmesh);
+								std::cout << " At try add openings overlapping happened @ " << contourCnt
+								<< " bounding boxes: (" << bb.first.x << "," << bb.first.y << ")(" << bb.second.x << "," << bb.second.y
+								<< ") and (" << ibb.first.x << ", " << ibb.first.y << ")(" << ibb.second.x << "," << ibb.second.y << ")" << std::endl;
+
+							if (int res = BoundingBoxesEncapsulated(ibb, bb))
+							{
+								if (dump)
+									std::cout << " one bb is fully encapsulating another @ " << contourCnt << std::endl;
+								//if one bounding box fully encapsulate another, then take the
+								//bigger bounding box's contour and remove the other
+								//FIXME: This is quite a leap of faith...
+								if (res < 0)
+								{
+									//ibb is bigger than bb.
+									bb = ibb;
+									temp_contour = other;
+								}
+
+								// Update contour-to-opening tables accordingly
+								if (generate_connection_geometry) {
+									std::vector<TempOpening*>& t = contours_to_openings[std::distance(contours.begin(), it)];
+									joined_openings.insert(joined_openings.end(), t.begin(), t.end());
+
+									contours_to_openings.erase(contours_to_openings.begin() + std::distance(contours.begin(), it));
+								}
+
+								contours.erase(it);
+								continue;
+							}
+							else
+							{
+								if (dump)
+									std::cout << " no work around @ " << contourCnt << std::endl;
+								return TryAddOpenings_Poly2Tri(openings, nors, curmesh);
+							}
 						}
 						else if (poly.size() == 0) {
 							IFCImporter::LogWarn("ignoring duplicate opening");
