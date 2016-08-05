@@ -2011,6 +2011,8 @@ namespace Assimp {
 				{
 					std::vector<IfcVector2> contour[2];
 					std::vector<IfcVector2> contour_end[2];
+					if (dump)
+						std::cout << "[" << openingsCount << "] Starting contour definition" << std::endl;
 					for (int i = 0; i < opening.contour.size(); ++i)
 					{
 						bool side_flag = true;
@@ -2058,15 +2060,16 @@ namespace Assimp {
 							}
 
 							std::vector<IfcVector2>& store = i > 1 ? contour[(int)side_flag] : contour_end[(int)side_flag];
-							if (dump && openingsCount == 4)
+							if (dump && openingsCount == 6)
 							{
-								std::cout << "[" << side_flag << "][" << (i > 1) << "] (" << vv.x << "," << vv.y << ")";
+								std::cout << "[" << side_flag << "][" << (i > 1) << "] (" << vv.x << "," << vv.y << ") Was ("
+									<< x.x << "," << x.y << "," << x.z << ")";
 							}
 							if (!IsDuplicateVertex(vv, store)) {
 								store.push_back(vv);
-								if (dump && openingsCount == 4) std::cout << std::endl;
+								if (dump && openingsCount == 6) std::cout << std::endl;
 							}
-							else if (dump && openingsCount == 4)
+							else if (dump && openingsCount == 6)
 							{
 								std::cout << " [REMOVED]" << std::endl;
 							}
@@ -2091,8 +2094,11 @@ namespace Assimp {
 					temp_contour = contour[1];
 					temp_contour2 = contour[0];
 				}
-				else
+				/*else*/
+				if (temp_contour.size() <= 2 && temp_contour2.size() <= 2)
 				{
+					if (dump)
+						std::cout << "[" << openingsCount << "] Starting alternative contour definition" << std::endl;
 					for (size_t f = 0, vi_total = 0, fend = profile_vertcnts.size(); f < fend; ++f) {
 						bool side_flag = true;
 						if (!is_2d_source) {
@@ -2132,10 +2138,19 @@ namespace Assimp {
 							}
 
 							std::vector<IfcVector2>& store = side_flag ? temp_contour : temp_contour2;
+							if (dump && openingsCount == 6)
+							{
+								std::cout << "[" << side_flag << "] (" << vv.x << "," << vv.y << ") Was ("
+									<< x.x << "," << x.y << "," << x.z << ")";
+							}
 
 							if (!IsDuplicateVertex(vv, store)) {
 								store.push_back(vv);
-								IfcVector3 point(vv.x, vv.y, 0);
+								if (dump && openingsCount == 6) std::cout << std::endl;
+							}
+							else if (dump && openingsCount == 6)
+							{
+								std::cout << " [REMOVED]" << std::endl;
 							}
 						}
 					}
@@ -2154,7 +2169,7 @@ namespace Assimp {
 				}
 				if (temp_contour.size() <= 2) {
 					if (dump)
-						std::cout << "Contour not shaped: " << openingsCount << std::endl;
+						std::cout << "[" << openingsCount << "]Contour not shaped " << std::endl;
 					continue;
 				}
 

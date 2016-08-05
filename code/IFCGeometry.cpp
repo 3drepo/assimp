@@ -532,7 +532,7 @@ namespace Assimp {
 
 			static int fileCount = 0;
 
-			bool dump = false;// !collect_openings && fileCount == 0;
+			bool dump = !collect_openings && fileCount == 0;
 
 			result.verts.reserve(curve.verts.size()*(has_area ? 4 : 2));
 			result.vertcnt.reserve(curve.verts.size() + 2);
@@ -575,6 +575,7 @@ namespace Assimp {
 				}
 
 				nors.reserve(conv.apply_openings->size());
+				int openIdx = 0;
 				BOOST_FOREACH(TempOpening& t, *conv.apply_openings) {
 					TempMesh& bounds = *t.profileMesh.get();
 
@@ -894,6 +895,7 @@ namespace Assimp {
 						ProcessCurve(*curve, curveMesh, conv);
 						ProcessExtrudedArea(solid, curveMesh, dir, tempMesh, conv, true);
 					}
+
 					// and then apply those to the geometry we're about to generate
 					conv.apply_openings = conv.collect_openings;
 					conv.collect_openings = oldCollectOpenings;
@@ -901,6 +903,7 @@ namespace Assimp {
 			}
 
 			ProcessExtrudedArea(solid, meshout, dir, result, conv, collect_openings);
+
 			conv.apply_openings = oldApplyOpenings;
 		}
 
