@@ -532,7 +532,7 @@ namespace Assimp {
 
 			static int fileCount = 0;
 
-			bool dump = !collect_openings && fileCount == 0;
+			bool dump = false;// !collect_openings && fileCount == 0;
 
 			result.verts.reserve(curve.verts.size()*(has_area ? 4 : 2));
 			result.vertcnt.reserve(curve.verts.size() + 2);
@@ -603,7 +603,7 @@ namespace Assimp {
 				if (openings) {
 					static int cutCount = 0;
 					//Dump geometry before
-					static const int selectCount = 8;
+					static const int selectCount = 9;
 					if (dump)
 					{
 						std::string fileName = "C:\\Users\\Carmen\\Desktop\\test\\pre\\Mesh" + std::string(cutCount < 10 ? "0" : "") + std::to_string(cutCount) + ".obj";

@@ -2020,8 +2020,8 @@ namespace Assimp {
 						std::vector<IfcVector3> vertices;
 						vertices.push_back(opening.contour[i]);
 						vertices.push_back(opening.contour[next]);
-						vertices.push_back(opening.contour[next] + opening.extrusionDir);
 						vertices.push_back(opening.contour[i] + opening.extrusionDir);
+						vertices.push_back(opening.contour[next] + opening.extrusionDir);
 
 						const auto face_nor = ((vertices[2] - vertices[0]) ^ (vertices[1] - vertices[0])).Normalize();
 
@@ -2058,8 +2058,17 @@ namespace Assimp {
 							}
 
 							std::vector<IfcVector2>& store = i > 1 ? contour[(int)side_flag] : contour_end[(int)side_flag];
+							if (dump && openingsCount == 4)
+							{
+								std::cout << "[" << side_flag << "][" << (i > 1) << "] (" << vv.x << "," << vv.y << ")";
+							}
 							if (!IsDuplicateVertex(vv, store)) {
 								store.push_back(vv);
+								if (dump && openingsCount == 4) std::cout << std::endl;
+							}
+							else if (dump && openingsCount == 4)
+							{
+								std::cout << " [REMOVED]" << std::endl;
 							}
 						}
 					}
