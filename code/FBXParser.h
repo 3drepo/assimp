@@ -209,7 +209,7 @@ double ParseTokenAsFloat(const Token& t, const char*& err_out);
 int ParseTokenAsInt(const Token& t, const char*& err_out);
 int64_t ParseTokenAsInt64(const Token& t, const char*& err_out);
 std::string ParseTokenAsString(const Token& t, const char*& err_out);
-
+std::vector<char> ParseTokenAsCharArray(const Token& t, const char*& err_out);
 
 /* wrapper around ParseTokenAsXXX() with DOMError handling */
 uint64_t ParseTokenAsID(const Token& t);
@@ -218,6 +218,7 @@ double ParseTokenAsFloat(const Token& t);
 int ParseTokenAsInt(const Token& t);
 int64_t ParseTokenAsInt64(const Token& t);
 std::string ParseTokenAsString(const Token& t);
+std::vector<char> ParseTokenAsCharArray(const Token& t);
 
 /* read data arrays */
 void ParseVectorDataArray(std::vector<aiVector3D>& out, const Element& el);

@@ -54,10 +54,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FBXUtil.h"
 #include "FBXProperties.h"
 #include "FBXImporter.h"
+#include <boost/filesystem.hpp>
 #include "../include/assimp/scene.h"
 #include <boost/foreach.hpp>
 #include <boost/scoped_array.hpp>
-
+#include <boost/algorithm/string/replace.hpp>
+#include <fstream>
 
 namespace Assimp {
 namespace FBX {
@@ -100,10 +102,11 @@ public:
 
 public:
 
-    Converter(aiScene* out, const Document& doc)
+    Converter(const std::string &pFile, aiScene* out, const Document& doc)
         : defaultMaterialIndex()
         , out(out)
         , doc(doc)
+        , originalFileName(pFile)
     {
         // animations need to be converted first since this will
         // populate the node_anim_chain_bits map, which is needed
@@ -129,6 +132,8 @@ public:
                 }
             }
         }
+
+        this->originalFileName = pFile;
 
         TransferDataToScene();
 
@@ -1466,7 +1471,39 @@ private:
             aiString path;
             path.Set(tex->RelativeFilename());
 
-            out_mat->AddProperty(&path,_AI_MATKEY_TEXTURE_BASE,target,0);
+            out_mat->AddProperty(&path, _AI_MATKEY_TEXTURE_BASE,target,0);
+
+            for (const auto& vid : tex->Videos())
+            {
+                 const std::vector<char> &content = vid.second->Content();
+                 
+                 if (content.size())
+                 {
+                     std::string texFileName = boost::replace_all_copy(vid.second->RelativeFilename(), "\\", "/");
+                     boost::filesystem::path filePath = boost::filesystem::path(texFileName).filename();
+                     boost::filesystem::path outputPath = boost::filesystem::path(originalFileName);
+
+                     outputPath = outputPath.replace_extension(boost::filesystem::path(".fbm"));
+
+                     if (boost::filesystem::exists(outputPath) || boost::filesystem::create_directory(outputPath)) {
+                        std::string fileName = (outputPath / filePath).string();
+                        std::ofstream mediaFile(fileName, std::ios::out | std::ofstream::binary);
+
+                        if (mediaFile)
+                        {
+                            std::copy(content.begin(), content.end(), std::ostreambuf_iterator<char>(mediaFile));
+
+                            aiString temp(fileName);
+                            out_mat->AddProperty(&temp, _AI_MATKEY_TEXTURE_BASE,target,0);
+                        } else {
+                            FBXImporter::LogWarn("Could not open texture file " + fileName + " for writing.");
+                        }
+                     } else {
+                            FBXImporter::LogWarn("Could not create output directory " + outputPath.string()); 
+                     }
+                }
+            }
+
 
             aiUVTransform uvTrafo;
             // XXX handle all kinds of UV transformations
@@ -3057,6 +3094,7 @@ private:
 
     double anim_fps;
 
+    std::string originalFileName;
     aiScene* const out;
     const FBX::Document& doc;
 };
@@ -3064,9 +3102,9 @@ private:
 //} // !anon
 
 // ------------------------------------------------------------------------------------------------
-void ConvertToAssimpScene(aiScene* out, const Document& doc)
+void ConvertToAssimpScene(const std::string &pFile, aiScene* out, const Document& doc)
 {
-    Converter converter(out,doc);
+    Converter converter(pFile,out,doc);
 }
 
 } // !FBX

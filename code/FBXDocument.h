@@ -527,6 +527,42 @@ private:
     boost::shared_ptr<const PropertyTable> props;
 };
 
+/** Used here simply as a placeholder for texture content **/
+class Video : public Object
+{
+public:
+    Video(uint64_t id, const Element& element, const Document& doc, const std::string& name);
+    ~Video();
+ 
+public:
+
+    const std::string& Type() const {
+        return type;
+    }
+
+    const std::string& FileName() const {
+        return fileName;
+    }
+
+    const std::string& RelativeFilename() const {
+        return relativeFileName;
+    }
+
+    const std::vector<char> Content() const {
+        return content;
+    }
+
+private:
+
+    std::string type;
+    std::string relativeFileName;
+    std::string fileName;  
+
+    std::vector<char> content;
+};
+
+typedef std::fbx_unordered_map<std::string, const Video*> VideoMap;
+
 /** DOM class for generic FBX textures */
 class Texture : public Object
 {
@@ -561,9 +597,17 @@ public:
         return uvScaling;
     }
 
+    const std::string& Media() const {
+        return media;
+    }
+
     const PropertyTable& Props() const {
         ai_assert(props.get());
         return *props.get();
+    }
+
+    const VideoMap& Videos() const {
+        return videos;
     }
 
     // return a 4-tuple
@@ -580,9 +624,12 @@ private:
     std::string relativeFileName;
     std::string fileName;
     std::string alphaSource;
+    std::string media; 
     boost::shared_ptr<const PropertyTable> props;
 
     unsigned int crop[4];
+    
+    VideoMap videos;
 };
 
 /** DOM class for layered FBX textures */

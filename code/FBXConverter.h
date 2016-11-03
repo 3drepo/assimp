@@ -55,7 +55,7 @@ namespace FBX {
 /** Convert a FBX #Document to #aiScene
  *  @param out Empty scene to be populated
  *  @param doc Parsed FBX document */
-void ConvertToAssimpScene(aiScene* out, const Document& doc);
+void ConvertToAssimpScene(const std::string &pFile, aiScene* out, const Document& doc);
 
 
 }

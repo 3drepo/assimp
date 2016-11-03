@@ -489,6 +489,29 @@ std::string ParseTokenAsString(const Token& t, const char*& err_out)
     return std::string(s+1,length-2);
 }
 
+// ------------------------------------------------------------------------------------------------
+std::vector<char> ParseTokenAsCharArray(const Token& t, const char*& err_out)
+{
+    err_out = NULL;
+
+    if (t.Type() != TokenType_DATA) {
+        err_out = "expected TOK_DATA token";
+        return std::vector<char>();
+    }
+
+    const char* data = t.begin();
+    if (data[0] != 'R') {
+        err_out = "failed to parse raw data, unexpected data type (binary)";
+        return std::vector<char>();
+    }
+
+    // read string length
+    BE_NCONST int32_t len = SafeParse<int32_t>(data+1, t.end());
+    AI_SWAP4(len);
+
+    ai_assert(t.end() - data == 5 + len);
+    return std::vector<char>(t.begin() + 5, t.end());
+}
 
 namespace {
 
@@ -1277,6 +1300,17 @@ int ParseTokenAsInt(const Token& t)
     return i;
 }
 
+// ------------------------------------------------------------------------------------------------
+// wrapper around ParseTokenAsCharArray() with ParseError handling
+std::vector<char> ParseTokenAsCharArray(const Token& t)
+{
+    const char* err;
+    const std::vector<char> i = ParseTokenAsCharArray(t,err);
+    if(err) {
+        ParseError(err,t);
+    }
+    return i;
+}
 
 
 // ------------------------------------------------------------------------------------------------
