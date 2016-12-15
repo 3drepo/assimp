@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iterator>
 #include <sstream>
+#include <algorithm>
 #include <boost/tuple/tuple.hpp>
 #include <vector>
 #include "FBXParser.h"
@@ -58,7 +59,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../include/assimp/scene.h"
 #include <boost/foreach.hpp>
 #include <boost/scoped_array.hpp>
-#include <boost/algorithm/string/replace.hpp>
 #include <fstream>
 
 namespace Assimp {
@@ -1479,7 +1479,8 @@ private:
 
                  if (content.size())
                  {
-                     std::string texFileName = boost::replace_all_copy(vid.second->RelativeFilename(), "\\", "/");
+					 std::string texFileName = vid.second->RelativeFilename();
+					 std::replace(texFileName.begin(), texFileName.end(), '\\', '/'); 
                      boost::filesystem::path filePath = boost::filesystem::path(texFileName).filename();
                      boost::filesystem::path outputPath = boost::filesystem::path(originalFileName);
 
