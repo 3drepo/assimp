@@ -1476,17 +1476,17 @@ private:
             for (const auto& vid : tex->Videos())
             {
                  const std::vector<char> &content = vid.second->Content();
-                 
+
                  if (content.size())
                  {
                      std::string texFileName = boost::replace_all_copy(vid.second->RelativeFilename(), "\\", "/");
                      boost::filesystem::path filePath = boost::filesystem::path(texFileName).filename();
                      boost::filesystem::path outputPath = boost::filesystem::path(originalFileName);
 
-                     outputPath = outputPath.replace_extension(boost::filesystem::path(".fbm"));
+                     outputPath = outputPath.filename().replace_extension(boost::filesystem::path(".fbm"));
 
                      if (boost::filesystem::exists(outputPath) || boost::filesystem::create_directory(outputPath)) {
-                        std::string fileName = (outputPath / filePath).string();
+                        std::string fileName = (boost::filesystem::path("") / outputPath / filePath).string();
                         std::ofstream mediaFile(fileName, std::ios::out | std::ofstream::binary);
 
                         if (mediaFile)
@@ -1499,7 +1499,7 @@ private:
                             FBXImporter::LogWarn("Could not open texture file " + fileName + " for writing.");
                         }
                      } else {
-                            FBXImporter::LogWarn("Could not create output directory " + outputPath.string()); 
+                            FBXImporter::LogWarn("Could not create output directory " + outputPath.string());
                      }
                 }
             }
