@@ -306,7 +306,7 @@ void ValidateDSProcess::Validate( const aiCamera* pCamera)
 
     // FIX: there are many 3ds files with invalid FOVs. No reason to
     // reject them at all ... a warning is appropriate.
-    if (!pCamera->mHorizontalFOV || pCamera->mHorizontalFOV >= (float)AI_MATH_PI)
+    if (!pCamera->mHorizontalFOV || pCamera->mHorizontalFOV >= (double)AI_MATH_PI)
         ReportWarning("%f is not a valid value for aiCamera::mHorizontalFOV",pCamera->mHorizontalFOV);
 }
 
@@ -463,10 +463,10 @@ void ValidateDSProcess::Validate( const aiMesh* pMesh)
             ReportError("aiMesh::mBones is NULL (aiMesh::mNumBones is %i)",
                 pMesh->mNumBones);
         }
-        boost::scoped_array<float> afSum(NULL);
+        boost::scoped_array<double> afSum(NULL);
         if (pMesh->mNumVertices)
         {
-            afSum.reset(new float[pMesh->mNumVertices]);
+            afSum.reset(new double[pMesh->mNumVertices]);
             for (unsigned int i = 0; i < pMesh->mNumVertices;++i)
                 afSum[i] = 0.0f;
         }
@@ -511,7 +511,7 @@ void ValidateDSProcess::Validate( const aiMesh* pMesh)
 
 // ------------------------------------------------------------------------------------------------
 void ValidateDSProcess::Validate( const aiMesh* pMesh,
-    const aiBone* pBone,float* afSum)
+    const aiBone* pBone,double* afSum)
 {
     this->Validate(&pBone->mName);
 
@@ -702,10 +702,10 @@ void ValidateDSProcess::Validate( const aiMaterial* pMaterial)
         //  Validate((const aiString*)prop->mData);
         }
         else if (aiPTI_Float == prop->mType)    {
-            if (prop->mDataLength < sizeof(float))  {
+            if (prop->mDataLength < sizeof(double))  {
                 ReportError("aiMaterial::mProperties[%i].mDataLength is "
-                    "too small to contain a float (%i, needed: %i)",
-                    i,prop->mDataLength,sizeof(float));
+                    "too small to contain a double (%i, needed: %i)",
+                    i,prop->mDataLength,sizeof(double));
             }
         }
         else if (aiPTI_Integer == prop->mType)  {
@@ -719,7 +719,7 @@ void ValidateDSProcess::Validate( const aiMaterial* pMaterial)
     }
 
     // make some more specific tests
-    float fTemp;
+    double fTemp;
     int iShading;
     if (AI_SUCCESS == aiGetMaterialInteger( pMaterial,AI_MATKEY_SHADING_MODEL,&iShading))   {
         switch ((aiShadingMode)iShading)
@@ -823,15 +823,15 @@ void ValidateDSProcess::Validate( const aiAnimation* pAnimation,
             {
                 ReportError("aiNodeAnim::mPositionKeys[%i].mTime (%.5f) is larger "
                     "than aiAnimation::mDuration (which is %.5f)",i,
-                    (float)pNodeAnim->mPositionKeys[i].mTime,
-                    (float)pAnimation->mDuration);
+                    (double)pNodeAnim->mPositionKeys[i].mTime,
+                    (double)pAnimation->mDuration);
             }
             if (i && pNodeAnim->mPositionKeys[i].mTime <= dLast)
             {
                 ReportWarning("aiNodeAnim::mPositionKeys[%i].mTime (%.5f) is smaller "
                     "than aiAnimation::mPositionKeys[%i] (which is %.5f)",i,
-                    (float)pNodeAnim->mPositionKeys[i].mTime,
-                    i-1, (float)dLast);
+                    (double)pNodeAnim->mPositionKeys[i].mTime,
+                    i-1, (double)dLast);
             }
             dLast = pNodeAnim->mPositionKeys[i].mTime;
         }
@@ -851,15 +851,15 @@ void ValidateDSProcess::Validate( const aiAnimation* pAnimation,
             {
                 ReportError("aiNodeAnim::mRotationKeys[%i].mTime (%.5f) is larger "
                     "than aiAnimation::mDuration (which is %.5f)",i,
-                    (float)pNodeAnim->mRotationKeys[i].mTime,
-                    (float)pAnimation->mDuration);
+                    (double)pNodeAnim->mRotationKeys[i].mTime,
+                    (double)pAnimation->mDuration);
             }
             if (i && pNodeAnim->mRotationKeys[i].mTime <= dLast)
             {
                 ReportWarning("aiNodeAnim::mRotationKeys[%i].mTime (%.5f) is smaller "
                     "than aiAnimation::mRotationKeys[%i] (which is %.5f)",i,
-                    (float)pNodeAnim->mRotationKeys[i].mTime,
-                    i-1, (float)dLast);
+                    (double)pNodeAnim->mRotationKeys[i].mTime,
+                    i-1, (double)dLast);
             }
             dLast = pNodeAnim->mRotationKeys[i].mTime;
         }
@@ -878,15 +878,15 @@ void ValidateDSProcess::Validate( const aiAnimation* pAnimation,
             {
                 ReportError("aiNodeAnim::mScalingKeys[%i].mTime (%.5f) is larger "
                     "than aiAnimation::mDuration (which is %.5f)",i,
-                    (float)pNodeAnim->mScalingKeys[i].mTime,
-                    (float)pAnimation->mDuration);
+                    (double)pNodeAnim->mScalingKeys[i].mTime,
+                    (double)pAnimation->mDuration);
             }
             if (i && pNodeAnim->mScalingKeys[i].mTime <= dLast)
             {
                 ReportWarning("aiNodeAnim::mScalingKeys[%i].mTime (%.5f) is smaller "
                     "than aiAnimation::mScalingKeys[%i] (which is %.5f)",i,
-                    (float)pNodeAnim->mScalingKeys[i].mTime,
-                    i-1, (float)dLast);
+                    (double)pNodeAnim->mScalingKeys[i].mTime,
+                    i-1, (double)dLast);
             }
             dLast = pNodeAnim->mScalingKeys[i].mTime;
         }

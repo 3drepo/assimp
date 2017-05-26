@@ -80,7 +80,7 @@ namespace Assimp
         void DestroyTriMesh( );
         void ConvertPolyToFaces( const Blender::MPoly& poly );
         void AddFace( int v1, int v2, int v3, int v4 = 0 );
-        void AddTFace( const float* uv1, const float* uv2, const float *uv3, const float* uv4 = 0 );
+        void AddTFace( const double* uv1, const double* uv2, const double *uv3, const double* uv4 = 0 );
 
         const Blender::Mesh* BMesh;
         Blender::Mesh* triMesh;

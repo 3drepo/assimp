@@ -308,13 +308,13 @@ void UnrealImporter::InternReadFile( const std::string& pFile,
 
                         for (;!IsLineEnd(*data);++data) {
                             if (data[0] == 'X' && data[1] == '=')   {
-                                data = fast_atoreal_move<float>(data+2,(float&)nd->mTransformation.a1);
+                                data = fast_atoreal_move<double>(data+2,(double&)nd->mTransformation.a1);
                             }
                             else if (data[0] == 'Y' && data[1] == '=')  {
-                                data = fast_atoreal_move<float>(data+2,(float&)nd->mTransformation.b2);
+                                data = fast_atoreal_move<double>(data+2,(double&)nd->mTransformation.b2);
                             }
                             else if (data[0] == 'Z' && data[1] == '=')  {
-                                data = fast_atoreal_move<float>(data+2,(float&)nd->mTransformation.c3);
+                                data = fast_atoreal_move<double>(data+2,(double&)nd->mTransformation.c3);
                             }
                         }
                     }
@@ -389,7 +389,7 @@ void UnrealImporter::InternReadFile( const std::string& pFile,
 
         // make TRANS faces 90% opaque that RemRedundantMaterials won't catch us
         if (materials[i].type == Unreal::MF_NORMAL_TRANS_TS)    {
-            const float opac = 0.9f;
+            const double opac = 0.9f;
             mat->AddProperty(&opac,1,AI_MATKEY_OPACITY);
             ::strcat(s.data,"tran_");
         }

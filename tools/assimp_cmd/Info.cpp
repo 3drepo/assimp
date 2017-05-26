@@ -154,7 +154,7 @@ void FindSpecialPoints(const aiScene* scene,aiVector3D special_points[3])
 	special_points[1] = aiVector3D(-1e10f,-1e10f,-1e10f);
 
 	FindSpecialPoints(scene,scene->mRootNode,special_points);
-	special_points[2] = 0.5f*(special_points[0]+special_points[1]);
+	special_points[2] = 0.5*(special_points[0]+special_points[1]);
 }
 
 // -----------------------------------------------------------------------------------

@@ -100,7 +100,7 @@ public:
      */
     // -------------------------------------------------------------------
     void FindPositions( const aiVector3D& pPosition, uint32_t pSG,
-        float pRadius, std::vector<unsigned int>& poResults,
+        double pRadius, std::vector<unsigned int>& poResults,
         bool exactMatch = false) const;
 
 protected:
@@ -117,10 +117,10 @@ protected:
         unsigned int mIndex;    ///< The vertex referred by this entry
         aiVector3D mPosition;   ///< Position
         uint32_t mSmoothGroups;
-        float mDistance;        ///< Distance of this vertex to the sorting plane
+        double mDistance;        ///< Distance of this vertex to the sorting plane
 
         Entry() { /** intentionally not initialized.*/ }
-        Entry( unsigned int pIndex, const aiVector3D& pPosition, float pDistance,uint32_t pSG)
+        Entry( unsigned int pIndex, const aiVector3D& pPosition, double pDistance,uint32_t pSG)
             :
             mIndex( pIndex),
             mPosition( pPosition),

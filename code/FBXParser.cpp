@@ -337,7 +337,7 @@ size_t ParseTokenAsDim(const Token& t, const char*& err_out)
 
 
 // ------------------------------------------------------------------------------------------------
-float ParseTokenAsFloat(const Token& t, const char*& err_out)
+double ParseTokenAsFloat(const Token& t, const char*& err_out)
 {
     err_out = NULL;
 
@@ -355,10 +355,10 @@ float ParseTokenAsFloat(const Token& t, const char*& err_out)
         }
 
         if (data[0] == 'F') {
-            return SafeParse<float>(data+1, t.end());
+            return SafeParse<double>(data+1, t.end());
         }
         else {
-            return static_cast<float>( SafeParse<double>(data+1, t.end()) );
+            return static_cast<double>( SafeParse<double>(data+1, t.end()) );
         }
     }
 
@@ -489,6 +489,29 @@ std::string ParseTokenAsString(const Token& t, const char*& err_out)
     return std::string(s+1,length-2);
 }
 
+// ------------------------------------------------------------------------------------------------
+std::vector<char> ParseTokenAsCharArray(const Token& t, const char*& err_out)
+{
+    err_out = NULL;
+
+    if (t.Type() != TokenType_DATA) {
+        err_out = "expected TOK_DATA token";
+        return std::vector<char>();
+    }
+
+    const char* data = t.begin();
+    if (data[0] != 'R') {
+        err_out = "failed to parse raw data, unexpected data type (binary)";
+        return std::vector<char>();
+    }
+
+    // read string length
+    BE_NCONST int32_t len = SafeParse<int32_t>(data+1, t.end());
+    AI_SWAP4(len);
+
+    ai_assert(t.end() - data == 5 + len);
+    return std::vector<char>(t.begin() + 5, t.end());
+}
 
 namespace {
 
@@ -627,7 +650,7 @@ void ParseVectorDataArray(std::vector<aiVector3D>& out, const Element& el)
         }
 
         if (type != 'd' && type != 'f') {
-            ParseError("expected float or double array (binary)",&el);
+            ParseError("expected double or double array (binary)",&el);
         }
 
         std::vector<char> buff;
@@ -642,13 +665,13 @@ void ParseVectorDataArray(std::vector<aiVector3D>& out, const Element& el)
         if (type == 'd') {
             const double* d = reinterpret_cast<const double*>(&buff[0]);
             for (unsigned int i = 0; i < count3; ++i, d += 3) {
-                out.push_back(aiVector3D(static_cast<float>(d[0]),
-                    static_cast<float>(d[1]),
-                    static_cast<float>(d[2])));
+                out.push_back(aiVector3D(static_cast<double>(d[0]),
+                    static_cast<double>(d[1]),
+                    static_cast<double>(d[2])));
             }
         }
         else if (type == 'f') {
-            const float* f = reinterpret_cast<const float*>(&buff[0]);
+            const double* f = reinterpret_cast<const double*>(&buff[0]);
             for (unsigned int i = 0; i < count3; ++i, f += 3) {
                 out.push_back(aiVector3D(f[0],f[1],f[2]));
             }
@@ -707,7 +730,7 @@ void ParseVectorDataArray(std::vector<aiColor4D>& out, const Element& el)
         }
 
         if (type != 'd' && type != 'f') {
-            ParseError("expected float or double array (binary)",&el);
+            ParseError("expected double or double array (binary)",&el);
         }
 
         std::vector<char> buff;
@@ -722,14 +745,14 @@ void ParseVectorDataArray(std::vector<aiColor4D>& out, const Element& el)
         if (type == 'd') {
             const double* d = reinterpret_cast<const double*>(&buff[0]);
             for (unsigned int i = 0; i < count4; ++i, d += 4) {
-                out.push_back(aiColor4D(static_cast<float>(d[0]),
-                    static_cast<float>(d[1]),
-                    static_cast<float>(d[2]),
-                    static_cast<float>(d[3])));
+                out.push_back(aiColor4D(static_cast<double>(d[0]),
+                    static_cast<double>(d[1]),
+                    static_cast<double>(d[2]),
+                    static_cast<double>(d[3])));
             }
         }
         else if (type == 'f') {
-            const float* f = reinterpret_cast<const float*>(&buff[0]);
+            const double* f = reinterpret_cast<const double*>(&buff[0]);
             for (unsigned int i = 0; i < count4; ++i, f += 4) {
                 out.push_back(aiColor4D(f[0],f[1],f[2],f[3]));
             }
@@ -786,7 +809,7 @@ void ParseVectorDataArray(std::vector<aiVector2D>& out, const Element& el)
         }
 
         if (type != 'd' && type != 'f') {
-            ParseError("expected float or double array (binary)",&el);
+            ParseError("expected double or double array (binary)",&el);
         }
 
         std::vector<char> buff;
@@ -801,12 +824,12 @@ void ParseVectorDataArray(std::vector<aiVector2D>& out, const Element& el)
         if (type == 'd') {
             const double* d = reinterpret_cast<const double*>(&buff[0]);
             for (unsigned int i = 0; i < count2; ++i, d += 2) {
-                out.push_back(aiVector2D(static_cast<float>(d[0]),
-                    static_cast<float>(d[1])));
+                out.push_back(aiVector2D(static_cast<double>(d[0]),
+                    static_cast<double>(d[1])));
             }
         }
         else if (type == 'f') {
-            const float* f = reinterpret_cast<const float*>(&buff[0]);
+            const double* f = reinterpret_cast<const double*>(&buff[0]);
             for (unsigned int i = 0; i < count2; ++i, f += 2) {
                 out.push_back(aiVector2D(f[0],f[1]));
             }
@@ -896,7 +919,7 @@ void ParseVectorDataArray(std::vector<int>& out, const Element& el)
 
 // ------------------------------------------------------------------------------------------------
 // read an array of floats
-void ParseVectorDataArray(std::vector<float>& out, const Element& el)
+void ParseVectorDataArray(std::vector<double>& out, const Element& el)
 {
     out.clear();
     const TokenList& tok = el.Tokens();
@@ -916,7 +939,7 @@ void ParseVectorDataArray(std::vector<float>& out, const Element& el)
         }
 
         if (type != 'd' && type != 'f') {
-            ParseError("expected float or double array (binary)",&el);
+            ParseError("expected double or double array (binary)",&el);
         }
 
         std::vector<char> buff;
@@ -928,11 +951,11 @@ void ParseVectorDataArray(std::vector<float>& out, const Element& el)
         if (type == 'd') {
             const double* d = reinterpret_cast<const double*>(&buff[0]);
             for (unsigned int i = 0; i < count; ++i, ++d) {
-                out.push_back(static_cast<float>(*d));
+                out.push_back(static_cast<double>(*d));
             }
         }
         else if (type == 'f') {
-            const float* f = reinterpret_cast<const float*>(&buff[0]);
+            const double* f = reinterpret_cast<const double*>(&buff[0]);
             for (unsigned int i = 0; i < count; ++i, ++f) {
                 out.push_back(*f);
             }
@@ -950,7 +973,7 @@ void ParseVectorDataArray(std::vector<float>& out, const Element& el)
     const Element& a = GetRequiredElement(scope,"a",&el);
 
     for (TokenList::const_iterator it = a.Tokens().begin(), end = a.Tokens().end(); it != end; ) {
-        const float ival = ParseTokenAsFloat(**it++);
+        const double ival = ParseTokenAsFloat(**it++);
         out.push_back(ival);
     }
 }
@@ -1140,7 +1163,7 @@ void ParseVectorDataArray(std::vector<int64_t>& out, const Element& el)
 // ------------------------------------------------------------------------------------------------
 aiMatrix4x4 ReadMatrix(const Element& element)
 {
-    std::vector<float> values;
+    std::vector<double> values;
     ParseVectorDataArray(values,element);
 
     if(values.size() != 16) {
@@ -1254,10 +1277,10 @@ size_t ParseTokenAsDim(const Token& t)
 
 // ------------------------------------------------------------------------------------------------
 // wrapper around ParseTokenAsFloat() with ParseError handling
-float ParseTokenAsFloat(const Token& t)
+double ParseTokenAsFloat(const Token& t)
 {
     const char* err;
-    const float i = ParseTokenAsFloat(t,err);
+    const double i = ParseTokenAsFloat(t,err);
     if(err) {
         ParseError(err,t);
     }
@@ -1277,6 +1300,17 @@ int ParseTokenAsInt(const Token& t)
     return i;
 }
 
+// ------------------------------------------------------------------------------------------------
+// wrapper around ParseTokenAsCharArray() with ParseError handling
+std::vector<char> ParseTokenAsCharArray(const Token& t)
+{
+    const char* err;
+    const std::vector<char> i = ParseTokenAsCharArray(t,err);
+    if(err) {
+        ParseError(err,t);
+    }
+    return i;
+}
 
 
 // ------------------------------------------------------------------------------------------------

@@ -102,10 +102,10 @@ void TextureTransformStep::PreProcessUVTransform(STransformVecInfo& info)
      */
     if (info.mRotation)
     {
-        float out = info.mRotation;
-        if ((rounded = (int)(info.mRotation / (float)AI_MATH_TWO_PI)))
+        double out = info.mRotation;
+        if ((rounded = (int)(info.mRotation / (double)AI_MATH_TWO_PI)))
         {
-            out -= rounded*(float)AI_MATH_PI;
+            out -= rounded*(double)AI_MATH_PI;
 
             sprintf(szTemp,"Texture coordinate rotation %f can be simplified to %f",info.mRotation,out);
             DefaultLogger::get()->info(szTemp);
@@ -113,7 +113,7 @@ void TextureTransformStep::PreProcessUVTransform(STransformVecInfo& info)
 
         // Next step - convert negative rotation angles to positives
         if (out < 0.f)
-            out = (float)AI_MATH_TWO_PI * 2 + out;
+            out = (double)AI_MATH_TWO_PI * 2 + out;
 
         info.mRotation = out;
         return;
@@ -126,18 +126,18 @@ void TextureTransformStep::PreProcessUVTransform(STransformVecInfo& info)
      * offset 2 and 3)
      */
     if ((rounded  = (int)info.mTranslation.x))  {
-        float out = 0.0f;
+        double out = 0.0f;
         szTemp[0] = 0;
         if (aiTextureMapMode_Wrap == info.mapU) {
             // Wrap - simple take the fraction of the field
-            out = info.mTranslation.x-(float)rounded;
+            out = info.mTranslation.x-(double)rounded;
             sprintf(szTemp,"[w] UV U offset %f can be simplified to %f",info.mTranslation.x,out);
         }
         else if (aiTextureMapMode_Mirror == info.mapU && 1 != rounded)  {
             // Mirror
             if (rounded % 2)
                 rounded--;
-            out = info.mTranslation.x-(float)rounded;
+            out = info.mTranslation.x-(double)rounded;
 
             sprintf(szTemp,"[m/d] UV U offset %f can be simplified to %f",info.mTranslation.x,out);
         }
@@ -159,18 +159,18 @@ void TextureTransformStep::PreProcessUVTransform(STransformVecInfo& info)
      * offset 2 and 3)
      */
     if ((rounded  = (int)info.mTranslation.y))  {
-        float out = 0.0f;
+        double out = 0.0f;
         szTemp[0] = 0;
         if (aiTextureMapMode_Wrap == info.mapV) {
             // Wrap - simple take the fraction of the field
-            out = info.mTranslation.y-(float)rounded;
+            out = info.mTranslation.y-(double)rounded;
             sprintf(szTemp,"[w] UV V offset %f can be simplified to %f",info.mTranslation.y,out);
         }
         else if (aiTextureMapMode_Mirror == info.mapV  && 1 != rounded) {
             // Mirror
             if (rounded % 2)
                 rounded--;
-            out = info.mTranslation.x-(float)rounded;
+            out = info.mTranslation.x-(double)rounded;
 
             sprintf(szTemp,"[m/d] UV V offset %f can be simplified to %f",info.mTranslation.y,out);
         }
@@ -269,7 +269,7 @@ void TextureTransformStep::Execute( aiScene* pScene)
                     else if ( !::strcmp( prop2->mKey.data, "$tex.uvtrafo"))  {
                         // ValidateDS should check this
                         ai_assert(prop2->mDataLength >= 20);
-                        ::memcpy(&info.mTranslation.x,prop2->mData,sizeof(float)*5);
+                        ::memcpy(&info.mTranslation.x,prop2->mData,sizeof(double)*5);
 
                         // Directly remove this property from the list
                         mat->mNumProperties--;

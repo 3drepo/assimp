@@ -126,7 +126,11 @@ ELSE ( ASSIMP_ENABLE_BOOST_WORKAROUND )
   IF ( NOT Boost_ADDITIONAL_VERSIONS )
     SET( Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0" "1.48.0" "1.48" "1.49" "1.49.0" "1.50" "1.50.0" "1.51" "1.51.0" "1.52.0" "1.53.0" "1.54.0" "1.55" "1.55.0" "1.56" "1.56.0" "1.57" "1.57.0" "1.58" "1.58.0" "1.59" "1.59.0")
   ENDIF ( NOT Boost_ADDITIONAL_VERSIONS )
-  FIND_PACKAGE( Boost )
+  set(Boost_USE_STATIC_LIBS OFF)
+  set(Boost_USE_STATIC_RUNTIME OFF)
+  add_definitions(-DBOOST_ALL_NO_LIB)
+  set(Boost_USE_MULTITHREADED ON)
+  FIND_PACKAGE( Boost COMPONENTS filesystem system)
   IF ( NOT Boost_FOUND )
     MESSAGE( FATAL_ERROR
       "Boost libraries (http://www.boost.org/) not found. "

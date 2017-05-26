@@ -175,7 +175,7 @@ struct VertexBoneAssignment
 {
     uint32_t vertexIndex;
     uint16_t boneIndex;
-    float weight;
+    double weight;
 };
 typedef std::vector<VertexBoneAssignment> VertexBoneAssignmentList;
 typedef std::map<uint32_t, VertexBoneAssignmentList > VertexBoneAssignmentsMap;
@@ -300,7 +300,7 @@ typedef std::vector<Pose*> PoseList;
 struct PoseRef
 {
     uint16_t index;
-    float influence;
+    double influence;
 };
 typedef std::vector<PoseRef> PoseRefList;
 
@@ -308,7 +308,7 @@ typedef std::vector<PoseRef> PoseRefList;
 struct PoseKeyFrame
 {
     /// Time position in the animation.
-    float timePos;
+    double timePos;
 
     PoseRefList references;
 };
@@ -318,7 +318,7 @@ typedef std::vector<PoseKeyFrame> PoseKeyFrameList;
 struct MorphKeyFrame
 {
     /// Time position in the animation.
-    float timePos;
+    double timePos;
 
     MemoryStreamPtr buffer;
 };
@@ -331,7 +331,7 @@ struct TransformKeyFrame
 
     aiMatrix4x4 Transform();
 
-    float timePos;
+    double timePos;
 
     aiQuaternion rotation;
     aiVector3D position;
@@ -406,10 +406,10 @@ public:
     std::string baseName;
 
     /// Length in seconds.
-    float length;
+    double length;
 
     /// Base animation key time.
-    float baseTime;
+    double baseTime;
 
     /// Animation tracks.
     VertexAnimationTrackList tracks;

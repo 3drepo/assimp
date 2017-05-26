@@ -86,7 +86,7 @@ void FillMaterial(aiMaterial* mat,const IFC::IfcSurfaceStyle* surf,ConversionDat
             if (const IFC::IfcSurfaceStyleRendering* ren = shade->ToPtr<IFC::IfcSurfaceStyleRendering>()) {
 
                 if (ren->Transparency) {
-                    const float t = 1.f-static_cast<float>(ren->Transparency.Get());
+                    const double t = 1.f-static_cast<double>(ren->Transparency.Get());
                     mat->AddProperty(&t,1, AI_MATKEY_OPACITY);
                 }
 
@@ -117,7 +117,7 @@ void FillMaterial(aiMaterial* mat,const IFC::IfcSurfaceStyle* surf,ConversionDat
                     if(const EXPRESS::REAL* rt = ren->SpecularHighlight.Get()->ToPtr<EXPRESS::REAL>()) {
                         // at this point we don't distinguish between the two distinct ways of
                         // specifying highlight intensities. leave this to the user.
-                        const float e = static_cast<float>(*rt);
+                        const double e = static_cast<double>(*rt);
                         mat->AddProperty(&e,1,AI_MATKEY_SHININESS);
                     }
                     else {

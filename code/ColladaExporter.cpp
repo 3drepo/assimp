@@ -148,7 +148,7 @@ void ColladaExporter::WriteFile()
 // Writes the asset header
 void ColladaExporter::WriteHeader()
 {
-    static const float epsilon = 0.00001f;
+    static const double epsilon = 0.00001f;
     static const aiQuaternion x_rot(aiMatrix3x3(
         0, -1,  0,
         1,  0,  0,
@@ -175,9 +175,9 @@ void ColladaExporter::WriteHeader()
 
     bool add_root_node = false;
 
-    float scale = 1.0;
+    double scale = 1.0;
     if(std::abs(scaling.x - scaling.y) <= epsilon && std::abs(scaling.x - scaling.z) <= epsilon && std::abs(scaling.y - scaling.z) <= epsilon) {
-        scale = (float) ((((double) scaling.x) + ((double) scaling.y) + ((double) scaling.z)) / 3.0);
+        scale = (double) ((((double) scaling.x) + ((double) scaling.y) + ((double) scaling.z)) / 3.0);
     } else {
         add_root_node = true;
     }
@@ -449,7 +449,7 @@ void ColladaExporter::WriteSpotLight(const aiLight *const light){
                             srcLight->mFalloffAngle);
     */
 
-    const float fallOffAngle = AI_RAD_TO_DEG(light->mAngleInnerCone);
+    const double fallOffAngle = AI_RAD_TO_DEG(light->mAngleInnerCone);
     mOutput << startstr <<"<falloff_angle sid=\"fall_off_angle\">"
                                 << fallOffAngle
                         <<"</falloff_angle>" << endstr;
@@ -608,7 +608,7 @@ void ColladaExporter::WriteFloatEntry( const Property& pProperty, const std::str
     if(pProperty.exist) {
         mOutput << startstr << "<" << pTypeName << ">" << endstr;
         PushTag();
-        mOutput << startstr << "<float sid=\"" << pTypeName << "\">" << pProperty.value << "</float>" << endstr;
+        mOutput << startstr << "<double sid=\"" << pTypeName << "\">" << pProperty.value << "</double>" << endstr;
         PopTag();
         mOutput << startstr << "</" << pTypeName << ">" << endstr;
     }
@@ -797,10 +797,10 @@ void ColladaExporter::WriteGeometry( size_t pIndex)
     PushTag();
 
     // Positions
-    WriteFloatArray( idstr + "-positions", FloatType_Vector, (float*) mesh->mVertices, mesh->mNumVertices);
+    WriteFloatArray( idstr + "-positions", FloatType_Vector, (double*) mesh->mVertices, mesh->mNumVertices);
     // Normals, if any
     if( mesh->HasNormals() )
-        WriteFloatArray( idstr + "-normals", FloatType_Vector, (float*) mesh->mNormals, mesh->mNumVertices);
+        WriteFloatArray( idstr + "-normals", FloatType_Vector, (double*) mesh->mNormals, mesh->mNumVertices);
 
     // texture coords
     for( size_t a = 0; a < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++a)
@@ -808,7 +808,7 @@ void ColladaExporter::WriteGeometry( size_t pIndex)
         if( mesh->HasTextureCoords( a) )
         {
             WriteFloatArray( idstr + "-tex" + boost::lexical_cast<std::string> (a), mesh->mNumUVComponents[a] == 3 ? FloatType_TexCoord3 : FloatType_TexCoord2,
-                (float*) mesh->mTextureCoords[a], mesh->mNumVertices);
+                (double*) mesh->mTextureCoords[a], mesh->mNumVertices);
         }
     }
 
@@ -816,7 +816,7 @@ void ColladaExporter::WriteGeometry( size_t pIndex)
     for( size_t a = 0; a < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++a)
     {
         if( mesh->HasVertexColors( a) )
-            WriteFloatArray( idstr + "-color" + boost::lexical_cast<std::string> (a), FloatType_Color, (float*) mesh->mColors[a], mesh->mNumVertices);
+            WriteFloatArray( idstr + "-color" + boost::lexical_cast<std::string> (a), FloatType_Color, (double*) mesh->mColors[a], mesh->mNumVertices);
     }
 
     // assemble vertex structure
@@ -905,8 +905,8 @@ void ColladaExporter::WriteGeometry( size_t pIndex)
 }
 
 // ------------------------------------------------------------------------------------------------
-// Writes a float array of the given type
-void ColladaExporter::WriteFloatArray( const std::string& pIdString, FloatDataType pType, const float* pData, size_t pElementCount)
+// Writes a double array of the given type
+void ColladaExporter::WriteFloatArray( const std::string& pIdString, FloatDataType pType, const double* pData, size_t pElementCount)
 {
     size_t floatsPerElement = 0;
     switch( pType )
@@ -962,26 +962,26 @@ void ColladaExporter::WriteFloatArray( const std::string& pIdString, FloatDataTy
     switch( pType )
     {
         case FloatType_Vector:
-            mOutput << startstr << "<param name=\"X\" type=\"float\" />" << endstr;
-            mOutput << startstr << "<param name=\"Y\" type=\"float\" />" << endstr;
-            mOutput << startstr << "<param name=\"Z\" type=\"float\" />" << endstr;
+            mOutput << startstr << "<param name=\"X\" type=\"double\" />" << endstr;
+            mOutput << startstr << "<param name=\"Y\" type=\"double\" />" << endstr;
+            mOutput << startstr << "<param name=\"Z\" type=\"double\" />" << endstr;
             break;
 
         case FloatType_TexCoord2:
-            mOutput << startstr << "<param name=\"S\" type=\"float\" />" << endstr;
-            mOutput << startstr << "<param name=\"T\" type=\"float\" />" << endstr;
+            mOutput << startstr << "<param name=\"S\" type=\"double\" />" << endstr;
+            mOutput << startstr << "<param name=\"T\" type=\"double\" />" << endstr;
             break;
 
         case FloatType_TexCoord3:
-            mOutput << startstr << "<param name=\"S\" type=\"float\" />" << endstr;
-            mOutput << startstr << "<param name=\"T\" type=\"float\" />" << endstr;
-            mOutput << startstr << "<param name=\"P\" type=\"float\" />" << endstr;
+            mOutput << startstr << "<param name=\"S\" type=\"double\" />" << endstr;
+            mOutput << startstr << "<param name=\"T\" type=\"double\" />" << endstr;
+            mOutput << startstr << "<param name=\"P\" type=\"double\" />" << endstr;
             break;
 
         case FloatType_Color:
-            mOutput << startstr << "<param name=\"R\" type=\"float\" />" << endstr;
-            mOutput << startstr << "<param name=\"G\" type=\"float\" />" << endstr;
-            mOutput << startstr << "<param name=\"B\" type=\"float\" />" << endstr;
+            mOutput << startstr << "<param name=\"R\" type=\"double\" />" << endstr;
+            mOutput << startstr << "<param name=\"G\" type=\"double\" />" << endstr;
+            mOutput << startstr << "<param name=\"B\" type=\"double\" />" << endstr;
             break;
     }
 

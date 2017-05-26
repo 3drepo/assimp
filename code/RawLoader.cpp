@@ -149,12 +149,12 @@ void RAWImporter::InternReadFile( const std::string& pFile,
         else
         {
             // there can be maximally 12 floats plus an extra texture file name
-            float data[12];
+            double data[12];
             unsigned int num;
             for (num = 0; num < 12;++num)
             {
                 if(!SkipSpaces(&sz) || !IsNumeric(*sz))break;
-                sz = fast_atoreal_move<float>(sz,data[num]);
+                sz = fast_atoreal_move<double>(sz,data[num]);
             }
             if (num != 12 && num != 9)
             {

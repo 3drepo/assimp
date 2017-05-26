@@ -71,7 +71,7 @@ private:
 
     int ReadByte();
     int ReadInt();
-    float ReadFloat();
+    double ReadFloat();
     aiVector2D ReadVec2();
     aiVector3D ReadVec3();
     aiQuaternion ReadQuat();
@@ -88,7 +88,7 @@ private:
         aiVector3D normal;
         aiVector3D texcoords;
         unsigned char bones[4];
-        float weights[4];
+        double weights[4];
     };
 
     AI_WONT_RETURN void Oops() AI_WONT_RETURN_SUFFIX;

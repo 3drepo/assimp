@@ -149,7 +149,7 @@ void AnimResolver::UpdateAnimRangeSetup()
         const double delta = my_last-my_first;
         const size_t old_size = (*it).keys.size();
 
-        const float value_delta = (*it).keys.back().value - (*it).keys.front().value;
+        const double value_delta = (*it).keys.back().value - (*it).keys.front().value;
 
         // NOTE: We won't handle reset, linear and constant here.
         // See DoInterpolation() for their implementation.
@@ -261,7 +261,7 @@ void AnimResolver::ExtractBindPose(aiMatrix4x4& out)
 // ------------------------------------------------------------------------------------------------
 // Do a single interpolation on a channel
 void AnimResolver::DoInterpolation(std::vector<LWO::Key>::const_iterator cur,
-    LWO::Envelope* envl,double time, float& fill)
+    LWO::Envelope* envl,double time, double& fill)
 {
     if (envl->keys.size() == 1) {
         fill = envl->keys[0].value;
@@ -314,7 +314,7 @@ void AnimResolver::DoInterpolation(std::vector<LWO::Key>::const_iterator cur,
 // ------------------------------------------------------------------------------------------------
 // Almost the same, except we won't handle pre/post conditions here
 void AnimResolver::DoInterpolation2(std::vector<LWO::Key>::const_iterator beg,
-    std::vector<LWO::Key>::const_iterator end,double time, float& fill)
+    std::vector<LWO::Key>::const_iterator end,double time, double& fill)
 {
     switch ((*end).inter) {
 
@@ -328,7 +328,7 @@ void AnimResolver::DoInterpolation2(std::vector<LWO::Key>::const_iterator beg,
             break;
     }
     // linear interpolation - default
-    fill = (*beg).value + ((*end).value - (*beg).value)*(float)(((time - (*beg).time) / ((*end).time - (*beg).time)));
+    fill = (*beg).value + ((*end).value - (*beg).value)*(double)(((time - (*beg).time) / ((*end).time - (*beg).time)));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -361,7 +361,7 @@ void AnimResolver::InterpolateTrack(std::vector<aiVectorKey>& out,aiVectorKey& f
             ++cur_x;
         else end_x = true;
     }
-    else DoInterpolation(cur_x,envl_x,time,(float&)fill.mValue.x);
+    else DoInterpolation(cur_x,envl_x,time,(double&)fill.mValue.x);
 
     // get y
     if ((*cur_y).time == time) {
@@ -371,7 +371,7 @@ void AnimResolver::InterpolateTrack(std::vector<aiVectorKey>& out,aiVectorKey& f
             ++cur_y;
         else end_y = true;
     }
-    else DoInterpolation(cur_y,envl_y,time,(float&)fill.mValue.y);
+    else DoInterpolation(cur_y,envl_y,time,(double&)fill.mValue.y);
 
     // get z
     if ((*cur_z).time == time) {
@@ -381,7 +381,7 @@ void AnimResolver::InterpolateTrack(std::vector<aiVectorKey>& out,aiVectorKey& f
             ++cur_z;
         else end_x = true;
     }
-    else DoInterpolation(cur_z,envl_z,time,(float&)fill.mValue.z);
+    else DoInterpolation(cur_z,envl_z,time,(double&)fill.mValue.z);
 }
 
 // ------------------------------------------------------------------------------------------------

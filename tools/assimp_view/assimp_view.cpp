@@ -67,11 +67,11 @@ bool g_bMousePressed				= false;
 bool g_bMousePressedR				= false;
 bool g_bMousePressedM				= false;
 bool g_bMousePressedBoth			= false;
-float g_fElpasedTime				= 0.0f;
+double g_fElpasedTime				= 0.0f;
 D3DCAPS9 g_sCaps;
 bool g_bLoadingFinished				= false;
 HANDLE g_hThreadHandle				= NULL;
-float g_fWheelPos					= -10.0f;
+double g_fWheelPos					= -10.0f;
 bool g_bLoadingCanceled				= false;
 IDirect3DTexture9* g_pcTexture		= NULL;
 bool g_bPlay						= false;
@@ -121,8 +121,8 @@ bool g_bInvert						= false;
 EClickPos g_eClick					= EClickPos_Circle;
 unsigned int g_iCurrentColor		= 0;
 
-float g_fLightIntensity				= 1.0f;
-float g_fLightColor					= 1.0f;
+double g_fLightIntensity				= 1.0f;
+double g_fLightColor					= 1.0f;
 
 RenderOptions g_sOptions;
 Camera g_sCamera;
@@ -134,7 +134,7 @@ AssetHelper *g_pcAsset				= NULL;
 //
 unsigned char* g_szImageMask		= NULL;
 
-float g_fLoadTime = 0.0f;
+double g_fLoadTime = 0.0f;
 
 
 //-------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ DWORD WINAPI LoadThreadProc(LPVOID lpParameter)
 
     // get the end time of zje operation, calculate delta t
     double fEnd = (double)timeGetTime();
-    g_fLoadTime = (float)((fEnd - fCur) / 1000);
+    g_fLoadTime = (double)((fEnd - fCur) / 1000);
 //	char szTemp[128];
     g_bLoadingFinished = true;
 
@@ -394,7 +394,7 @@ int ScaleAsset(void)
 
     aiVector3D vDelta = aiVecs[1]-aiVecs[0];
     aiVector3D vHalf =  aiVecs[0] + (vDelta / 2.0f);
-    float fScale = 10.0f / vDelta.Length();
+    double fScale = 10.0f / vDelta.Length();
 
     g_mWorld =  aiMatrix4x4(
         1.0f,0.0f,0.0f,0.0f,
@@ -1126,18 +1126,18 @@ int CreateDevice (void)
 //-------------------------------------------------------------------------------
 int GetProjectionMatrix (aiMatrix4x4& p_mOut)
 {
-    const float fFarPlane = 100.0f;
-    const float fNearPlane = 0.1f;
-    const float fFOV = (float)(45.0 * 0.0174532925);
+    const double fFarPlane = 100.0f;
+    const double fNearPlane = 0.1f;
+    const double fFOV = (double)(45.0 * 0.0174532925);
 
-    const float s = 1.0f / tanf(fFOV * 0.5f);
-    const float Q = fFarPlane / (fFarPlane - fNearPlane);
+    const double s = 1.0f / tanf(fFOV * 0.5f);
+    const double Q = fFarPlane / (fFarPlane - fNearPlane);
 
     RECT sRect;
     GetWindowRect(GetDlgItem(g_hDlg,IDC_RT),&sRect);
     sRect.right -= sRect.left;
     sRect.bottom -= sRect.top;
-    const float fAspect = (float)sRect.right / (float)sRect.bottom;
+    const double fAspect = (double)sRect.right / (double)sRect.bottom;
 
     p_mOut = aiMatrix4x4(
         s / fAspect, 0.0f, 0.0f, 0.0f,

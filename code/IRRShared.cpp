@@ -140,7 +140,7 @@ void IrrlichtBase::ReadBoolProperty   (BoolProperty&   out)
 }
 
 // ------------------------------------------------------------------------------------------------
-// read a float property
+// read a double property
 void IrrlichtBase::ReadFloatProperty  (FloatProperty&  out)
 {
     for (int i = 0; i < reader->getAttributeCount();++i)
@@ -151,7 +151,7 @@ void IrrlichtBase::ReadFloatProperty  (FloatProperty&  out)
         }
         else if (!ASSIMP_stricmp(reader->getAttributeName(i),"value"))
         {
-            // just parse the float
+            // just parse the double
             out.value = fast_atof( reader->getAttributeValue(i) );
         }
     }
@@ -173,21 +173,21 @@ void IrrlichtBase::ReadVectorProperty  (VectorProperty&  out)
             const char* ptr = reader->getAttributeValue(i);
 
             SkipSpaces(&ptr);
-            ptr = fast_atoreal_move<float>( ptr,(float&)out.value.x );
+            ptr = fast_atoreal_move<double>( ptr,(double&)out.value.x );
             SkipSpaces(&ptr);
             if (',' != *ptr)
             {
                 DefaultLogger::get()->error("IRR(MESH): Expected comma in vector definition");
             }
             else SkipSpaces(ptr+1,&ptr);
-            ptr = fast_atoreal_move<float>( ptr,(float&)out.value.y );
+            ptr = fast_atoreal_move<double>( ptr,(double&)out.value.y );
             SkipSpaces(&ptr);
             if (',' != *ptr)
             {
                 DefaultLogger::get()->error("IRR(MESH): Expected comma in vector definition");
             }
             else SkipSpaces(ptr+1,&ptr);
-            ptr = fast_atoreal_move<float>( ptr,(float&)out.value.z );
+            ptr = fast_atoreal_move<double>( ptr,(double&)out.value.z );
         }
     }
 }
@@ -258,8 +258,8 @@ aiMaterial* IrrlichtBase::ParseMaterial(unsigned int& matFlags)
                 }
 #endif
             }
-            // Float properties
-            else if (!ASSIMP_stricmp(reader->getNodeName(),"float"))
+            // double properties
+            else if (!ASSIMP_stricmp(reader->getNodeName(),"double"))
             {
                 FloatProperty prop;
                 ReadFloatProperty(prop);
@@ -467,7 +467,7 @@ aiMaterial* IrrlichtBase::ParseMaterial(unsigned int& matFlags)
                     // We should have at least one textur to do that ..
                     if (cnt && matFlags & AI_IRRMESH_MAT_lightmap)
                     {
-                        float f = 1.f;
+                        double f = 1.f;
                         unsigned int unmasked = matFlags&~AI_IRRMESH_MAT_lightmap;
 
                         // Additive lightmap?

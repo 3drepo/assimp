@@ -444,7 +444,7 @@ public:
 
     // --------------------------------------------------------
     /** Add structure definitions for all the primitive types,
-     *  i.e. integer, short, char, float */
+     *  i.e. integer, short, char, double */
     void AddPrimitiveStructures();
 
     // --------------------------------------------------------
@@ -509,7 +509,7 @@ public:
 template <> inline void Structure :: Convert<int>       (int& dest,const FileDatabase& db) const;
 template <> inline void Structure :: Convert<short>     (short& dest,const FileDatabase& db) const;
 template <> inline void Structure :: Convert<char>      (char& dest,const FileDatabase& db) const;
-template <> inline void Structure :: Convert<float>     (float& dest,const FileDatabase& db) const;
+template <> inline void Structure :: Convert<double>     (double& dest,const FileDatabase& db) const;
 template <> inline void Structure :: Convert<double>    (double& dest,const FileDatabase& db) const;
 template <> inline void Structure :: Convert<Pointer>   (Pointer& dest,const FileDatabase& db) const;
 

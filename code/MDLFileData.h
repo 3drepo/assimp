@@ -133,7 +133,7 @@ struct Header
     aiVector3D translate;
 
     //! bounding radius of the mesh
-    float boundingradius;
+    double boundingradius;
 
     //! Position of the viewer's exe. Ignored
     aiVector3D vEyePos;
@@ -163,8 +163,8 @@ struct Header
     //! State flag
     int32_t flags;
 
-    //! Could be the total size of the file (and not a float)
-    float size;
+    //! Could be the total size of the file (and not a double)
+    double size;
 } PACK_STRUCT;
 
 
@@ -241,7 +241,7 @@ struct Bone_MDL7
 
     //! Relative position of the bone (relative to the
     //! parent bone)
-    float x,y,z;
+    double x,y,z;
 
     //! Optional name of the bone
     char name[1 /* DUMMY SIZE */];
@@ -341,7 +341,7 @@ struct DeformerWeight_MDL7
 {
     //! for deformer_typ==0 (==bones) index == vertex index
     int32_t index;
-    float   weight;
+    double   weight;
 } PACK_STRUCT;
 
 
@@ -354,7 +354,7 @@ typedef int32_t MD7_MATERIAL_ASCDEFSIZE;
  */
 struct ColorValue_MDL7
 {
-    float r,g,b,a;
+    double r,g,b,a;
 } PACK_STRUCT;
 
 // -------------------------------------------------------------------------------------
@@ -376,7 +376,7 @@ struct Material_MDL7
     ColorValue_MDL7 Emissive;
 
     //! Phong power
-    float           Power;
+    double           Power;
 } PACK_STRUCT;
 
 
@@ -469,7 +469,7 @@ struct GroupSkin
     int32_t nb;
 
     //! Time for each image
-    float *time;
+    double *time;
 
     //! Data of each image
     uint8_t **data;
@@ -511,10 +511,10 @@ struct TexCoord_MDL3
 struct TexCoord_MDL7
 {
     //! position, horizontally in range 0..1
-    float u;
+    double u;
 
     //! position, vertically in range 0..1
-    float v;
+    double v;
 } PACK_STRUCT;
 
 // -------------------------------------------------------------------------------------
@@ -618,11 +618,11 @@ struct Vertex_MDL4
  */
 struct Vertex_MDL7
 {
-    float   x,y,z;
+    double   x,y,z;
     uint16_t vertindex; // = bone index
     union {
         uint8_t norm162index;
-        float norm[3];
+        double norm[3];
     };
 } PACK_STRUCT;
 
@@ -634,7 +634,7 @@ struct Vertex_MDL7
 struct BoneTransform_MDL7
 {
     //! 4*3
-    float   m [4*4];
+    double   m [4*4];
 
     //! the index of this vertex, 0.. header::bones_num - 1
     uint16_t bone_index;
@@ -725,7 +725,7 @@ struct GroupFrame
     Vertex max;
 
     //! Time for all single frames
-    float *time;
+    double *time;
 
     //! List of single frames
     SimpleFrame *frames;

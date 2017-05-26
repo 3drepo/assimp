@@ -85,7 +85,7 @@ protected:
      * @param pMesh The mesh to process.
      * @param meshNum Index of the mesh to process
      */
-    float ProcessMesh( aiMesh* pMesh, unsigned int meshNum);
+    double ProcessMesh( aiMesh* pMesh, unsigned int meshNum);
 
 private:
     //! Configuration parameter: specifies the size of the cache to

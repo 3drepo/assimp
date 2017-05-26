@@ -339,17 +339,17 @@ struct Texture
     }
 
     //! Specifies the blend factor for the texture
-    float mTextureBlend;
+    double mTextureBlend;
 
     //! Specifies the filename of the texture
     std::string mMapName;
 
     //! Specifies texture coordinate offsets/scaling/rotations
-    float mOffsetU;
-    float mOffsetV;
-    float mScaleU;
-    float mScaleV;
-    float mRotation;
+    double mOffsetU;
+    double mOffsetV;
+    double mScaleU;
+    double mScaleV;
+    double mRotation;
 
     //! Specifies the mapping mode to be used for the texture
     aiTextureMapMode mMapMode;
@@ -388,9 +388,9 @@ struct Material
     //! Diffuse color of the material
     aiColor3D mDiffuse;
     //! Specular exponent
-    float mSpecularExponent;
+    double mSpecularExponent;
     //! Shininess strength, in percent
-    float mShininessStrength;
+    double mShininessStrength;
     //! Specular color of the material
     aiColor3D mSpecular;
     //! Ambient color of the material
@@ -398,7 +398,7 @@ struct Material
     //! Shading type to be used
     Discreet3DS::shadetype3ds mShading;
     //! Opacity of the material
-    float mTransparency;
+    double mTransparency;
     //! Diffuse texture channel
     Texture sTexDiffuse;
     //! Opacity texture channel
@@ -414,7 +414,7 @@ struct Material
     //! Shininess texture channel
     Texture sTexShininess;
     //! Scaling factor for the bump values
-    float mBumpHeight;
+    double mBumpHeight;
     //! Emissive color
     aiColor3D mEmissive;
     //! Ambient texture channel
@@ -453,12 +453,12 @@ struct Mesh : public MeshWithSmoothingGroups<D3DS::Face>
 };
 
 // ---------------------------------------------------------------------------
-/** Float key - quite similar to aiVectorKey and aiQuatKey. Both are in the
+/** double key - quite similar to aiVectorKey and aiQuatKey. Both are in the
     C-API, so it would be difficult to make them a template. */
 struct aiFloatKey
 {
     double mTime;      ///< The time of this key
-    float mValue;   ///< The value of this key
+    double mValue;   ///< The value of this key
 
 #ifdef __cplusplus
 

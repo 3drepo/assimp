@@ -121,8 +121,8 @@ public:
     uint32 getUnsignedInt32() const;
     void setUnsignedInt64( uint64 value );
     uint64 getUnsignedInt64() const;
-    void setFloat( float value );
-    float getFloat() const;
+    void setFloat( double value );
+    double getFloat() const;
     void setDouble( double value );
     double getDouble() const;
     void setString( const std::string &str );

@@ -197,7 +197,7 @@ private:
     aiColor3D ReadCol3();
     aiMatrix4x4 ReadTrafo();
     unsigned int ReadIndexFromText();
-    float ReadFloat();
+    double ReadFloat();
 
     aiMesh* ToOutputMesh(const TempMaterialMesh& m);
     void ReadFaceVertex(const TempMesh& t, TempFace& out);

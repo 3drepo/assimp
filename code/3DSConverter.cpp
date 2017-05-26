@@ -196,7 +196,7 @@ void CopyTexture(aiMaterial& mat, D3DS::Texture& texture, aiTextureType type)
 
     // Setup the texture blend factor
     if (is_not_qnan(texture.mTextureBlend))
-        mat.AddProperty<float>( &texture.mTextureBlend, 1, AI_MATKEY_TEXBLEND(type,0));
+        mat.AddProperty<double>( &texture.mTextureBlend, 1, AI_MATKEY_TEXBLEND(type,0));
 
     // Setup the texture mapping mode
     mat.AddProperty<int>((int*)&texture.mMapMode,1,AI_MATKEY_MAPPINGMODE_U(type,0));
@@ -213,7 +213,7 @@ void CopyTexture(aiMaterial& mat, D3DS::Texture& texture, aiTextureType type)
     }
 
     // Setup texture UV transformations
-    mat.AddProperty<float>(&texture.mOffsetU,5,AI_MATKEY_UVTRANSFORM(type,0));
+    mat.AddProperty<double>(&texture.mOffsetU,5,AI_MATKEY_UVTRANSFORM(type,0));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -264,10 +264,10 @@ void Discreet3DSImporter::ConvertMaterial(D3DS::Material& oldMat,
     }
 
     // Opacity
-    mat.AddProperty<float>( &oldMat.mTransparency,1,AI_MATKEY_OPACITY);
+    mat.AddProperty<double>( &oldMat.mTransparency,1,AI_MATKEY_OPACITY);
 
     // Bump height scaling
-    mat.AddProperty<float>( &oldMat.mBumpHeight,1,AI_MATKEY_BUMPSCALING);
+    mat.AddProperty<double>( &oldMat.mBumpHeight,1,AI_MATKEY_BUMPSCALING);
 
     // Two sided rendering?
     if (oldMat.mTwoSided)

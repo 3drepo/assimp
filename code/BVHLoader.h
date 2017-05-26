@@ -80,7 +80,7 @@ class BVHLoader : public BaseImporter
     {
         const aiNode* mNode;
         std::vector<ChannelType> mChannels;
-        std::vector<float> mChannelValues; // motion data values for that node. Of size NumChannels * NumFrames
+        std::vector<double> mChannelValues; // motion data values for that node. Of size NumChannels * NumFrames
 
         Node() { }
         Node( const aiNode* pNode) : mNode( pNode) { }
@@ -132,8 +132,8 @@ protected:
     /** Retrieves the next token */
     std::string GetNextToken();
 
-    /** Reads the next token as a float */
-    float GetNextTokenAsFloat();
+    /** Reads the next token as a double */
+    double GetNextTokenAsFloat();
 
     /** Aborts the file reading with an exception */
     AI_WONT_RETURN void ThrowException( const std::string& pError) AI_WONT_RETURN_SUFFIX;
@@ -160,7 +160,7 @@ protected:
     std::vector<Node> mNodes;
 
     /** basic Animation parameters */
-    float mAnimTickDuration;
+    double mAnimTickDuration;
     unsigned int mAnimNumFrames;
 
     bool noSkeletonMesh;

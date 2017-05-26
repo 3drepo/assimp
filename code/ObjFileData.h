@@ -191,13 +191,13 @@ struct Material
     //! Emissive color
     aiColor3D emissive;
     //! Alpha value
-    float alpha;
+    double alpha;
     //! Shineness factor
-    float shineness;
+    double shineness;
     //! Illumination model
     int illumination_model;
     //! Index of refraction
-    float ior;
+    double ior;
 
     //! Constructor
     Material()

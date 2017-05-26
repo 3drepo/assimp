@@ -823,10 +823,10 @@ void CopyASETexture(aiMaterial& mat, ASE::Texture& texture, aiTextureType type)
 
     // Setup the texture blend factor
     if (is_not_qnan(texture.mTextureBlend))
-        mat.AddProperty<float>( &texture.mTextureBlend, 1, AI_MATKEY_TEXBLEND(type,0));
+        mat.AddProperty<double>( &texture.mTextureBlend, 1, AI_MATKEY_TEXBLEND(type,0));
 
     // Setup texture UV transformations
-    mat.AddProperty<float>(&texture.mOffsetU,5,AI_MATKEY_UVTRANSFORM(type,0));
+    mat.AddProperty<double>(&texture.mOffsetU,5,AI_MATKEY_UVTRANSFORM(type,0));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -869,7 +869,7 @@ void ASEImporter::ConvertMaterial(ASE::Material& mat)
     }
 
     // opacity
-    mat.pcInstance->AddProperty<float>( &mat.mTransparency,1,AI_MATKEY_OPACITY);
+    mat.pcInstance->AddProperty<double>( &mat.mTransparency,1,AI_MATKEY_OPACITY);
 
     // Two sided rendering?
     if (mat.mTwoSided)
@@ -994,9 +994,9 @@ void ASEImporter::ConvertMeshes(ASE::Mesh& mesh, std::vector<aiMesh*>& avOutMesh
                 p_pcOut->mNumFaces = (unsigned int)aiSplit[p].size();
 
                 // receive output vertex weights
-                std::vector<std::pair<unsigned int, float> > *avOutputBones = NULL;
+                std::vector<std::pair<unsigned int, double> > *avOutputBones = NULL;
                 if (!mesh.mBones.empty())   {
-                    avOutputBones = new std::vector<std::pair<unsigned int, float> >[mesh.mBones.size()];
+                    avOutputBones = new std::vector<std::pair<unsigned int, double> >[mesh.mBones.size()];
                 }
 
                 // allocate enough storage for faces
@@ -1024,12 +1024,12 @@ void ASEImporter::ConvertMeshes(ASE::Mesh& mesh, std::vector<aiMesh*>& avOutMesh
                                 // check whether there is a vertex weight for this vertex index
                                 if (iIndex2 < mesh.mBoneVertices.size())    {
 
-                                    for (std::vector<std::pair<int,float> >::const_iterator
+                                    for (std::vector<std::pair<int,double> >::const_iterator
                                         blubb =  mesh.mBoneVertices[iIndex2].mBoneWeights.begin();
                                         blubb != mesh.mBoneVertices[iIndex2].mBoneWeights.end();++blubb)    {
 
                                         // NOTE: illegal cases have already been filtered out
-                                        avOutputBones[(*blubb).first].push_back(std::pair<unsigned int, float>(
+                                        avOutputBones[(*blubb).first].push_back(std::pair<unsigned int, double>(
                                             iBase,(*blubb).second));
                                     }
                                 }
@@ -1087,7 +1087,7 @@ void ASEImporter::ConvertMeshes(ASE::Mesh& mesh, std::vector<aiMesh*>& avOutMesh
 
                             for (unsigned int captainkirk = 0; captainkirk < pc->mNumWeights;++captainkirk)
                             {
-                                const std::pair<unsigned int,float>& ref = avOutputBones[mrspock][captainkirk];
+                                const std::pair<unsigned int,double>& ref = avOutputBones[mrspock][captainkirk];
                                 pc->mWeights[captainkirk].mVertexId = ref.first;
                                 pc->mWeights[captainkirk].mWeight = ref.second;
                             }
@@ -1186,7 +1186,7 @@ void ASEImporter::ConvertMeshes(ASE::Mesh& mesh, std::vector<aiMesh*>& avOutMesh
             for (std::vector<BoneVertex>::const_iterator harrypotter =  mesh.mBoneVertices.begin();
                 harrypotter != mesh.mBoneVertices.end();++harrypotter,++quak)   {
 
-                for (std::vector<std::pair<int,float> >::const_iterator
+                for (std::vector<std::pair<int,double> >::const_iterator
                     ronaldweasley  = (*harrypotter).mBoneWeights.begin();
                     ronaldweasley != (*harrypotter).mBoneWeights.end();++ronaldweasley)
                 {

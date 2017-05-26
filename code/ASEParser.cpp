@@ -431,7 +431,7 @@ void Parser::ParseLV1SoftSkinBlock()
                             ParseString(bone,"*MESH_SOFTSKINVERTS.Bone");
 
                             // Find the bone in the mesh's list
-                            std::pair<int,float> me;
+                            std::pair<int,double> me;
                             me.first = -1;
 
                             for (unsigned int n = 0; n < curMesh->mBones.size();++n)
@@ -623,7 +623,7 @@ void Parser::ParseLV2MaterialBlock(ASE::Material& mat)
             // material self illumination
             if (TokenMatch(filePtr,"MATERIAL_SELFILLUM",18))
             {
-                float f = 0.0f;
+                double f = 0.0f;
                 ParseLV4MeshFloat(f);
 
                 mat.mEmissive.r = f;
@@ -1251,7 +1251,7 @@ void Parser::ParseLV3RotAnimationBlock(ASE::Animation& anim)
             {
                 anim.akeyRotations.push_back(aiQuatKey());
                 aiQuatKey& key = anim.akeyRotations.back();
-                aiVector3D v;float f;
+                aiVector3D v;double f;
                 ParseLV4MeshFloatTriple(&v.x,iIndex);
                 ParseLV4MeshFloat(f);
                 key.mTime = (double)iIndex;
@@ -1604,10 +1604,10 @@ void Parser::ParseLV4MeshBonesVertices(unsigned int iNumVertices,ASE::Mesh& mesh
                 }
 
                 // --- ignored
-                float afVert[3];
+                double afVert[3];
                 ParseLV4MeshFloatTriple(afVert);
 
-                std::pair<int,float> pairOut;
+                std::pair<int,double> pairOut;
                 while (true)
                 {
                     // first parse the bone index ...
@@ -1616,7 +1616,7 @@ void Parser::ParseLV4MeshBonesVertices(unsigned int iNumVertices,ASE::Mesh& mesh
 
                     // then parse the vertex weight
                     if (!SkipSpaces(&filePtr))break;
-                    filePtr = fast_atoreal_move<float>(filePtr,pairOut.second);
+                    filePtr = fast_atoreal_move<double>(filePtr,pairOut.second);
 
                     // -1 marks unused entries
                     if (-1 != pairOut.first)
@@ -2102,7 +2102,7 @@ void Parser::ParseLV4MeshLongTriple(unsigned int* apOut, unsigned int& rIndexOut
     ParseLV4MeshLongTriple(apOut);
 }
 // ------------------------------------------------------------------------------------------------
-void Parser::ParseLV4MeshFloatTriple(float* apOut, unsigned int& rIndexOut)
+void Parser::ParseLV4MeshFloatTriple(double* apOut, unsigned int& rIndexOut)
 {
     ai_assert(NULL != apOut);
 
@@ -2113,7 +2113,7 @@ void Parser::ParseLV4MeshFloatTriple(float* apOut, unsigned int& rIndexOut)
     ParseLV4MeshFloatTriple(apOut);
 }
 // ------------------------------------------------------------------------------------------------
-void Parser::ParseLV4MeshFloatTriple(float* apOut)
+void Parser::ParseLV4MeshFloatTriple(double* apOut)
 {
     ai_assert(NULL != apOut);
 
@@ -2121,19 +2121,19 @@ void Parser::ParseLV4MeshFloatTriple(float* apOut)
         ParseLV4MeshFloat(apOut[i]);
 }
 // ------------------------------------------------------------------------------------------------
-void Parser::ParseLV4MeshFloat(float& fOut)
+void Parser::ParseLV4MeshFloat(double& fOut)
 {
     // skip spaces and tabs
     if(!SkipSpaces(&filePtr))
     {
         // LOG
-        LogWarning("Unable to parse float: unexpected EOL [#1]");
+        LogWarning("Unable to parse double: unexpected EOL [#1]");
         fOut = 0.0f;
         ++iLineNumber;
         return;
     }
-    // parse the first float
-    filePtr = fast_atoreal_move<float>(filePtr,fOut);
+    // parse the first double
+    filePtr = fast_atoreal_move<double>(filePtr,fOut);
 }
 // ------------------------------------------------------------------------------------------------
 void Parser::ParseLV4MeshLong(unsigned int& iOut)

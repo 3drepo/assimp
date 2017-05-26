@@ -52,8 +52,8 @@ extern std::string g_szSkyboxShader;
 // ------------------------------------------------------------------------------
 struct SkyBoxVertex
 {
-    float x,y,z;
-    float u,v,w;
+    double x,y,z;
+    double u,v,w;
 };
 
 
@@ -239,7 +239,7 @@ void CBackgroundPainter::OnPreRender()
 
             struct SVertex
             {
-                float x,y,z,w,u,v;
+                double x,y,z,w,u,v;
             };
 
             UINT dw;
@@ -254,7 +254,7 @@ void CBackgroundPainter::OnPreRender()
             as[1].u = 0.0f;
             as[1].v = 0.0f;
 
-            as[3].x = (float)sRect.right;
+            as[3].x = (double)sRect.right;
             as[3].y = 0.0f;
             as[3].z = 0.2f;
             as[3].w = 1.0f;
@@ -262,14 +262,14 @@ void CBackgroundPainter::OnPreRender()
             as[3].v = 0.0f;
 
             as[0].x = 0.0f;
-            as[0].y = (float)sRect.bottom;
+            as[0].y = (double)sRect.bottom;
             as[0].z = 0.2f;
             as[0].w = 1.0f;
             as[0].u = 0.0f;
             as[0].v = 1.0f;
 
-            as[2].x = (float)sRect.right;
-            as[2].y = (float)sRect.bottom;
+            as[2].x = (double)sRect.right;
+            as[2].y = (double)sRect.bottom;
             as[2].z = 0.2f;
             as[2].w = 1.0f;
             as[2].u = 1.0f;

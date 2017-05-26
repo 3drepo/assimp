@@ -138,14 +138,14 @@ PlyExporter::PlyExporter(const char* _filename, const aiScene* pScene, bool bina
         << aiGetVersionRevision() << ")" << endl;
 
     mOutput << "element vertex " << vertices << endl;
-    mOutput << "property float x" << endl;
-    mOutput << "property float y" << endl;
-    mOutput << "property float z" << endl;
+    mOutput << "property double x" << endl;
+    mOutput << "property double y" << endl;
+    mOutput << "property double z" << endl;
 
     if(components & PLY_EXPORT_HAS_NORMALS) {
-        mOutput << "property float nx" << endl;
-        mOutput << "property float ny" << endl;
-        mOutput << "property float nz" << endl;
+        mOutput << "property double nx" << endl;
+        mOutput << "property double ny" << endl;
+        mOutput << "property double nz" << endl;
     }
 
     // write texcoords first, just in case an importer does not support tangents
@@ -155,37 +155,37 @@ PlyExporter::PlyExporter(const char* _filename, const aiScene* pScene, bool bina
     // and texture coordinates).
     for (unsigned int n = PLY_EXPORT_HAS_TEXCOORDS, c = 0; (components & n) && c != AI_MAX_NUMBER_OF_TEXTURECOORDS; n <<= 1, ++c) {
         if (!c) {
-            mOutput << "property float s" << endl;
-            mOutput << "property float t" << endl;
+            mOutput << "property double s" << endl;
+            mOutput << "property double t" << endl;
         }
         else {
-            mOutput << "property float s" << c << endl;
-            mOutput << "property float t" << c << endl;
+            mOutput << "property double s" << c << endl;
+            mOutput << "property double t" << c << endl;
         }
     }
 
     for (unsigned int n = PLY_EXPORT_HAS_COLORS, c = 0; (components & n) && c != AI_MAX_NUMBER_OF_COLOR_SETS; n <<= 1, ++c) {
         if (!c) {
-            mOutput << "property float r" << endl;
-            mOutput << "property float g" << endl;
-            mOutput << "property float b" << endl;
-            mOutput << "property float a" << endl;
+            mOutput << "property double r" << endl;
+            mOutput << "property double g" << endl;
+            mOutput << "property double b" << endl;
+            mOutput << "property double a" << endl;
         }
         else {
-            mOutput << "property float r" << c << endl;
-            mOutput << "property float g" << c << endl;
-            mOutput << "property float b" << c << endl;
-            mOutput << "property float a" << c << endl;
+            mOutput << "property double r" << c << endl;
+            mOutput << "property double g" << c << endl;
+            mOutput << "property double b" << c << endl;
+            mOutput << "property double a" << c << endl;
         }
     }
 
     if(components & PLY_EXPORT_HAS_TANGENTS_BITANGENTS) {
-        mOutput << "property float tx" << endl;
-        mOutput << "property float ty" << endl;
-        mOutput << "property float tz" << endl;
-        mOutput << "property float bx" << endl;
-        mOutput << "property float by" << endl;
-        mOutput << "property float bz" << endl;
+        mOutput << "property double tx" << endl;
+        mOutput << "property double ty" << endl;
+        mOutput << "property double tz" << endl;
+        mOutput << "property double bx" << endl;
+        mOutput << "property double by" << endl;
+        mOutput << "property double bz" << endl;
     }
 
     mOutput << "element face " << faces << endl;
@@ -219,7 +219,7 @@ PlyExporter::PlyExporter(const char* _filename, const aiScene* pScene, bool bina
 // ------------------------------------------------------------------------------------------------
 void PlyExporter::WriteMeshVerts(const aiMesh* m, unsigned int components)
 {
-    static const float inf = std::numeric_limits<float>::infinity();
+    static const double inf = std::numeric_limits<double>::infinity();
 
     // If a component (for instance normal vectors) is present in at least one mesh in the scene,
     // then default values are written for meshes that do not contain this component.

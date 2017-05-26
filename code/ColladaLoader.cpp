@@ -698,7 +698,7 @@ aiMesh* ColladaLoader::CreateMesh( const ColladaParser& pParser, const Collada::
                 size_t jointIndex = iit->first;
                 size_t vertexIndex = iit->second;
 
-                float weight = ReadFloat( weightsAcc, weights, vertexIndex, 0);
+                double weight = ReadFloat( weightsAcc, weights, vertexIndex, 0);
 
                 // one day I gonna kill that XSI Collada exporter
                 if( weight > 0.0f)
@@ -1065,7 +1065,7 @@ void ColladaLoader::CreateAnimation( aiScene* pScene, const ColladaParser& pPars
             continue;
 
         // resolve the data pointers for all anim channels. Find the minimum time while we're at it
-        float startTime = 1e20f, endTime = -1e20f;
+        double startTime = 1e20f, endTime = -1e20f;
         for( std::vector<Collada::ChannelEntry>::iterator it = entries.begin(); it != entries.end(); ++it)
         {
             Collada::ChannelEntry& e = *it;
@@ -1094,7 +1094,7 @@ void ColladaLoader::CreateAnimation( aiScene* pScene, const ColladaParser& pPars
 
           // now for every unique point in time, find or interpolate the key values for that time
           // and apply them to the transform chain. Then the node's present transformation can be calculated.
-          float time = startTime;
+          double time = startTime;
           while( 1)
           {
               for( std::vector<Collada::ChannelEntry>::iterator it = entries.begin(); it != entries.end(); ++it)
@@ -1103,7 +1103,7 @@ void ColladaLoader::CreateAnimation( aiScene* pScene, const ColladaParser& pPars
 
                   // find the keyframe behind the current point in time
                   size_t pos = 0;
-                  float postTime = 0.f;
+                  double postTime = 0.f;
                   while( 1)
                   {
                       if( pos >= e.mTimeAccessor->mCount)
@@ -1117,19 +1117,19 @@ void ColladaLoader::CreateAnimation( aiScene* pScene, const ColladaParser& pPars
                   pos = std::min( pos, e.mTimeAccessor->mCount-1);
 
                   // read values from there
-                  float temp[16];
+                  double temp[16];
                   for( size_t c = 0; c < e.mValueAccessor->mSize; ++c)
                       temp[c] = ReadFloat( *e.mValueAccessor, *e.mValueData, pos, c);
 
                   // if not exactly at the key time, interpolate with previous value set
                   if( postTime > time && pos > 0)
                   {
-                      float preTime = ReadFloat( *e.mTimeAccessor, *e.mTimeData, pos-1, 0);
-                      float factor = (time - postTime) / (preTime - postTime);
+                      double preTime = ReadFloat( *e.mTimeAccessor, *e.mTimeData, pos-1, 0);
+                      double factor = (time - postTime) / (preTime - postTime);
 
                       for( size_t c = 0; c < e.mValueAccessor->mSize; ++c)
                       {
-                          float v = ReadFloat( *e.mValueAccessor, *e.mValueData, pos-1, c);
+                          double v = ReadFloat( *e.mValueAccessor, *e.mValueData, pos-1, c);
                           temp[c] += (v - temp[c]) * factor;
                       }
                   }
@@ -1146,7 +1146,7 @@ void ColladaLoader::CreateAnimation( aiScene* pScene, const ColladaParser& pPars
               resultTrafos.push_back( mat);
 
               // find next point in time to evaluate. That's the closest frame larger than the current in any channel
-              float nextTime = 1e20f;
+              double nextTime = 1e20f;
               for( std::vector<Collada::ChannelEntry>::iterator it = entries.begin(); it != entries.end(); ++it)
               {
                   Collada::ChannelEntry& e = *it;
@@ -1155,7 +1155,7 @@ void ColladaLoader::CreateAnimation( aiScene* pScene, const ColladaParser& pPars
                   size_t pos = 0;
                   while( pos < e.mTimeAccessor->mCount)
                   {
-                      float t = ReadFloat( *e.mTimeAccessor, *e.mTimeData, pos, 0);
+                      double t = ReadFloat( *e.mTimeAccessor, *e.mTimeData, pos, 0);
                       if( t > time)
                       {
                           nextTime = std::min( nextTime, t);
@@ -1264,7 +1264,7 @@ void ColladaLoader::AddTexture ( aiMaterial& mat, const ColladaParser& pParser,
         _AI_MATKEY_TEXBLEND_BASE, type, idx);
 
     // Blend factor
-    mat.AddProperty((float*)&sampler.mWeighting , 1,
+    mat.AddProperty((double*)&sampler.mWeighting , 1,
         _AI_MATKEY_TEXBLEND_BASE, type, idx);
 
     // UV source index ... if we didn't resolve the mapping, it is actually just
@@ -1436,7 +1436,7 @@ void ColladaLoader::BuildMaterials( ColladaParser& pParser, aiScene* /*pScene*/)
         mat->AddProperty( &colAmbient, 1, AI_MATKEY_COLOR_AMBIENT);
         mat->AddProperty( &colDiffuse, 1, AI_MATKEY_COLOR_DIFFUSE);
         mat->AddProperty( &colSpecular, 1, AI_MATKEY_COLOR_SPECULAR);
-        const float specExp = 5.0f;
+        const double specExp = 5.0f;
         mat->AddProperty( &specExp, 1, AI_MATKEY_SHININESS);
     }
 #endif
@@ -1554,8 +1554,8 @@ void ColladaLoader::ConvertPath (aiString& ss)
 }
 
 // ------------------------------------------------------------------------------------------------
-// Reads a float value from an accessor and its data array.
-float ColladaLoader::ReadFloat( const Collada::Accessor& pAccessor, const Collada::Data& pData, size_t pIndex, size_t pOffset) const
+// Reads a double value from an accessor and its data array.
+double ColladaLoader::ReadFloat( const Collada::Accessor& pAccessor, const Collada::Data& pData, size_t pIndex, size_t pOffset) const
 {
     // FIXME: (thom) Test for data type here in every access? For the moment, I leave this to the caller
     size_t pos = pAccessor.mStride * pIndex + pAccessor.mOffset + pOffset;

@@ -205,7 +205,7 @@ struct aiVertexWeight
 
     //! The strength of the influence in the range (0...1).
     //! The influence from all bones at one vertex amounts to 1.
-    float mWeight;
+    double mWeight;
 
 #ifdef __cplusplus
 
@@ -215,7 +215,7 @@ struct aiVertexWeight
     //! Initialisation from a given index and vertex weight factor
     //! \param pID ID
     //! \param pWeight Vertex weight factor
-    aiVertexWeight( unsigned int pID, float pWeight)
+    aiVertexWeight( unsigned int pID, double pWeight)
         : mVertexId( pID), mWeight( pWeight)
     { /* nothing to do here */ }
 

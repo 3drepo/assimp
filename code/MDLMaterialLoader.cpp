@@ -656,7 +656,7 @@ void MDLImporter::ParseSkinLump_3DGS_MDL7(
         if (is_not_qnan(clrTexture.r)) {
             clrTemp.r *= clrTexture.a;
         }
-        pcMatOut->AddProperty<float>(&clrTemp.r,1,AI_MATKEY_OPACITY);
+        pcMatOut->AddProperty<double>(&clrTemp.r,1,AI_MATKEY_OPACITY);
 
         // read phong power
         int iShadingMode = (int)aiShadingMode_Gouraud;
@@ -664,7 +664,7 @@ void MDLImporter::ParseSkinLump_3DGS_MDL7(
         if (0.0f != pcMatIn->Power)
         {
             iShadingMode = (int)aiShadingMode_Phong;
-            pcMatOut->AddProperty<float>(&pcMatIn->Power,1,AI_MATKEY_SHININESS);
+            pcMatOut->AddProperty<double>(&pcMatIn->Power,1,AI_MATKEY_SHININESS);
         }
         pcMatOut->AddProperty<int>(&iShadingMode,1,AI_MATKEY_SHADING_MODEL);
     }

@@ -51,8 +51,8 @@ typedef signed int			s32;
 
 
 //! 32 bit floating point variable.
-/** This is a typedef for float, it ensures portability of the engine. */
-typedef float				f32; 
+/** This is a typedef for double, it ensures portability of the engine. */
+typedef double				f32; 
 
 //! 64 bit floating point variable.
 /** This is a typedef for double, it ensures portability of the engine. */

@@ -162,20 +162,20 @@ uint64 Value::getUnsignedInt64() const {
     return ( uint64 ) ( *m_data );
 }
 
-void Value::setFloat( float value ) {
+void Value::setFloat( double value ) {
     assert( ddl_float == m_type );
     ::memcpy( m_data, &value, m_size );
 }
 
-float Value::getFloat() const {
+double Value::getFloat() const {
     if( m_type == ddl_float ) {
-        float v;
+        double v;
         ::memcpy( &v, m_data, m_size );
-        return ( float ) v;
+        return ( double ) v;
     } else {
-        float tmp;
+        double tmp;
         ::memcpy( &tmp, m_data, 4 );
-        return ( float ) tmp;
+        return ( double ) tmp;
     }
 }
 
@@ -295,7 +295,7 @@ Value *ValueAllocator::allocPrimData( Value::ValueType type, size_t len ) {
             data->m_size = sizeof( short );
             break;
         case Value::ddl_float:
-            data->m_size = sizeof( float );
+            data->m_size = sizeof( double );
             break;
         case Value::ddl_double:
             data->m_size = sizeof( double );

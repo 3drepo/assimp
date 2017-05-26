@@ -105,7 +105,7 @@ void JoinVerticesProcess::Execute( aiScene* pScene)
             sprintf(szBuff,"JoinVerticesProcess finished | Verts in: %i out: %i | ~%.1f%%",
                 iNumOldVertices,
                 iNumVertices,
-                ((iNumOldVertices - iNumVertices) / (float)iNumOldVertices) * 100.f);
+                ((iNumOldVertices - iNumVertices) / (double)iNumOldVertices) * 100.f);
             DefaultLogger::get()->info(szBuff);
         }
     }
@@ -139,12 +139,12 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
 
     // A little helper to find locally close vertices faster.
     // Try to reuse the lookup table from the last step.
-    const static float epsilon = 1e-5f;
-    // float posEpsilonSqr;
+    const static double epsilon = 1e-5f;
+    // double posEpsilonSqr;
     SpatialSort* vertexFinder = NULL;
     SpatialSort _vertexFinder;
 
-    typedef std::pair<SpatialSort,float> SpatPair;
+    typedef std::pair<SpatialSort,double> SpatPair;
     if (shared) {
         std::vector<SpatPair >* avf;
         shared->GetProperty(AI_SPP_SPATIAL_SORT,avf);
@@ -162,7 +162,7 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
     }
 
     // Squared because we check against squared length of the vector difference
-    static const float squareEpsilon = epsilon * epsilon;
+    static const double squareEpsilon = epsilon * epsilon;
 
     // Again, better waste some bytes than a realloc ...
     std::vector<unsigned int> verticesFound;
@@ -281,7 +281,7 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
             " out: ",
             uniqueVertices.size(),
             " | ~",
-            ((pMesh->mNumVertices - uniqueVertices.size()) / (float)pMesh->mNumVertices) * 100.f,
+            ((pMesh->mNumVertices - uniqueVertices.size()) / (double)pMesh->mNumVertices) * 100.f,
             "%"
         ));
     }

@@ -167,15 +167,15 @@ public:
     TReal c1, c2, c3;
 } PACK_STRUCT;
 
-typedef aiMatrix3x3t<float> aiMatrix3x3;
+typedef aiMatrix3x3t<double> aiMatrix3x3;
 
 #else
 
 struct aiMatrix3x3 {
 
-    float a1, a2, a3;
-    float b1, b2, b3;
-    float c1, c2, c3;
+    double a1, a2, a3;
+    double b1, b2, b3;
+    double c1, c2, c3;
 } PACK_STRUCT;
 
 #endif

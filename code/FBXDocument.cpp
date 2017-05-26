@@ -177,6 +177,9 @@ const Object* LazyObject::Get(bool dieOnError)
         else if (!strncmp(obtype,"Texture",length)) {
             object.reset(new Texture(id,element,doc,name));
         }
+        else if (!strncmp(obtype, "Video", length)) {
+            object.reset(new Video(id,element,doc,name));  
+        }
         else if (!strncmp(obtype,"LayeredTexture",length)) {
             object.reset(new LayeredTexture(id,element,doc,name));
         }

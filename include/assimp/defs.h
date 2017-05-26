@@ -251,14 +251,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_MATH_TWO_PI      (AI_MATH_PI * 2.0)
 #define AI_MATH_HALF_PI     (AI_MATH_PI * 0.5)
 
-/* And this is to avoid endless casts to float */
-#define AI_MATH_PI_F        (3.1415926538f)
-#define AI_MATH_TWO_PI_F    (AI_MATH_PI_F * 2.0f)
-#define AI_MATH_HALF_PI_F   (AI_MATH_PI_F * 0.5f)
+/* And this is to avoid endless casts to double */
+#define AI_MATH_PI_F        (3.1415926538)
+#define AI_MATH_TWO_PI_F    (AI_MATH_PI_F * 2.0)
+#define AI_MATH_HALF_PI_F   (AI_MATH_PI_F * 0.5)
 
 /* Tiny macro to convert from radians to degrees and back */
-#define AI_DEG_TO_RAD(x) ((x)*0.0174532925f)
-#define AI_RAD_TO_DEG(x) ((x)*57.2957795f)
+#define AI_DEG_TO_RAD(x) ((x)*0.0174532925)
+#define AI_RAD_TO_DEG(x) ((x)*57.2957795)
 
 /* Support for big-endian builds */
 #if defined(__BYTE_ORDER__)

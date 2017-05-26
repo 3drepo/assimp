@@ -78,11 +78,11 @@ extern bool g_bMousePressed                 /*= false*/;
 extern bool g_bMousePressedR                /*= false*/;
 extern bool g_bMousePressedM                /*= false*/;
 extern bool g_bMousePressedBoth             /*= false*/;
-extern float g_fElpasedTime                 /*= 0.0f*/;
+extern double g_fElpasedTime                 /*= 0.0f*/;
 extern D3DCAPS9 g_sCaps;
 extern bool g_bLoadingFinished              /*= false*/;
 extern HANDLE g_hThreadHandle               /*= NULL*/;
-extern float g_fWheelPos                    /*= -10.0f*/;
+extern double g_fWheelPos                    /*= -10.0f*/;
 extern bool g_bLoadingCanceled              /*= false*/;
 extern IDirect3DTexture9* g_pcTexture       /*= NULL*/;
 
@@ -107,7 +107,7 @@ extern unsigned int g_iCurrentColor         /*= 0*/;
 // When the user chooses a color from the palette the intensity
 // is reset to 1.0
 // index[2] is the ambient color
-extern float g_fLightIntensity              /*=0.0f*/;
+extern double g_fLightIntensity              /*=0.0f*/;
 extern D3DCOLOR g_avLightColors[ 3 ];
 
 extern RenderOptions g_sOptions;
@@ -125,13 +125,13 @@ extern AssetHelper *g_pcAsset               /*= NULL*/;
 extern unsigned char* g_szImageMask         /*= NULL*/;
 
 
-extern float g_fACMR /*= 3.0f*/;
+extern double g_fACMR /*= 3.0f*/;
 extern IDirect3DQuery9* g_piQuery;
 
 extern bool g_bPlay                     /*= false*/;
 
 extern double g_dCurrent;
-extern float g_smoothAngle /*= 80.f*/;
+extern double g_smoothAngle /*= 80.f*/;
 
 extern unsigned int ppsteps, ppstepsdefault;
 extern bool nopointslines;
@@ -711,14 +711,14 @@ void CMaterialManager::HMtoNMIfNecessary(
                         clrColorLine.b += pcPointer->b;
                         pcPointer++;
                     }
-                    clrColor.r += clrColorLine.r /= (float)sDesc.Width;
-                    clrColor.g += clrColorLine.g /= (float)sDesc.Width;
-                    clrColor.b += clrColorLine.b /= (float)sDesc.Width;
+                    clrColor.r += clrColorLine.r /= (double)sDesc.Width;
+                    clrColor.g += clrColorLine.g /= (double)sDesc.Width;
+                    clrColor.b += clrColorLine.b /= (double)sDesc.Width;
                     pcCharPointer += iPitchDiff;
                 }
-                clrColor.r /= (float)sDesc.Height;
-                clrColor.g /= (float)sDesc.Height;
-                clrColor.b /= (float)sDesc.Height;
+                clrColor.r /= (double)sDesc.Height;
+                clrColor.g /= (double)sDesc.Height;
+                clrColor.b /= (double)sDesc.Height;
 
                 if (!(clrColor.b > 215 &&
                     clrColor.r > 100 && clrColor.r < 140 &&
@@ -1171,7 +1171,7 @@ int CMaterialManager::CreateMaterial(
         else sMacro[iCurrent].Definition = "IN.TexCoord0";
         sMacro[iCurrent].Name = "AV_LIGHTMAP_TEXTURE_UV_COORD";
 
-        ++iCurrent;float f= 1.f;
+        ++iCurrent;double f= 1.f;
         aiGetMaterialFloat(pcMat,AI_MATKEY_TEXBLEND_LIGHTMAP(0),&f);
         sprintf(buff,"%f",f);
 

@@ -326,7 +326,7 @@ struct VMapEntry
     std::string name;
     unsigned int dims;
 
-    std::vector<float> rawData;
+    std::vector<double> rawData;
     std::vector<bool> abAssigned;
 };
 
@@ -455,7 +455,7 @@ struct Texture
     unsigned int mClipIdx;
 
     //! Strength of the texture - blend factor
-    float mStrength;
+    double mStrength;
 
     uint32_t type; // type of the texture
 
@@ -479,7 +479,7 @@ struct Texture
     Axes majorAxis;
 
     //! wrap amount for cylindrical and spherical projections
-    float wrapAmountH,wrapAmountW;
+    double wrapAmountH,wrapAmountW;
 
     //! wrapping mode for the texture
     Wrap wrapModeWidth,wrapModeHeight;
@@ -573,11 +573,11 @@ struct Surface
     bool bDoubleSided;
 
     //! Various material parameters
-    float mDiffuseValue,mSpecularValue,mTransparency,mGlossiness,mLuminosity,mColorHighlights;
+    double mDiffuseValue,mSpecularValue,mTransparency,mGlossiness,mLuminosity,mColorHighlights;
 
     //! Maximum angle between two adjacent triangles
     //! that they can be smoothed - in degrees
-    float mMaximumSmoothAngle;
+    double mMaximumSmoothAngle;
 
     //! Vertex color map to be used to color the surface
     std::string mVCMap;
@@ -596,16 +596,16 @@ struct Surface
         mReflectionTextures;
 
     //! Index of refraction
-    float mIOR;
+    double mIOR;
 
     //! Bump intensity scaling
-    float mBumpIntensity;
+    double mBumpIntensity;
 
     //! Wireframe flag
     bool mWireframe;
 
     //! Intensity of additive blending
-    float mAdditiveTransparency;
+    double mAdditiveTransparency;
 };
 
 // ---------------------------------------------------------------------------

@@ -157,6 +157,7 @@ Texture::Texture(uint64_t id, const Element& element, const Document& doc, const
     const Element* const ModelUVScaling = sc["ModelUVScaling"];
     const Element* const Texture_Alpha_Source = sc["Texture_Alpha_Source"];
     const Element* const Cropping = sc["Cropping"];
+    const Element* const Media = sc["Media"];
 
     if(Type) {
         type = ParseTokenAsString(GetRequiredToken(*Type,0));
@@ -168,6 +169,25 @@ Texture::Texture(uint64_t id, const Element& element, const Document& doc, const
 
     if(RelativeFilename) {
         relativeFileName = ParseTokenAsString(GetRequiredToken(*RelativeFilename,0));
+    }
+
+    if (Media) {
+        
+       const Token &mediaToken = GetRequiredToken(*Media,0); 
+       media = ParseTokenAsString(mediaToken);
+
+       // small fix for binary reading: binary fbx files don't use
+       // prefixes such as Model:: in front of their names. The
+       // loading code expects this at many places, though!
+       // so convert the binary representation (a 0x0001) to the
+       // double colon notation.
+       if(mediaToken.IsBinary()) {
+          for (size_t i = 0; i < media.length(); ++i) {
+              if (media[i] == 0x0 && media[i+1] == 0x1) {
+                  media = media.substr(i+2) + "::" + media.substr(0,i);
+              }
+          }
+       }
     }
 
     if(ModelUVTranslation) {
@@ -199,10 +219,64 @@ Texture::Texture(uint64_t id, const Element& element, const Document& doc, const
     }
 
     props = GetPropertyTable(doc,"Texture.FbxFileTexture",element,sc);
+   
+    // resolve texture links
+    const std::vector<const Connection*>& conns = doc.GetConnectionsByDestinationSequenced(ID());
+    BOOST_FOREACH(const Connection* con, conns) {
+        const Object* const ob = con->SourceObject();
+        if(!ob) {
+            DOMWarning("failed to read source object for video link, ignoring",&element);
+            continue;
+        }
+
+        if (Media && !ob->Name().compare(media))
+        {   
+             const Video* const vid = dynamic_cast<const Video*>(ob);
+             if (videos.find(media) != videos.end()) {
+                DOMWarning("duplicate video link: " + media,&element);
+             }
+
+             videos[media] = vid;
+        }
+    } 
 }
 
 
 Texture::~Texture()
+{
+
+}
+
+// ------------------------------------------------------------------------------------------------
+Video::Video(uint64_t id, const Element& element, const Document& doc, const std::string& name)
+: Object(id,element,name)
+{
+    const Scope& sc = GetRequiredScope(element);
+
+    const Element* const Type = sc["Type"];
+    const Element* const FileName = sc["FileName"];
+    const Element* const RelativeFilename = sc["RelativeFilename"];
+    const Element* const Content = sc["Content"];
+
+    if(Type) {
+        type = ParseTokenAsString(GetRequiredToken(*Type,0));
+    }
+
+    if(FileName) {
+        fileName = ParseTokenAsString(GetRequiredToken(*FileName,0));
+    }
+
+    if(RelativeFilename) {
+        relativeFileName = ParseTokenAsString(GetRequiredToken(*RelativeFilename,0));
+    }
+
+    if (Content) {
+        content = ParseTokenAsCharArray(GetRequiredToken(*Content,0));
+    }
+}
+
+
+Video::~Video()
 {
 
 }

@@ -94,7 +94,7 @@ void SkeletonMeshBuilder::CreateGeometry( const aiNode* pNode)
             // find a suitable coordinate system
             const aiMatrix4x4& childTransform = pNode->mChildren[a]->mTransformation;
             aiVector3D childpos( childTransform.a4, childTransform.b4, childTransform.c4);
-            float distanceToChild = childpos.Length();
+            double distanceToChild = childpos.Length();
             if( distanceToChild < 0.0001f)
                 continue;
             aiVector3D up = aiVector3D( childpos).Normalize();
@@ -107,18 +107,18 @@ void SkeletonMeshBuilder::CreateGeometry( const aiNode* pNode)
             aiVector3D side = (front ^ up).Normalize();
 
             unsigned int localVertexStart = mVertices.size();
-            mVertices.push_back( -front * distanceToChild * 0.1f);
+            mVertices.push_back( -front * distanceToChild * 0.1);
             mVertices.push_back( childpos);
-            mVertices.push_back( -side * distanceToChild * 0.1f);
-            mVertices.push_back( -side * distanceToChild * 0.1f);
+            mVertices.push_back( -side * distanceToChild * 0.1);
+            mVertices.push_back( -side * distanceToChild * 0.1);
             mVertices.push_back( childpos);
-            mVertices.push_back( front * distanceToChild * 0.1f);
-            mVertices.push_back( front * distanceToChild * 0.1f);
+            mVertices.push_back( front * distanceToChild * 0.1);
+            mVertices.push_back( front * distanceToChild * 0.1);
             mVertices.push_back( childpos);
-            mVertices.push_back( side * distanceToChild * 0.1f);
-            mVertices.push_back( side * distanceToChild * 0.1f);
+            mVertices.push_back( side * distanceToChild * 0.1);
+            mVertices.push_back( side * distanceToChild * 0.1);
             mVertices.push_back( childpos);
-            mVertices.push_back( -front * distanceToChild * 0.1f);
+            mVertices.push_back( -front * distanceToChild * 0.1);
 
             mFaces.push_back( Face( localVertexStart + 0, localVertexStart + 1, localVertexStart + 2));
             mFaces.push_back( Face( localVertexStart + 3, localVertexStart + 4, localVertexStart + 5));
@@ -130,7 +130,7 @@ void SkeletonMeshBuilder::CreateGeometry( const aiNode* pNode)
     {
         // if the node has no children, it's an end node. Put a little knob there instead
         aiVector3D ownpos( pNode->mTransformation.a4, pNode->mTransformation.b4, pNode->mTransformation.c4);
-        float sizeEstimate = ownpos.Length() * 0.18f;
+        double sizeEstimate = ownpos.Length() * 0.18f;
 
         mVertices.push_back( aiVector3D( -sizeEstimate, 0.0f, 0.0f));
         mVertices.push_back( aiVector3D( 0.0f, sizeEstimate, 0.0f));

@@ -94,7 +94,7 @@ struct Transform
 {
     std::string mID;  ///< SID of the transform step, by which anim channels address their target node
     TransformType mType;
-    float f[16]; ///< Interpretation of data depends on the type of the transformation
+    double f[16]; ///< Interpretation of data depends on the type of the transformation
 };
 
 /** A collada camera. */
@@ -116,16 +116,16 @@ struct Camera
     bool mOrtho;
 
     //! Horizontal field of view in degrees
-    float mHorFov;
+    double mHorFov;
 
     //! Vertical field of view in degrees
-    float mVerFov;
+    double mVerFov;
 
     //! Screen aspect
-    float mAspect;
+    double mAspect;
 
     //! Near& far z
-    float mZNear, mZFar;
+    double mZNear, mZFar;
 };
 
 #define ASSIMP_COLLADA_LIGHT_ANGLE_NOT_SET 1e9f
@@ -152,21 +152,21 @@ struct Light
     aiColor3D mColor;
 
     //! Light attenuation
-    float mAttConstant,mAttLinear,mAttQuadratic;
+    double mAttConstant,mAttLinear,mAttQuadratic;
 
     //! Spot light falloff
-    float mFalloffAngle;
-    float mFalloffExponent;
+    double mFalloffAngle;
+    double mFalloffExponent;
 
     // -----------------------------------------------------
     // FCOLLADA extension from here
 
     //! ... related stuff from maja and max extensions
-    float mPenumbraAngle;
-    float mOuterAngle;
+    double mPenumbraAngle;
+    double mOuterAngle;
 
     //! Common light intensity
-    float mIntensity;
+    double mIntensity;
 };
 
 /** Short vertex index description */
@@ -275,7 +275,7 @@ struct Node
 struct Data
 {
     bool mIsStringArray;
-    std::vector<float> mValues;
+    std::vector<double> mValues;
     std::vector<std::string> mStrings;
 };
 
@@ -387,7 +387,7 @@ struct Controller
     std::string mJointNameSource;
 
     ///< The bind shape matrix, as array of floats. I'm not sure what this matrix actually describes, but it can't be ignored in all cases
-    float mBindShapeMatrix[16];
+    double mBindShapeMatrix[16];
 
     // accessor URL of the joint inverse bind matrices
     std::string mJointOffsetMatrixSource;
@@ -490,11 +490,11 @@ struct Sampler
 
     /** Weighting factor
      */
-    float mWeighting;
+    double mWeighting;
 
     /** Mixing factor from OKINO
      */
-    float mMixWithPrevious;
+    double mMixWithPrevious;
 };
 
 /** A collada effect. Can contain about anything according to the Collada spec,
@@ -513,8 +513,8 @@ struct Effect
         mTexTransparent, mTexBump, mTexReflective;
 
     // Scalar factory
-    float mShininess, mRefractIndex, mReflectivity;
-    float mTransparency;
+    double mShininess, mRefractIndex, mReflectivity;
+    double mTransparency;
     bool mHasTransparency;
     bool mRGBTransparency;
 

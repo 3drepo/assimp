@@ -74,7 +74,7 @@ protected:
     typedef Property<uint32_t>      HexProperty;
     typedef Property<std::string>   StringProperty;
     typedef Property<bool>          BoolProperty;
-    typedef Property<float>         FloatProperty;
+    typedef Property<double>         FloatProperty;
     typedef Property<aiVector3D>    VectorProperty;
     typedef Property<int>           IntProperty;
 

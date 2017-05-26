@@ -59,7 +59,7 @@ namespace Grammar {
         "unsigned_int32",
         "unsigned_int64",
         "half",
-        "float",
+        "double",
         "double",
         "string",
         "ref"
@@ -660,7 +660,7 @@ char *OpenDDLParser::parseFloatingLiteral( char *in, char *end, Value **floating
         in++;
     }
 
-    // parse the float value
+    // parse the double value
     bool ok( false );
     if( isNumeric( *start ) ) {
         ok = true;
@@ -673,7 +673,7 @@ char *OpenDDLParser::parseFloatingLiteral( char *in, char *end, Value **floating
     }
 
     if( ok ) {
-        const float value( ( float ) atof( start ) );
+        const double value( ( double ) atof( start ) );
         *floating = ValueAllocator::allocPrimData( Value::ddl_float );
         ( *floating )->setFloat( value );
     }

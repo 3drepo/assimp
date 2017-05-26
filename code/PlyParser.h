@@ -68,8 +68,8 @@ short      short integer             2
 ushort     unsigned short integer    2
 int        integer                   4
 uint       unsigned integer          4
-float      single-precision float    4
-double     double-precision float    8
+double      single-precision double    4
+double     double-precision double    8
 
 int8
 int16
@@ -316,7 +316,7 @@ public:
         int32_t iInt;
 
         //! Float32 representation of the property
-        float fFloat;
+        double fFloat;
 
         //! Float64 representation of the property
         double fDouble;

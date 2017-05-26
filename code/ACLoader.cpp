@@ -125,7 +125,7 @@ static const aiImporterDesc desc = {
     for (unsigned int i = 0; i < num;++i) \
     { \
         AI_AC_SKIP_TO_NEXT_TOKEN(); \
-        buffer = fast_atoreal_move<float>(buffer,((float*)out)[i]); \
+        buffer = fast_atoreal_move<double>(buffer,((double*)out)[i]); \
     }
 
 
@@ -443,13 +443,13 @@ void AC3DImporter::ConvertMaterial(const Object& object,
     if (matSrc.shin)
     {
         n = aiShadingMode_Phong;
-        matDest.AddProperty<float>(&matSrc.shin,1,AI_MATKEY_SHININESS);
+        matDest.AddProperty<double>(&matSrc.shin,1,AI_MATKEY_SHININESS);
     }
     else n = aiShadingMode_Gouraud;
     matDest.AddProperty<int>(&n,1,AI_MATKEY_SHADING_MODEL);
 
-    float f = 1.f - matSrc.trans;
-    matDest.AddProperty<float>(&f,1,AI_MATKEY_OPACITY);
+    double f = 1.f - matSrc.trans;
+    matDest.AddProperty<double>(&f,1,AI_MATKEY_OPACITY);
 }
 
 // ------------------------------------------------------------------------------------------------

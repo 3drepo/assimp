@@ -164,9 +164,9 @@ int B3DImporter::ReadInt(){
 }
 
 // ------------------------------------------------------------------------------------------------
-float B3DImporter::ReadFloat(){
+double B3DImporter::ReadFloat(){
     if( _pos+4<=_buf.size() ){
-        float n=*(float*)&_buf[_pos];
+        double n=*(double*)&_buf[_pos];
         _pos+=4;
         return n;
     }
@@ -176,26 +176,26 @@ float B3DImporter::ReadFloat(){
 
 // ------------------------------------------------------------------------------------------------
 aiVector2D B3DImporter::ReadVec2(){
-    float x=ReadFloat();
-    float y=ReadFloat();
+    double x=ReadFloat();
+    double y=ReadFloat();
     return aiVector2D( x,y );
 }
 
 // ------------------------------------------------------------------------------------------------
 aiVector3D B3DImporter::ReadVec3(){
-    float x=ReadFloat();
-    float y=ReadFloat();
-    float z=ReadFloat();
+    double x=ReadFloat();
+    double y=ReadFloat();
+    double z=ReadFloat();
     return aiVector3D( x,y,z );
 }
 
 // ------------------------------------------------------------------------------------------------
 aiQuaternion B3DImporter::ReadQuat(){
     // (aramis_acg) Fix to adapt the loader to changed quat orientation
-    float w=-ReadFloat();
-    float x=ReadFloat();
-    float y=ReadFloat();
-    float z=ReadFloat();
+    double w=-ReadFloat();
+    double x=ReadFloat();
+    double y=ReadFloat();
+    double z=ReadFloat();
     return aiQuaternion( w,x,y,z );
 }
 
@@ -257,7 +257,7 @@ void B3DImporter::ReadTEXS(){
         /*int blend=*/ReadInt();
         /*aiVector2D pos=*/ReadVec2();
         /*aiVector2D scale=*/ReadVec2();
-        /*float rot=*/ReadFloat();
+        /*double rot=*/ReadFloat();
 
         _textures.push_back( name );
     }
@@ -272,8 +272,8 @@ void B3DImporter::ReadBRUS(){
     while( ChunkSize() ){
         string name=ReadString();
         aiVector3D color=ReadVec3();
-        float alpha=ReadFloat();
-        float shiny=ReadFloat();
+        double alpha=ReadFloat();
+        double shiny=ReadFloat();
         /*int blend=**/ReadInt();
         int fx=ReadInt();
 
@@ -295,7 +295,7 @@ void B3DImporter::ReadBRUS(){
         mat->AddProperty( &speccolor,1,AI_MATKEY_COLOR_SPECULAR );
         
         // Specular power
-        float specpow=shiny*128;
+        double specpow=shiny*128;
         mat->AddProperty( &specpow,1,AI_MATKEY_SHININESS );
         
         // Double sided
@@ -346,7 +346,7 @@ void B3DImporter::ReadVRTS(){
         if( _vflags & 2 ) ReadQuat();	//skip v 4bytes...
 
         for( int i=0;i<_tcsets;++i ){
-            float t[4]={0,0,0,0};
+            double t[4]={0,0,0,0};
             for( int j=0;j<_tcsize;++j ){
                 t[j]=ReadFloat();
             }
@@ -420,7 +420,7 @@ void B3DImporter::ReadMESH(){
 void B3DImporter::ReadBONE( int id ){
     while( ChunkSize() ){
         int vertex=ReadInt();
-        float weight=ReadFloat();
+        double weight=ReadFloat();
         if( vertex<0 || vertex>=(int)_vertices.size() ){
             Fail( "Bad vertex index" );
         }
@@ -480,7 +480,7 @@ void B3DImporter::ReadKEYS( aiNodeAnim *nodeAnim ){
 void B3DImporter::ReadANIM(){
     /*int flags=*/ReadInt();
     int frames=ReadInt();
-    float fps=ReadFloat();
+    double fps=ReadFloat();
 
     aiAnimation *anim=new aiAnimation;
     _animations.push_back( anim );
@@ -625,7 +625,7 @@ void B3DImporter::ReadBB3D( aiScene *scene ){
                         if( !v.weights[k] ) break;
 
                         int bone=v.bones[k];
-                        float weight=v.weights[k];
+                        double weight=v.weights[k];
 
                         vweights[bone].push_back( aiVertexWeight(i+j,weight) );
                     }

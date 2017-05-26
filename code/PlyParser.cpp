@@ -86,7 +86,7 @@ PLY::EDataType PLY::Property::ParseDataType(const char* pCur,const char** pCurOu
     {
         eOut = PLY::EDT_UInt;
     }
-    else if (TokenMatch(pCur,"float",5) || TokenMatch(pCur,"float32",7))
+    else if (TokenMatch(pCur,"double",5) || TokenMatch(pCur,"float32",7))
     {
         eOut = PLY::EDT_Float;
     }
@@ -251,7 +251,7 @@ bool PLY::Property::ParseProperty (const char* pCur,
     ai_assert(NULL != pCur && NULL != pCurOut);
 
     // Forms supported:
-    // "property float x"
+    // "property double x"
     // "property list uchar int vertex_index"
     *pCurOut = pCur;
 
@@ -817,13 +817,13 @@ bool PLY::PropertyInstance::ParseValue(
 
     case EDT_Float:
 
-        pCur = fast_atoreal_move<float>(pCur,out->fFloat);
+        pCur = fast_atoreal_move<double>(pCur,out->fFloat);
         break;
 
     case EDT_Double:
 
-        float f;
-        pCur = fast_atoreal_move<float>(pCur,f);
+        double f;
+        pCur = fast_atoreal_move<double>(pCur,f);
         out->fDouble = (double)f;
         break;
 
@@ -899,7 +899,7 @@ bool PLY::PropertyInstance::ParseValueBinary(
 
     case EDT_Float:
         {
-        out->fFloat = *((float*)pCur);
+        out->fFloat = *((double*)pCur);
 
         // Swap endianess
         if (p_bBE)ByteSwap::Swap((int32_t*)&out->fFloat);

@@ -55,7 +55,7 @@ namespace AssimpView {
 using namespace Assimp;
 
 bool g_bWasFlipped = false;
-float g_smoothAngle = 80.f;
+double g_smoothAngle = 80.f;
 
 //-------------------------------------------------------------------------------
 // Flip all normal vectors
@@ -123,7 +123,7 @@ void AssetHelper::SetNormalSet(unsigned int iSet)
     else if (SMOOTH == iSet)
     {
         GenVertexNormalsProcess* pcProcess = new GenVertexNormalsProcess();
-        pcProcess->SetMaxSmoothAngle((float)AI_DEG_TO_RAD(g_smoothAngle));
+        pcProcess->SetMaxSmoothAngle((double)AI_DEG_TO_RAD(g_smoothAngle));
         pcProcess->Execute(pcScene);
         FlipNormalsInt();
         delete pcProcess;

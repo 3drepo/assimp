@@ -122,7 +122,7 @@ uint16_t OgreXmlSerializer::ReadAttribute<uint16_t>(const std::string &name) con
 }
 
 template<>
-float OgreXmlSerializer::ReadAttribute<float>(const std::string &name) const
+double OgreXmlSerializer::ReadAttribute<double>(const std::string &name) const
 {
     if (HasAttribute(name.c_str()))
     {
@@ -430,25 +430,25 @@ void OgreXmlSerializer::ReadGeometryVertexBuffer(VertexDataXml *dest)
         if (positions && m_currentNodeName == nnPosition)
         {
             aiVector3D pos;
-            pos.x = ReadAttribute<float>(anX);
-            pos.y = ReadAttribute<float>(anY);
-            pos.z = ReadAttribute<float>(anZ);
+            pos.x = ReadAttribute<double>(anX);
+            pos.y = ReadAttribute<double>(anY);
+            pos.z = ReadAttribute<double>(anZ);
             dest->positions.push_back(pos);
         }
         else if (normals && m_currentNodeName == nnNormal)
         {
             aiVector3D normal;
-            normal.x = ReadAttribute<float>(anX);
-            normal.y = ReadAttribute<float>(anY);
-            normal.z = ReadAttribute<float>(anZ);
+            normal.x = ReadAttribute<double>(anX);
+            normal.y = ReadAttribute<double>(anY);
+            normal.z = ReadAttribute<double>(anZ);
             dest->normals.push_back(normal);
         }
         else if (tangents && m_currentNodeName == nnTangent)
         {
             aiVector3D tangent;
-            tangent.x = ReadAttribute<float>(anX);
-            tangent.y = ReadAttribute<float>(anY);
-            tangent.z = ReadAttribute<float>(anZ);
+            tangent.x = ReadAttribute<double>(anX);
+            tangent.y = ReadAttribute<double>(anY);
+            tangent.z = ReadAttribute<double>(anZ);
             dest->tangents.push_back(tangent);
         }
         else if (uvs > 0 && m_currentNodeName == nnTexCoord)
@@ -460,8 +460,8 @@ void OgreXmlSerializer::ReadGeometryVertexBuffer(VertexDataXml *dest)
                 }
 
                 aiVector3D uv;
-                uv.x = ReadAttribute<float>("u");
-                uv.y = (ReadAttribute<float>("v") * -1) + 1; // Flip UV from Ogre to Assimp form
+                uv.x = ReadAttribute<double>("u");
+                uv.y = (ReadAttribute<double>("v") * -1) + 1; // Flip UV from Ogre to Assimp form
                 dest->uvs[i].push_back(uv);
 
                 NextNode();
@@ -645,7 +645,7 @@ void OgreXmlSerializer::ReadBoneAssignments(VertexDataXml *dest)
         VertexBoneAssignment ba;
         ba.vertexIndex = ReadAttribute<uint32_t>(anVertexIndex);
         ba.boneIndex = ReadAttribute<uint16_t>(anBoneIndex);
-        ba.weight = ReadAttribute<float>(anWeight);
+        ba.weight = ReadAttribute<double>(anWeight);
 
         dest->boneAssignments.push_back(ba);
         influencedVertices.insert(ba.vertexIndex);
@@ -656,12 +656,12 @@ void OgreXmlSerializer::ReadBoneAssignments(VertexDataXml *dest)
     /** Normalize bone weights.
         Some exporters wont care if the sum of all bone weights
         for a single vertex equals 1 or not, so validate here. */
-    const float epsilon = 0.05f;
+    const double epsilon = 0.05f;
     for(std::set<uint32_t>::const_iterator iter=influencedVertices.begin(), end=influencedVertices.end(); iter != end; ++iter)
     {
         const uint32_t vertexIndex = (*iter);
 
-        float sum = 0.0f;
+        double sum = 0.0f;
         for (VertexBoneAssignmentList::const_iterator baIter=dest->boneAssignments.begin(), baEnd=dest->boneAssignments.end(); baIter != baEnd; ++baIter)
         {
             if (baIter->vertexIndex == vertexIndex)
@@ -801,7 +801,7 @@ void OgreXmlSerializer::ReadAnimations(Skeleton *skeleton)
     {
         Animation *anim = new Animation(skeleton);
         anim->name = ReadAttribute<std::string>("name");
-        anim->length = ReadAttribute<float>("length");
+        anim->length = ReadAttribute<double>("length");
 
         if (NextNode() != nnTracks) {
             throw DeadlyImportError(Formatter::format() << "No <tracks> found in <animation> " << anim->name);
@@ -841,29 +841,29 @@ void OgreXmlSerializer::ReadAnimationKeyFrames(Animation *anim, VertexAnimationT
     while(m_currentNodeName == nnKeyFrame)
     {
         TransformKeyFrame keyframe;
-        keyframe.timePos = ReadAttribute<float>("time");
+        keyframe.timePos = ReadAttribute<double>("time");
 
         NextNode();
         while(m_currentNodeName == nnTranslate || m_currentNodeName == nnRotate || m_currentNodeName == nnScale)
         {
             if (m_currentNodeName == nnTranslate)
             {
-                keyframe.position.x = ReadAttribute<float>(anX);
-                keyframe.position.y = ReadAttribute<float>(anY);
-                keyframe.position.z = ReadAttribute<float>(anZ);
+                keyframe.position.x = ReadAttribute<double>(anX);
+                keyframe.position.y = ReadAttribute<double>(anY);
+                keyframe.position.z = ReadAttribute<double>(anZ);
             }
             else if (m_currentNodeName == nnRotate)
             {
-                float angle = ReadAttribute<float>("angle");
+                double angle = ReadAttribute<double>("angle");
 
                 if (NextNode() != nnAxis) {
                     throw DeadlyImportError("No axis specified for keyframe rotation in animation " + anim->name);
                 }
 
                 aiVector3D axis;
-                axis.x = ReadAttribute<float>(anX);
-                axis.y = ReadAttribute<float>(anY);
-                axis.z = ReadAttribute<float>(anZ);
+                axis.x = ReadAttribute<double>(anX);
+                axis.y = ReadAttribute<double>(anY);
+                axis.z = ReadAttribute<double>(anZ);
                 if (axis.Equal(zeroVec))
                 {
                     axis.x = 1.0f;
@@ -875,9 +875,9 @@ void OgreXmlSerializer::ReadAnimationKeyFrames(Animation *anim, VertexAnimationT
             }
             else if (m_currentNodeName == nnScale)
             {
-                keyframe.scale.x = ReadAttribute<float>(anX);
-                keyframe.scale.y = ReadAttribute<float>(anY);
-                keyframe.scale.z = ReadAttribute<float>(anZ);
+                keyframe.scale.x = ReadAttribute<double>(anX);
+                keyframe.scale.y = ReadAttribute<double>(anY);
+                keyframe.scale.z = ReadAttribute<double>(anZ);
             }
 
             NextNode();
@@ -939,22 +939,22 @@ void OgreXmlSerializer::ReadBones(Skeleton *skeleton)
         {
             if (m_currentNodeName == nnPosition)
             {
-                bone->position.x = ReadAttribute<float>(anX);
-                bone->position.y = ReadAttribute<float>(anY);
-                bone->position.z = ReadAttribute<float>(anZ);
+                bone->position.x = ReadAttribute<double>(anX);
+                bone->position.y = ReadAttribute<double>(anY);
+                bone->position.z = ReadAttribute<double>(anZ);
             }
             else if (m_currentNodeName == nnRotation)
             {
-                float angle = ReadAttribute<float>("angle");
+                double angle = ReadAttribute<double>("angle");
 
                 if (NextNode() != nnAxis) {
                     throw DeadlyImportError(Formatter::format() << "No axis specified for bone rotation in bone " << bone->id);
                 }
 
                 aiVector3D axis;
-                axis.x = ReadAttribute<float>(anX);
-                axis.y = ReadAttribute<float>(anY);
-                axis.z = ReadAttribute<float>(anZ);
+                axis.x = ReadAttribute<double>(anX);
+                axis.y = ReadAttribute<double>(anY);
+                axis.z = ReadAttribute<double>(anZ);
 
                 bone->rotation = aiQuaternion(axis, angle);
             }
@@ -963,17 +963,17 @@ void OgreXmlSerializer::ReadBones(Skeleton *skeleton)
                 /// @todo Implement taking scale into account in matrix/pose calculations!
                 if (HasAttribute("factor"))
                 {
-                    float factor = ReadAttribute<float>("factor");
+                    double factor = ReadAttribute<double>("factor");
                     bone->scale.Set(factor, factor, factor);
                 }
                 else
                 {
                     if (HasAttribute(anX))
-                        bone->scale.x = ReadAttribute<float>(anX);
+                        bone->scale.x = ReadAttribute<double>(anX);
                     if (HasAttribute(anY))
-                        bone->scale.y = ReadAttribute<float>(anY);
+                        bone->scale.y = ReadAttribute<double>(anY);
                     if (HasAttribute(anZ))
-                        bone->scale.z = ReadAttribute<float>(anZ);
+                        bone->scale.z = ReadAttribute<double>(anZ);
                 }
             }
 

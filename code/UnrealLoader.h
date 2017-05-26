@@ -137,9 +137,9 @@ inline void DecompressVertex(aiVector3D& v, int32_t in)
     };
     i = in;
 
-    v.x = (float)n.X;
-    v.y = (float)n.Y;
-    v.z = (float)n.Z;
+    v.x = (double)n.X;
+    v.y = (double)n.Y;
+    v.z = (double)n.Z;
 }
 
 } // end namespace Unreal

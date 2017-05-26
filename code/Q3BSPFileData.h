@@ -83,12 +83,12 @@ struct sQ3BSPLump
 
 struct vec2f
 {
-    float x,y;
+    double x,y;
 };
 
 struct vec3f
 {
-    float x, y, z;
+    double x, y, z;
 };
 
 /// Vertex of a Q3 level

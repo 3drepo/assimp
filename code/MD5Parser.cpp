@@ -195,17 +195,17 @@ bool MD5Parser::ParseSection(Section& out)
 #define AI_MD5_SKIP_SPACES()  if(!SkipSpaces(&sz)) \
     MD5Parser::ReportWarning("Unexpected end of line",(*eit).iLineNumber);
 
-    // read a triple float in brackets: (1.0 1.0 1.0)
+    // read a triple double in brackets: (1.0 1.0 1.0)
 #define AI_MD5_READ_TRIPLE(vec) \
     AI_MD5_SKIP_SPACES(); \
     if ('(' != *sz++) \
         MD5Parser::ReportWarning("Unexpected token: ( was expected",(*eit).iLineNumber); \
     AI_MD5_SKIP_SPACES(); \
-    sz = fast_atoreal_move<float>(sz,(float&)vec.x); \
+    sz = fast_atoreal_move<double>(sz,(double&)vec.x); \
     AI_MD5_SKIP_SPACES(); \
-    sz = fast_atoreal_move<float>(sz,(float&)vec.y); \
+    sz = fast_atoreal_move<double>(sz,(double&)vec.y); \
     AI_MD5_SKIP_SPACES(); \
-    sz = fast_atoreal_move<float>(sz,(float&)vec.z); \
+    sz = fast_atoreal_move<double>(sz,(double&)vec.z); \
     AI_MD5_SKIP_SPACES(); \
     if (')' != *sz++) \
         MD5Parser::ReportWarning("Unexpected token: ) was expected",(*eit).iLineNumber);
@@ -299,9 +299,9 @@ MD5MeshParser::MD5MeshParser(SectionList& mSections)
                     if ('(' != *sz++)
                         MD5Parser::ReportWarning("Unexpected token: ( was expected",(*eit).iLineNumber);
                     AI_MD5_SKIP_SPACES();
-                    sz = fast_atoreal_move<float>(sz,(float&)vert.mUV.x);
+                    sz = fast_atoreal_move<double>(sz,(double&)vert.mUV.x);
                     AI_MD5_SKIP_SPACES();
-                    sz = fast_atoreal_move<float>(sz,(float&)vert.mUV.y);
+                    sz = fast_atoreal_move<double>(sz,(double&)vert.mUV.y);
                     AI_MD5_SKIP_SPACES();
                     if (')' != *sz++)
                         MD5Parser::ReportWarning("Unexpected token: ) was expected",(*eit).iLineNumber);
@@ -337,7 +337,7 @@ MD5MeshParser::MD5MeshParser(SectionList& mSections)
                     WeightDesc& weight = desc.mWeights[idx];
                     weight.mBone = strtoul10(sz,&sz);
                     AI_MD5_SKIP_SPACES();
-                    sz = fast_atoreal_move<float>(sz,weight.mWeight);
+                    sz = fast_atoreal_move<double>(sz,weight.mWeight);
                     AI_MD5_READ_TRIPLE(weight.vOffsetPosition);
                 }
             }
@@ -410,7 +410,7 @@ MD5AnimParser::MD5AnimParser(SectionList& mSections)
             for (ElementList::const_iterator eit = (*iter).mElements.begin(), eitEnd = (*iter).mElements.end(); eit != eitEnd; ++eit){
                 const char* sz = (*eit).szStart;
                 while (SkipSpacesAndLineEnd(&sz))   {
-                    float f;sz = fast_atoreal_move<float>(sz,f);
+                    double f;sz = fast_atoreal_move<double>(sz,f);
                     desc.mValues.push_back(f);
                 }
             }
@@ -431,7 +431,7 @@ MD5AnimParser::MD5AnimParser(SectionList& mSections)
             mAnimatedBones.reserve( strtoul10((*iter).mGlobalValue.c_str()));
         }
         else if((*iter).mName == "frameRate")   {
-            fast_atoreal_move<float>((*iter).mGlobalValue.c_str(),fFrameRate);
+            fast_atoreal_move<double>((*iter).mGlobalValue.c_str(),fFrameRate);
         }
     }
     DefaultLogger::get()->debug("MD5AnimParser end");

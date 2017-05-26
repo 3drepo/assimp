@@ -95,7 +95,7 @@ namespace Assimp    {
 void Subdivide(std::vector<aiVector3D>& positions)
 {
     // assume this to be constant - (fixme: must be 1.0? I think so)
-    const float fl1 = positions[0].Length();
+    const double fl1 = positions[0].Length();
 
     unsigned int origSize = (unsigned int)positions.size();
     for (unsigned int i = 0 ; i < origSize ; i+=3)
@@ -194,8 +194,8 @@ unsigned int StandardShapes::MakeIcosahedron(std::vector<aiVector3D>& positions)
 {
     positions.reserve(positions.size()+60);
 
-    const float t = (1.f + 2.236067977f)/2.f;
-    const float s = std::sqrt(1.f + t*t);
+    const double t = (1.f + 2.236067977f)/2.f;
+    const double s = std::sqrt(1.f + t*t);
 
     const aiVector3D v0  = aiVector3D(t,1.f, 0.f)/s;
     const aiVector3D v1  = aiVector3D(-t,1.f, 0.f)/s;
@@ -244,9 +244,9 @@ unsigned int StandardShapes::MakeDodecahedron(std::vector<aiVector3D>& positions
 {
     positions.reserve(positions.size()+108);
 
-    const float a = 1.f / 1.7320508f;
-    const float b = std::sqrt((3.f-2.23606797f)/6.f);
-    const float c = std::sqrt((3.f+2.23606797f)/6.f);
+    const double a = 1.f / 1.7320508f;
+    const double b = std::sqrt((3.f-2.23606797f)/6.f);
+    const double c = std::sqrt((3.f+2.23606797f)/6.f);
 
     const aiVector3D v0  = aiVector3D(a,a,a);
     const aiVector3D v1  = aiVector3D(a,a,-a);
@@ -316,8 +316,8 @@ unsigned int StandardShapes::MakeTetrahedron(std::vector<aiVector3D>& positions)
 {
     positions.reserve(positions.size()+9);
 
-    const float a = 1.41421f/3.f;
-    const float b = 2.4494f/3.f;
+    const double a = 1.41421f/3.f;
+    const double b = 2.4494f/3.f;
 
     const aiVector3D v0  = aiVector3D(0.f,0.f,1.f);
     const aiVector3D v1  = aiVector3D(2*a,0,-1.f/3.f);
@@ -337,7 +337,7 @@ unsigned int StandardShapes::MakeHexahedron(std::vector<aiVector3D>& positions,
     bool polygons /*= false*/)
 {
     positions.reserve(positions.size()+36);
-    const float length = 1.f/1.73205080f;
+    const double length = 1.f/1.73205080f;
 
     const aiVector3D v0  = aiVector3D(-1.f,-1.f,-1.f)*length;
     const aiVector3D v1  = aiVector3D(1.f,-1.f,-1.f)*length;
@@ -382,8 +382,8 @@ void StandardShapes::MakeSphere(unsigned int    tess,
 
 // ------------------------------------------------------------------------------------------------
 // Build a cone
-void StandardShapes::MakeCone(float height,float radius1,
-    float radius2,unsigned int tess,
+void StandardShapes::MakeCone(double height,double radius1,
+    double radius2,unsigned int tess,
     std::vector<aiVector3D>& positions,bool bOpen /*= false */)
 {
     // Sorry, a cone with less than 3 segments makes ABSOLUTELY NO SENSE
@@ -396,7 +396,7 @@ void StandardShapes::MakeCone(float height,float radius1,
     radius1 = std::fabs(radius1);
     radius2 = std::fabs(radius2);
 
-    float halfHeight = height / 2;
+    double halfHeight = height / 2;
 
     // radius1 is always the smaller one
     if (radius2 > radius1)
@@ -415,20 +415,20 @@ void StandardShapes::MakeCone(float height,float radius1,
     positions.reserve(positions.size () + mem);
 
     // Now construct all segments
-    const float angle_delta = (float)AI_MATH_TWO_PI / tess;
-    const float angle_max   = (float)AI_MATH_TWO_PI;
+    const double angle_delta = (double)AI_MATH_TWO_PI / tess;
+    const double angle_max   = (double)AI_MATH_TWO_PI;
 
-    float s = 1.f; // std::cos(angle == 0);
-    float t = 0.f; // std::sin(angle == 0);
+    double s = 1.f; // std::cos(angle == 0);
+    double t = 0.f; // std::sin(angle == 0);
 
-    for (float angle = 0.f; angle < angle_max; )
+    for (double angle = 0.f; angle < angle_max; )
     {
         const aiVector3D v1 = aiVector3D (s * radius1, -halfHeight, t * radius1 );
         const aiVector3D v2 = aiVector3D (s * radius2,  halfHeight, t * radius2 );
 
-        const float next = angle + angle_delta;
-        float s2 = std::cos(next);
-        float t2 = std::sin(next);
+        const double next = angle + angle_delta;
+        double s2 = std::cos(next);
+        double t2 = std::sin(next);
 
         const aiVector3D v3 = aiVector3D (s2 * radius2,  halfHeight, t2 * radius2 );
         const aiVector3D v4 = aiVector3D (s2 * radius1, -halfHeight, t2 * radius1 );
@@ -472,7 +472,7 @@ void StandardShapes::MakeCone(float height,float radius1,
 
 // ------------------------------------------------------------------------------------------------
 // Build a circle
-void StandardShapes::MakeCircle(float radius, unsigned int tess,
+void StandardShapes::MakeCircle(double radius, unsigned int tess,
     std::vector<aiVector3D>& positions)
 {
     // Sorry, a circle with less than 3 segments makes ABSOLUTELY NO SENSE
@@ -484,13 +484,13 @@ void StandardShapes::MakeCircle(float radius, unsigned int tess,
     // We will need 3 vertices per segment
     positions.reserve(positions.size()+tess*3);
 
-    const float angle_delta = (float)AI_MATH_TWO_PI / tess;
-    const float angle_max   = (float)AI_MATH_TWO_PI;
+    const double angle_delta = (double)AI_MATH_TWO_PI / tess;
+    const double angle_max   = (double)AI_MATH_TWO_PI;
 
-    float s = 1.f; // std::cos(angle == 0);
-    float t = 0.f; // std::sin(angle == 0);
+    double s = 1.f; // std::cos(angle == 0);
+    double t = 0.f; // std::sin(angle == 0);
 
-    for (float angle = 0.f; angle < angle_max;  )
+    for (double angle = 0.f; angle < angle_max;  )
     {
         positions.push_back(aiVector3D(s * radius,0.f,t * radius));
         angle += angle_delta;

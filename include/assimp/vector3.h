@@ -127,13 +127,13 @@ public:
 } PACK_STRUCT;
 
 
-typedef aiVector3t<float> aiVector3D;
+typedef aiVector3t<double> aiVector3D;
 
 #else
 
 struct aiVector3D {
 
-    float x,y,z;
+    double x,y,z;
 } PACK_STRUCT;
 
 #endif // __cplusplus

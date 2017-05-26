@@ -134,7 +134,7 @@ struct NodeDesc
     aiColor3D lightColor;
 
     // intensity of light source
-    float lightIntensity;
+    double lightIntensity;
 
     // type of light source
     unsigned int lightType;
@@ -143,10 +143,10 @@ struct NodeDesc
     unsigned int lightFalloffType;
 
     // cone angle of (spot) light source
-    float lightConeAngle;
+    double lightConeAngle;
 
     // soft cone angle of (spot) light source
-    float lightEdgeAngle;
+    double lightEdgeAngle;
 
 
 

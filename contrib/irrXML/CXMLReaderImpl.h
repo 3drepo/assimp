@@ -152,8 +152,8 @@ public:
 	}
 
 
-	//! Returns the value of an attribute as float. 
-	float getAttributeValueAsFloat(const char_type* name) const
+	//! Returns the value of an attribute as double. 
+	double getAttributeValueAsFloat(const char_type* name) const
 	{
 		const SAttribute* attr = getAttributeByName(name);
 		if (!attr)
@@ -164,8 +164,8 @@ public:
 	}
 
 
-	//! Returns the value of an attribute as float. 
-	float getAttributeValueAsFloat(int idx) const
+	//! Returns the value of an attribute as double. 
+	double getAttributeValueAsFloat(int idx) const
 	{
 		const char_type* attrvalue = getAttributeValue(idx);
 		if (!attrvalue)

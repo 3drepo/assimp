@@ -52,7 +52,7 @@ namespace {
     const static aiVector3D base_axis_y(0.f,1.f,0.f);
     const static aiVector3D base_axis_x(1.f,0.f,0.f);
     const static aiVector3D base_axis_z(0.f,0.f,1.f);
-    const static float angle_epsilon = 0.95f;
+    const static double angle_epsilon = 0.95f;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -81,8 +81,8 @@ bool ComputeUVMappingProcess::IsActive( unsigned int pFlags) const
 inline bool PlaneIntersect(const aiRay& ray, const aiVector3D& planePos,
     const aiVector3D& planeNormal, aiVector3D& pos)
 {
-    const float b = planeNormal * (planePos - ray.pos);
-    float h = ray.dir * planeNormal;
+    const double b = planeNormal * (planePos - ray.pos);
+    double h = ray.dir * planeNormal;
     if ((h < 10e-5f && h > -10e-5f) || (h = b/h) < 0)
         return false;
 
@@ -109,11 +109,11 @@ void RemoveUVSeams (aiMesh* mesh, aiVector3D* out)
     // much easier, but I don't know how and am currently too tired to
     // to think about a better solution.
 
-    const static float LOWER_LIMIT = 0.1f;
-    const static float UPPER_LIMIT = 0.9f;
+    const static double LOWER_LIMIT = 0.1f;
+    const static double UPPER_LIMIT = 0.9f;
 
-    const static float LOWER_EPSILON = 10e-3f;
-    const static float UPPER_EPSILON = 1.f-10e-3f;
+    const static double LOWER_EPSILON = 10e-3f;
+    const static double UPPER_EPSILON = 1.f-10e-3f;
 
     for (unsigned int fidx = 0; fidx < mesh->mNumFaces;++fidx)
     {
@@ -257,7 +257,7 @@ void ComputeUVMappingProcess::ComputeCylinderMapping(aiMesh* mesh,const aiVector
     // thus changing the mapping axis)
     if (axis * base_axis_x >= angle_epsilon)    {
         FindMeshCenter(mesh, center, min, max);
-        const float diff = max.x - min.x;
+        const double diff = max.x - min.x;
 
         // If the main axis is 'z', the z coordinate of a point 'p' is mapped
         // directly to the texture V axis. The other axis is derived from
@@ -268,12 +268,12 @@ void ComputeUVMappingProcess::ComputeCylinderMapping(aiMesh* mesh,const aiVector
             aiVector3D& uv  = out[pnt];
 
             uv.y = (pos.x - min.x) / diff;
-            uv.x = (atan2 ( pos.z - center.z, pos.y - center.y) +(float)AI_MATH_PI ) / (float)AI_MATH_TWO_PI;
+            uv.x = (atan2 ( pos.z - center.z, pos.y - center.y) +(double)AI_MATH_PI ) / (double)AI_MATH_TWO_PI;
         }
     }
     else if (axis * base_axis_y >= angle_epsilon)   {
         FindMeshCenter(mesh, center, min, max);
-        const float diff = max.y - min.y;
+        const double diff = max.y - min.y;
 
         // just the same ...
         for (unsigned int pnt = 0; pnt < mesh->mNumVertices;++pnt)  {
@@ -281,12 +281,12 @@ void ComputeUVMappingProcess::ComputeCylinderMapping(aiMesh* mesh,const aiVector
             aiVector3D& uv  = out[pnt];
 
             uv.y = (pos.y - min.y) / diff;
-            uv.x = (atan2 ( pos.x - center.x, pos.z - center.z) +(float)AI_MATH_PI ) / (float)AI_MATH_TWO_PI;
+            uv.x = (atan2 ( pos.x - center.x, pos.z - center.z) +(double)AI_MATH_PI ) / (double)AI_MATH_TWO_PI;
         }
     }
     else if (axis * base_axis_z >= angle_epsilon)   {
         FindMeshCenter(mesh, center, min, max);
-        const float diff = max.z - min.z;
+        const double diff = max.z - min.z;
 
         // just the same ...
         for (unsigned int pnt = 0; pnt < mesh->mNumVertices;++pnt)  {
@@ -294,7 +294,7 @@ void ComputeUVMappingProcess::ComputeCylinderMapping(aiMesh* mesh,const aiVector
             aiVector3D& uv  = out[pnt];
 
             uv.y = (pos.z - min.z) / diff;
-            uv.x = (atan2 ( pos.y - center.y, pos.x - center.x) +(float)AI_MATH_PI ) / (float)AI_MATH_TWO_PI;
+            uv.x = (atan2 ( pos.y - center.y, pos.x - center.x) +(double)AI_MATH_PI ) / (double)AI_MATH_TWO_PI;
         }
     }
     // slower code path in case the mapping axis is not one of the coordinate system axes
@@ -302,7 +302,7 @@ void ComputeUVMappingProcess::ComputeCylinderMapping(aiMesh* mesh,const aiVector
         aiMatrix4x4 mTrafo;
         aiMatrix4x4::FromToMatrix(axis,base_axis_y,mTrafo);
         FindMeshCenterTransformed(mesh, center, min, max,mTrafo);
-        const float diff = max.y - min.y;
+        const double diff = max.y - min.y;
 
         // again the same, except we're applying a transformation now
         for (unsigned int pnt = 0; pnt < mesh->mNumVertices;++pnt){
@@ -310,7 +310,7 @@ void ComputeUVMappingProcess::ComputeCylinderMapping(aiMesh* mesh,const aiVector
             aiVector3D& uv  = out[pnt];
 
             uv.y = (pos.y - min.y) / diff;
-            uv.x = (atan2 ( pos.x - center.x, pos.z - center.z) +(float)AI_MATH_PI ) / (float)AI_MATH_TWO_PI;
+            uv.x = (atan2 ( pos.x - center.x, pos.z - center.z) +(double)AI_MATH_PI ) / (double)AI_MATH_TWO_PI;
         }
     }
 
@@ -323,7 +323,7 @@ void ComputeUVMappingProcess::ComputeCylinderMapping(aiMesh* mesh,const aiVector
 // ------------------------------------------------------------------------------------------------
 void ComputeUVMappingProcess::ComputePlaneMapping(aiMesh* mesh,const aiVector3D& axis, aiVector3D* out)
 {
-    float diffu,diffv;
+    double diffu,diffv;
     aiVector3D center, min, max;
 
     // If the axis is one of x,y,z run a faster code path. It's worth the extra effort ...

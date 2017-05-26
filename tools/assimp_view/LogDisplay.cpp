@@ -166,11 +166,11 @@ void CLogDisplay::OnRender()
             }
         else if (NULL != this->piFont)
             {
-            float fAlpha = 1.0f;
+            double fAlpha = 1.0f;
             if ((*i).dwStartTicks <= dwLimit2)
                 {
                 // linearly interpolate to create the fade out effect
-                fAlpha = 1.0f - (float)(dwLimit2 - (*i).dwStartTicks) / 3000.0f;
+                fAlpha = 1.0f - (double)(dwLimit2 - (*i).dwStartTicks) / 3000.0f;
                 }
             D3DCOLOR& clrColor = (*i).clrColor;
             clrColor &= ~(0xFFu << 24);

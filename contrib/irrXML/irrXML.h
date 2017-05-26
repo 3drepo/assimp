@@ -324,17 +324,17 @@ namespace io
 		the value could not be interpreted as integer. */
 		virtual int getAttributeValueAsInt(int idx) const = 0;
 
-		//! Returns the value of an attribute as float. 
+		//! Returns the value of an attribute as double. 
 		/** \param name: Name of the attribute.
-		\return Value of the attribute as float, and 0 if an attribute with this name does not exist or
-		the value could not be interpreted as float. */
-		virtual float getAttributeValueAsFloat(const char_type* name) const = 0;
+		\return Value of the attribute as double, and 0 if an attribute with this name does not exist or
+		the value could not be interpreted as double. */
+		virtual double getAttributeValueAsFloat(const char_type* name) const = 0;
 
-		//! Returns the value of an attribute as float. 
+		//! Returns the value of an attribute as double. 
 		/** \param idx: Zero based index, should be something between 0 and getAttributeCount()-1.
-		\return Value of the attribute as float, and 0 if an attribute with this index does not exist or
-		the value could not be interpreted as float. */
-		virtual float getAttributeValueAsFloat(int idx) const = 0;
+		\return Value of the attribute as double, and 0 if an attribute with this index does not exist or
+		the value could not be interpreted as double. */
+		virtual double getAttributeValueAsFloat(int idx) const = 0;
 
 		//! Returns the name of the current node. 
 		/** Only non null, if the node type is EXN_ELEMENT.

@@ -404,16 +404,16 @@ void BlenderTessellatorP2T::MakeFacesFromTriangles( std::vector< p2t::Triangle* 
 }
 
 // ------------------------------------------------------------------------------------------------
-inline float p2tMax( float a, float b )
+inline double p2tMax( double a, double b )
 {
     return a > b ? a : b;
 }
 
 // ------------------------------------------------------------------------------------------------
 // Adapted from: http://missingbytes.blogspot.co.uk/2012/06/fitting-plane-to-point-cloud.html
-float BlenderTessellatorP2T::FindLargestMatrixElem( const aiMatrix3x3& mtx ) const
+double BlenderTessellatorP2T::FindLargestMatrixElem( const aiMatrix3x3& mtx ) const
 {
-    float result = 0.0f;
+    double result = 0.0f;
 
     for ( int x = 0; x < 3; ++x )
     {
@@ -428,7 +428,7 @@ float BlenderTessellatorP2T::FindLargestMatrixElem( const aiMatrix3x3& mtx ) con
 
 // ------------------------------------------------------------------------------------------------
 // Aparently Assimp doesn't have matrix scaling
-aiMatrix3x3 BlenderTessellatorP2T::ScaleMatrix( const aiMatrix3x3& mtx, float scale ) const
+aiMatrix3x3 BlenderTessellatorP2T::ScaleMatrix( const aiMatrix3x3& mtx, double scale ) const
 {
     aiMatrix3x3 result;
 
@@ -448,7 +448,7 @@ aiMatrix3x3 BlenderTessellatorP2T::ScaleMatrix( const aiMatrix3x3& mtx, float sc
 // Adapted from: http://missingbytes.blogspot.co.uk/2012/06/fitting-plane-to-point-cloud.html
 aiVector3D BlenderTessellatorP2T::GetEigenVectorFromLargestEigenValue( const aiMatrix3x3& mtx ) const
 {
-    float scale = FindLargestMatrixElem( mtx );
+    double scale = FindLargestMatrixElem( mtx );
     aiMatrix3x3 mc = ScaleMatrix( mtx, 1.0f / scale );
     mc = mc * mc * mc;
 
@@ -478,14 +478,14 @@ PlaneP2T BlenderTessellatorP2T::FindLLSQPlane( const std::vector< PointP2T >& po
     {
         sum += points[ i ].point3D;
     }
-    result.centre = sum * ( 1.0f / points.size( ) );
+    result.centre = sum * ( 1.0 / points.size( ) );
 
-    float sumXX = 0.0f;
-    float sumXY = 0.0f;
-    float sumXZ = 0.0f;
-    float sumYY = 0.0f;
-    float sumYZ = 0.0f;
-    float sumZZ = 0.0f;
+    double sumXX = 0.0;
+    double sumXY = 0.0;
+    double sumXZ = 0.0;
+    double sumYY = 0.0;
+    double sumYZ = 0.0;
+    double sumZZ = 0.0;
     for ( unsigned int i = 0; i < points.size( ); ++i )
     {
         aiVector3D offset = points[ i ].point3D - result.centre;
@@ -499,7 +499,7 @@ PlaneP2T BlenderTessellatorP2T::FindLLSQPlane( const std::vector< PointP2T >& po
 
     aiMatrix3x3 mtx( sumXX, sumXY, sumXZ, sumXY, sumYY, sumYZ, sumXZ, sumYZ, sumZZ );
 
-    float det = mtx.Determinant( );
+    double det = mtx.Determinant( );
     if ( det == 0.0f )
     {
         result.normal = aiVector3D( 0.0f );

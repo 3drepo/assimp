@@ -60,6 +60,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryIOWrapper.h"
 #include "../include/assimp/Importer.hpp"
 
+#include <iostream>
+
 namespace Assimp {
     template<> const std::string LogFunctions<FBXImporter>::log_prefix = "FBX: ";
 }
@@ -179,7 +181,7 @@ void FBXImporter::InternReadFile( const std::string& pFile,
         Document doc(parser,settings);
 
         // convert the FBX DOM to aiScene
-        ConvertToAssimpScene(pScene,doc);
+        ConvertToAssimpScene(pFile, pScene,doc);
 
         std::for_each(tokens.begin(),tokens.end(),Util::delete_fun<Token>());
     }

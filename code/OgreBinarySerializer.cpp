@@ -63,8 +63,8 @@ const std::string       SKELETON_VERSION_1_1    = "[Serializer_v1.10]";
 const unsigned short    HEADER_CHUNK_ID         = 0x1000;
 
 const long              MSTREAM_OVERHEAD_SIZE               = sizeof(uint16_t) + sizeof(uint32_t);
-const long              MSTREAM_BONE_SIZE_WITHOUT_SCALE     = MSTREAM_OVERHEAD_SIZE + sizeof(unsigned short) + (sizeof(float) * 7);
-const long              MSTREAM_KEYFRAME_SIZE_WITHOUT_SCALE = MSTREAM_OVERHEAD_SIZE + (sizeof(float) * 8);
+const long              MSTREAM_BONE_SIZE_WITHOUT_SCALE     = MSTREAM_OVERHEAD_SIZE + sizeof(unsigned short) + (sizeof(double) * 7);
+const long              MSTREAM_KEYFRAME_SIZE_WITHOUT_SCALE = MSTREAM_OVERHEAD_SIZE + (sizeof(double) * 8);
 
 template<>
 inline bool OgreBinarySerializer::Read<bool>()
@@ -97,7 +97,7 @@ inline uint32_t OgreBinarySerializer::Read<uint32_t>()
 }
 
 template<>
-inline float OgreBinarySerializer::Read<float>()
+inline double OgreBinarySerializer::Read<double>()
 {
     return m_reader->GetF4();
 }
@@ -126,13 +126,13 @@ uint8_t *OgreBinarySerializer::ReadBytes(size_t numBytes)
 
 void OgreBinarySerializer::ReadVector(aiVector3D &vec)
 {
-    m_reader->CopyAndAdvance(&vec.x, sizeof(float)*3);
+    m_reader->CopyAndAdvance(&vec.x, sizeof(double)*3);
 }
 
 void OgreBinarySerializer::ReadQuaternion(aiQuaternion &quat)
 {
-    float temp[4];
-    m_reader->CopyAndAdvance(temp, sizeof(float)*4);
+    double temp[4];
+    m_reader->CopyAndAdvance(temp, sizeof(double)*4);
     quat.x = temp[0];
     quat.y = temp[1];
     quat.z = temp[2];
@@ -340,7 +340,7 @@ void OgreBinarySerializer::ReadMeshLodInfo(Mesh *mesh)
             throw DeadlyImportError("M_MESH_LOD does not contain a M_MESH_LOD_USAGE for each LOD level");
         }
 
-        m_reader->IncPtr(sizeof(float)); // user value
+        m_reader->IncPtr(sizeof(double)); // user value
 
         if (manual)
         {
@@ -381,8 +381,8 @@ void OgreBinarySerializer::ReadMeshSkeletonLink(Mesh *mesh)
 void OgreBinarySerializer::ReadMeshBounds(Mesh * /*mesh*/)
 {
     // Skip bounds, not compatible with Assimp.
-    // 2x float vec3 + 1x float sphere radius
-    SkipBytes(sizeof(float) * 7);
+    // 2x double vec3 + 1x double sphere radius
+    SkipBytes(sizeof(double) * 7);
 }
 
 void OgreBinarySerializer::ReadMeshExtremes(Mesh * /*mesh*/)
@@ -401,7 +401,7 @@ void OgreBinarySerializer::ReadBoneAssignment(VertexData *dest)
     VertexBoneAssignment ba;
     ba.vertexIndex = Read<uint32_t>();
     ba.boneIndex = Read<uint16_t>();
-    ba.weight = Read<float>();
+    ba.weight = Read<double>();
 
     dest->boneAssignments.push_back(ba);
 }
@@ -500,12 +500,12 @@ void OgreBinarySerializer::NormalizeBoneWeights(VertexData *vertexData) const
     /** Normalize bone weights.
         Some exporters wont care if the sum of all bone weights
         for a single vertex equals 1 or not, so validate here. */
-    const float epsilon = 0.05f;
+    const double epsilon = 0.05f;
     for(std::set<uint32_t>::const_iterator iter=influencedVertices.begin(), end=influencedVertices.end(); iter != end; ++iter)
     {
         const uint32_t vertexIndex = (*iter);
 
-        float sum = 0.0f;
+        double sum = 0.0f;
         for (VertexBoneAssignmentList::const_iterator baIter=vertexData->boneAssignments.begin(), baEnd=vertexData->boneAssignments.end(); baIter != baEnd; ++baIter)
         {
             if (baIter->vertexIndex == vertexIndex)
@@ -663,7 +663,7 @@ void OgreBinarySerializer::ReadEdgeList(Mesh * /*mesh*/)
                 uint32_t numTriangles = Read<uint32_t>();
                 uint32_t numEdgeGroups = Read<uint32_t>();
 
-                size_t skipBytes = (sizeof(uint32_t) * 8 + sizeof(float) * 4) * numTriangles;
+                size_t skipBytes = (sizeof(uint32_t) * 8 + sizeof(double) * 4) * numTriangles;
                 m_reader->IncPtr(skipBytes);
 
                 for (size_t i=0; i<numEdgeGroups; ++i)
@@ -745,7 +745,7 @@ void OgreBinarySerializer::ReadAnimations(Mesh *mesh)
         {
             Animation *anim = new Animation(mesh);
             anim->name = ReadLine();
-            anim->length = Read<float>();
+            anim->length = Read<double>();
 
             ReadAnimation(anim);
 
@@ -767,7 +767,7 @@ void OgreBinarySerializer::ReadAnimation(Animation *anim)
         if (id == M_ANIMATION_BASEINFO)
         {
             anim->baseName = ReadLine();
-            anim->baseTime = Read<float>();
+            anim->baseTime = Read<double>();
 
             // Advance to first track
             id = ReadHeader();
@@ -803,11 +803,11 @@ void OgreBinarySerializer::ReadAnimationKeyFrames(Animation *anim, VertexAnimati
             if (id == M_ANIMATION_MORPH_KEYFRAME)
             {
                 MorphKeyFrame kf;
-                kf.timePos = Read<float>();
+                kf.timePos = Read<double>();
                 bool hasNormals = Read<bool>();
 
                 size_t vertexCount = anim->AssociatedVertexData(track)->count;
-                size_t vertexSize = sizeof(float) * (hasNormals ? 6 : 3);
+                size_t vertexSize = sizeof(double) * (hasNormals ? 6 : 3);
                 size_t numBytes = vertexCount * vertexSize;
 
                 uint8_t *morphBuffer = ReadBytes(numBytes);
@@ -818,7 +818,7 @@ void OgreBinarySerializer::ReadAnimationKeyFrames(Animation *anim, VertexAnimati
             else if (id == M_ANIMATION_POSE_KEYFRAME)
             {
                 PoseKeyFrame kf;
-                kf.timePos = Read<float>();
+                kf.timePos = Read<double>();
 
                 if (!AtEnd())
                 {
@@ -827,7 +827,7 @@ void OgreBinarySerializer::ReadAnimationKeyFrames(Animation *anim, VertexAnimati
                     {
                         PoseRef pr;
                         pr.index = Read<uint16_t>();
-                        pr.influence = Read<float>();
+                        pr.influence = Read<double>();
                         kf.references.push_back(pr);
 
                         if (!AtEnd())
@@ -1026,7 +1026,7 @@ void OgreBinarySerializer::ReadSkeletonAnimation(Skeleton *skeleton)
 {
     Animation *anim = new Animation(skeleton);
     anim->name = ReadLine();
-    anim->length = Read<float>();
+    anim->length = Read<double>();
 
     if (!AtEnd())
     {
@@ -1034,7 +1034,7 @@ void OgreBinarySerializer::ReadSkeletonAnimation(Skeleton *skeleton)
         if (id == SKELETON_ANIMATION_BASEINFO)
         {
             anim->baseName = ReadLine();
-            anim->baseTime = Read<float>();
+            anim->baseTime = Read<double>();
 
             // Advance to first track
             id = ReadHeader();
@@ -1085,7 +1085,7 @@ void OgreBinarySerializer::ReadSkeletonAnimationTrack(Skeleton * /*skeleton*/, A
 void OgreBinarySerializer::ReadSkeletonAnimationKeyFrame(VertexAnimationTrack *dest)
 {
     TransformKeyFrame keyframe;
-    keyframe.timePos = Read<float>();
+    keyframe.timePos = Read<double>();
 
     // Rot and pos
     ReadQuaternion(keyframe.rotation);
@@ -1102,7 +1102,7 @@ void OgreBinarySerializer::ReadSkeletonAnimationLink(Skeleton * /*skeleton*/)
 {
     // Skip bounds, not compatible with Assimp.
     ReadLine(); // skeleton name
-    SkipBytes(sizeof(float) * 3); // scale
+    SkipBytes(sizeof(double) * 3); // scale
 }
 
 } // Ogre

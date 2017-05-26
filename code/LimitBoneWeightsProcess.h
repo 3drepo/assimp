@@ -117,9 +117,9 @@ public:
     struct Weight
     {
         unsigned int mBone; ///< Index of the bone
-        float mWeight;      ///< Weight of that bone on this vertex
+        double mWeight;      ///< Weight of that bone on this vertex
         Weight() { }
-        Weight( unsigned int pBone, float pWeight)
+        Weight( unsigned int pBone, double pWeight)
         {
             mBone = pBone;
             mWeight = pWeight;

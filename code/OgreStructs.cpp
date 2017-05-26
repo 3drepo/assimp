@@ -122,13 +122,13 @@ size_t VertexElement::TypeSize(Type type)
         case VET_COLOUR_ARGB:
             return sizeof(unsigned int);
         case VET_FLOAT1:
-            return sizeof(float);
+            return sizeof(double);
         case VET_FLOAT2:
-            return sizeof(float)*2;
+            return sizeof(double)*2;
         case VET_FLOAT3:
-            return sizeof(float)*3;
+            return sizeof(double)*3;
         case VET_FLOAT4:
-            return sizeof(float)*4;
+            return sizeof(double)*4;
         case VET_DOUBLE1:
             return sizeof(double);
         case VET_DOUBLE2:

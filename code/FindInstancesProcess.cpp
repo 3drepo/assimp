@@ -154,7 +154,7 @@ void FindInstancesProcess::Execute( aiScene* pScene)
 
                     // up to now the meshes are equal. find an appropriate
                     // epsilon to compare position differences against
-                    float epsilon = ComputePositionEpsilon(inst);
+                    double epsilon = ComputePositionEpsilon(inst);
                     epsilon *= epsilon;
 
                     // now compare vertex positions, normals,
@@ -174,7 +174,7 @@ void FindInstancesProcess::Execute( aiScene* pScene)
                     }
 
                     // use a constant epsilon for colors and UV coordinates
-                    static const float uvEpsilon = 10e-4f;
+                    static const double uvEpsilon = 10e-4f;
                     {
                         unsigned int i, end = orig->GetNumUVChannels();
                         for(i = 0; i < end; ++i) {

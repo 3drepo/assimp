@@ -96,7 +96,7 @@ private:
 
         aiString name;
         aiColor3D ambient, diffuse, specular;
-        float transparency;
+        double transparency;
 
         unsigned int texIdx;
     };

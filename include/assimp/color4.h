@@ -89,12 +89,12 @@ public:
     TReal r, g, b, a;
 } PACK_STRUCT;  // !struct aiColor4D
 
-typedef aiColor4t<float> aiColor4D;
+typedef aiColor4t<double> aiColor4D;
 
 #else
 
 struct aiColor4D {
-    float r, g, b, a;
+    double r, g, b, a;
 } PACK_STRUCT;
 
 #endif // __cplusplus

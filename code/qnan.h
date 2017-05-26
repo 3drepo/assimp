@@ -61,7 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *         IEEE 754 floating-point number. */
 union _IEEESingle
 {
-    float Float;
+    double Float;
     struct
     {
         uint32_t Frac : 23;
@@ -71,9 +71,9 @@ union _IEEESingle
 } ;
 
 // ---------------------------------------------------------------------------
-/** Check whether a given float is qNaN.
+/** Check whether a given double is qNaN.
  *  @param in Input value */
-AI_FORCE_INLINE bool is_qnan(float in)
+AI_FORCE_INLINE bool is_qnan(double in)
 {
     // the straightforward solution does not work:
     //   return (in != in);
@@ -81,34 +81,34 @@ AI_FORCE_INLINE bool is_qnan(float in)
     //   load <in> to <register-with-different-width>
     //   compare <register-with-different-width> against <in>
 
-    // FIXME: Use <float> stuff instead? I think fpclassify needs C99
+    // FIXME: Use <double> stuff instead? I think fpclassify needs C99
     return (reinterpret_cast<_IEEESingle*>(&in)->IEEE.Exp == (1u << 8)-1 &&
         reinterpret_cast<_IEEESingle*>(&in)->IEEE.Frac);
 }
 
 // ---------------------------------------------------------------------------
-/** Check whether a float is NOT qNaN.
+/** Check whether a double is NOT qNaN.
  *  @param in Input value */
-AI_FORCE_INLINE bool is_not_qnan(float in)
+AI_FORCE_INLINE bool is_not_qnan(double in)
 {
     return !is_qnan(in);
 }
 
 // ---------------------------------------------------------------------------
-/** @brief check whether a float is either NaN or (+/-) INF.
+/** @brief check whether a double is either NaN or (+/-) INF.
  *
  *  Denorms return false, they're treated like normal values.
  *  @param in Input value */
-AI_FORCE_INLINE bool is_special_float(float in)
+AI_FORCE_INLINE bool is_special_float(double in)
 {
     return (reinterpret_cast<_IEEESingle*>(&in)->IEEE.Exp == (1u << 8)-1);
 }
 
 // ---------------------------------------------------------------------------
 /** @brief Get a fresh qnan.  */
-AI_FORCE_INLINE float get_qnan()
+AI_FORCE_INLINE double get_qnan()
 {
-    return std::numeric_limits<float>::quiet_NaN();
+    return std::numeric_limits<double>::quiet_NaN();
 }
 
 #endif // !! AI_QNAN_H_INCLUDED

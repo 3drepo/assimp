@@ -284,7 +284,7 @@ void CatmullClarkSubdivider::InternSubdivide (
                 c += Vertex(mesh,face.mIndices[a]);
             }
 
-            c /= static_cast<float>(face.mNumIndices);
+            c /= static_cast<double>(face.mNumIndices);
             nfacesout += face.mNumIndices;
         }
     }
@@ -569,7 +569,7 @@ void CatmullClarkSubdivider::InternSubdivide (
                             ai_assert(haveit);
                         }
 
-                        const float div = static_cast<float>(cnt), divsq = 1.f/(div*div);
+                        const double div = static_cast<double>(cnt), divsq = 1.f/(div*div);
                         ov.second = Vertex(minp,face.mIndices[a])*((div-3.f) / div) + R*divsq + F*divsq;
                     }
                 }

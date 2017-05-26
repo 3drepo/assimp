@@ -542,8 +542,8 @@ struct static_cast_silent {
 };
 
 template <> struct static_cast_silent<float> {
-    template <typename V> float  operator()(V in) {
-        return static_cast<float> (in);
+	template <typename V> float  operator()(V in) {
+		return static_cast<float> (in);
     }
 };
 
@@ -565,7 +565,7 @@ template <typename T> inline void ConvertDispatcher(T& out, const Structure& in,
     else if (in.name == "char") {
         out = static_cast_silent<T>()(db.reader->GetU1());
     }
-    else if (in.name == "float") {
+    else if (in.name == "double") {
         out = static_cast<T>(db.reader->GetF4());
     }
     else if (in.name == "double") {
@@ -585,8 +585,8 @@ template <> inline void Structure :: Convert<int>    (int& dest,const FileDataba
 // ------------------------------------------------------------------------------------------------
 template <> inline void Structure :: Convert<short>  (short& dest,const FileDatabase& db) const
 {
-    // automatic rescaling from short to float and vice versa (seems to be used by normals)
-    if (name == "float") {
+    // automatic rescaling from short to double and vice versa (seems to be used by normals)
+    if (name == "double") {
         dest = static_cast<short>(db.reader->GetF4() * 32767.f);
         //db.reader->IncPtr(-4);
         return;
@@ -602,8 +602,8 @@ template <> inline void Structure :: Convert<short>  (short& dest,const FileData
 // ------------------------------------------------------------------------------------------------
 template <> inline void Structure :: Convert<char>   (char& dest,const FileDatabase& db) const
 {
-    // automatic rescaling from char to float and vice versa (seems useful for RGB colors)
-    if (name == "float") {
+    // automatic rescaling from char to double and vice versa (seems useful for RGB colors)
+    if (name == "double") {
         dest = static_cast<char>(db.reader->GetF4() * 255.f);
         return;
     }
@@ -617,12 +617,12 @@ template <> inline void Structure :: Convert<char>   (char& dest,const FileDatab
 // ------------------------------------------------------------------------------------------------
 template <> inline void Structure :: Convert<float>  (float& dest,const FileDatabase& db) const
 {
-    // automatic rescaling from char to float and vice versa (seems useful for RGB colors)
+    // automatic rescaling from char to double and vice versa (seems useful for RGB colors)
     if (name == "char") {
         dest = db.reader->GetI1() / 255.f;
         return;
     }
-    // automatic rescaling from short to float and vice versa (used by normals)
+    // automatic rescaling from short to double and vice versa (used by normals)
     else if (name == "short") {
         dest = db.reader->GetI2() / 32767.f;
         return;

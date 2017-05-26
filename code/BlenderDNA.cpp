@@ -325,9 +325,9 @@ void DNA :: AddPrimitiveStructures()
     structures.back().size = 1;
 
 
-    indices["float"] = structures.size();
+    indices["double"] = structures.size();
     structures.push_back( Structure() );
-    structures.back().name = "float";
+    structures.back().name = "double";
     structures.back().size = 4;
 
 

@@ -196,7 +196,7 @@ public:
      * @param iValue New value of the property
      * @return true if the property was set before. The new value replaces
      *   the previous value in this case.
-     * @note Property of different types (float, int, string ..) are kept
+     * @note Property of different types (double, int, string ..) are kept
      *   on different stacks, so calling SetPropertyInteger() for a
      *   floating-point property has no effect - the loader will call
      *   GetPropertyFloat() to read the property, but it won't be there.
@@ -218,7 +218,7 @@ public:
     /** Set a floating-point configuration property.
      * @see SetPropertyInteger()
      */
-    bool SetPropertyFloat(const char* szName, float fValue);
+    bool SetPropertyFloat(const char* szName, double fValue);
 
     // -------------------------------------------------------------------
     /** Set a string configuration property.
@@ -240,7 +240,7 @@ public:
      * @param iErrorReturn Value that is returned if the property
      *   is not found.
      * @return Current value of the property
-     * @note Property of different types (float, int, string ..) are kept
+     * @note Property of different types (double, int, string ..) are kept
      *   on different lists, so calling SetPropertyInteger() for a
      *   floating-point property has no effect - the loader will call
      *   GetPropertyFloat() to read the property, but it won't be there.
@@ -263,8 +263,8 @@ public:
     /** Get a floating-point configuration property
      * @see GetPropertyInteger()
      */
-    float GetPropertyFloat(const char* szName,
-        float fErrorReturn = 10e10f) const;
+    double GetPropertyFloat(const char* szName,
+        double fErrorReturn = 10e10f) const;
 
     // -------------------------------------------------------------------
     /** Get a string configuration property

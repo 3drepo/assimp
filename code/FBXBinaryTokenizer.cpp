@@ -193,7 +193,7 @@ void ReadData(const char*& sbegin_out, const char*& send_out, const char* input,
     case 'I':
         // <- fall thru
 
-        // float
+        // double
     case 'F':
         cursor += 4;
         break;

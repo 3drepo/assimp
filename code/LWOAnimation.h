@@ -123,13 +123,13 @@ struct Key
     double time;
 
     //! Current value
-    float value;
+    double value;
 
     //! How to interpolate this key with previous key?
     InterpolationType inter;
 
     //! Interpolation parameters
-    float params[5];
+    double params[5];
 
 
     // for std::find()
@@ -278,7 +278,7 @@ protected:
      *  @param fill Receives the interpolated output value.
      */
     void DoInterpolation(std::vector<LWO::Key>::const_iterator cur,
-        LWO::Envelope* envl,double time, float& fill);
+        LWO::Envelope* envl,double time, double& fill);
 
     // ------------------------------------------------------------------
     /** @brief Almost the same, except we won't handle pre/post
@@ -286,7 +286,7 @@ protected:
      *  @see DoInterpolation
      */
     void DoInterpolation2(std::vector<LWO::Key>::const_iterator beg,
-        std::vector<LWO::Key>::const_iterator end,double time, float& fill);
+        std::vector<LWO::Key>::const_iterator end,double time, double& fill);
 
     // ------------------------------------------------------------------
     /** @brief Interpolate 2 tracks if one is given

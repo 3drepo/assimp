@@ -68,7 +68,7 @@ struct MetricInfo {
     };
 
     std::string m_stringValue;
-    float m_floatValue;
+    double m_floatValue;
     int m_intValue;
 
     MetricInfo()

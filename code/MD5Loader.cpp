@@ -235,7 +235,7 @@ void MD5Importer::MakeDataUnique (MD5::MeshDesc& meshSrc)
     meshSrc.mVertices.resize(iNewNum);
 
     // try to guess how much storage we'll need for new weights
-    const float fWeightsPerVert = meshSrc.mWeights.size() / (float)iNewIndex;
+    const double fWeightsPerVert = meshSrc.mWeights.size() / (double)iNewIndex;
     const unsigned int guess = (unsigned int)(fWeightsPerVert*iNewNum);
     meshSrc.mWeights.reserve(guess + (guess >> 3)); // + 12.5% as buffer
 
@@ -477,7 +477,7 @@ void MD5Importer::LoadMD5MeshFile ()
                 *pv = aiVector3D();
 
                 // there are models which have weights which don't sum to 1 ...
-                float fSum = 0.0f;
+                double fSum = 0.0f;
                 for (unsigned int jub = (*iter).mFirstWeight, w = jub; w < jub + (*iter).mNumWeights;++w)
                     fSum += meshSrc.mWeights[w].mWeight;
                 if (!fSum) {
@@ -495,7 +495,7 @@ void MD5Importer::LoadMD5MeshFile ()
                         continue;
                     }
 
-                    const float fNewWeight = desc.mWeight / fSum;
+                    const double fNewWeight = desc.mWeight / fSum;
 
                     // transform the local position into worldspace
                     MD5::BoneDesc& boneSrc = meshParser.mJoints[desc.mBone];
@@ -628,7 +628,7 @@ void MD5Importer::LoadMD5AnimFile ()
                         }
                         continue;
                     }
-                    const float* fpCur = &(*iter).mValues[(*iter2).iFirstKeyIndex];
+                    const double* fpCur = &(*iter).mValues[(*iter2).iFirstKeyIndex];
                     aiNodeAnim* pcCurAnimBone = *pcAnimNode;
 
                     aiVectorKey* vKey = &pcCurAnimBone->mPositionKeys[pcCurAnimBone->mNumPositionKeys++];

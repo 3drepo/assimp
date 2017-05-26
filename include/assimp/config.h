@@ -142,7 +142,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * This applies to the CalcTangentSpace-Step. The angle is specified
  * in degrees. The maximum value is 175.
- * Property type: float. Default value: 45 degrees
+ * Property type: double. Default value: 45 degrees
  */
 #define AI_CONFIG_PP_CT_MAX_SMOOTHING_ANGLE \
     "PP_CT_MAX_SMOOTHING_ANGLE"
@@ -164,7 +164,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * Sometimes referred to as 'crease angle'.
  * This applies to the GenSmoothNormals-Step. The angle is specified
  * in degrees, so 180 is PI. The default value is 175 degrees (all vertex
- * normals are smoothed). The maximum value is 175, too. Property type: float.
+ * normals are smoothed). The maximum value is 175, too. Property type: double.
  * Warning: setting this option may cause a severe loss of performance. The
  * performance is unaffected if the #AI_CONFIG_FAVOUR_SPEED flag is set but
  * the output quality may be reduced.
@@ -337,7 +337,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * This is used by the #aiProcess_Debone PostProcess-Step.
  * @note The default value is AI_DEBONE_THRESHOLD
- * Property type: float.*/
+ * Property type: double.*/
 #define AI_CONFIG_PP_DB_THRESHOLD \
     "PP_DB_THRESHOLD"
 
@@ -898,7 +898,7 @@ enum aiComponent
 
 // ---------- All the Export defines ------------
 
-/** @brief Specifies the xfile use double for real values of float
+/** @brief Specifies the xfile use double for real values of double
  *
  * Property type: Bool. Default value: false.
  */

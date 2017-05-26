@@ -480,7 +480,7 @@ static void setMatrix( aiNode *node, DataArrayList *transformData ) {
     ai_assert( NULL != node );
     ai_assert( NULL != transformData );
 
-    float m[ 16 ];
+    double m[ 16 ];
     size_t i( 1 );
     Value *next( transformData->m_dataList->m_next );
     m[ 0 ] = transformData->m_dataList->getFloat();
@@ -599,7 +599,7 @@ static void fillVector3( aiVector3D *vec3, Value *vals ) {
     ai_assert( NULL != vec3 );
     ai_assert( NULL != vals );
 
-    float x( 0.0f ), y( 0.0f ), z( 0.0f );
+    double x( 0.0f ), y( 0.0f ), z( 0.0f );
     Value *next( vals );
     x = next->getFloat();
     next = next->m_next;
